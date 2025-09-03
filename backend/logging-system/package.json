@@ -1,0 +1,22 @@
+{
+  "name": "logging-system",
+  "version": "1.0.0",
+  "description": "Sistema de logging centralizado - MVP Nivel 1",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "node src/test.js",
+    "clean": "node src/utils/cleanLogs.js"
+  },
+  "dependencies": {
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1",
+    "express-winston": "^4.2.0",
+    "morgan": "^1.10.0",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

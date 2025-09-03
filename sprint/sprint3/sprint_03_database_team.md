@@ -1,3 +1,17 @@
+---
+title: "Sprint 03 - Database Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["database", "postgres", "rbac", "roles", "permisos", "invitaciones", "auditoria"]
+responsable: "Database Team"
+fecha_inicio: "2024-01-29"
+fecha_fin: "2024-02-11"
+dependencias: ["sprint_02_database_team"]
+version: "1.0"
+sprint: 3
+---
+
 # Sprint 03 - Database Team
 
 ## Información del Sprint

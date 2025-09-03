@@ -1,3 +1,17 @@
+---
+title: "Sprint 01 - Frontend Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["frontend", "react", "typescript", "vite", "ui", "arquitectura"]
+responsable: "Frontend Team"
+fecha_inicio: "2024-01-01"
+fecha_fin: "2024-01-14"
+dependencias: []
+version: "1.0"
+sprint: 1
+---
+
 # Sprint 01 - Frontend Team
 
 ## Información del Sprint

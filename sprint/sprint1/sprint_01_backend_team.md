@@ -1,3 +1,17 @@
+---
+title: "Sprint 01 - Backend Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["backend", "typescript", "nodejs", "express", "arquitectura", "monolito-modular"]
+responsable: "Backend Team"
+fecha_inicio: "2024-01-01"
+fecha_fin: "2024-01-14"
+dependencias: []
+version: "1.0"
+sprint: 1
+---
+
 # Sprint 01 - Backend Team
 
 ## Información del Sprint

@@ -1,3 +1,17 @@
+---
+title: "Sprint 04 - Frontend Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["frontend", "react", "typescript", "dashboard", "ui", "navegacion", "componentes"]
+responsable: "Frontend Team"
+fecha_inicio: "2024-02-12"
+fecha_fin: "2024-02-25"
+dependencias: ["sprint_03_frontend_team"]
+version: "1.0"
+sprint: 4
+---
+
 # Sprint 04 - Frontend Team
 
 ## Información del Sprint

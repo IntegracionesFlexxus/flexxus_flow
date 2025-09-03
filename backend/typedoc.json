@@ -1,0 +1,50 @@
+{
+  "entryPoints": ["./src"],
+  "entryPointStrategy": "expand",
+  "out": "./docs",
+  "exclude": [
+    "**/__tests__/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**"
+  ],
+  "theme": "default",
+  "name": "Flexxus Flow Backend API - Level 3",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "readme": "./README.md",
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Services",
+    "Repositories",
+    "Controllers",
+    "Interfaces",
+    "Middlewares",
+    "Utils",
+    "Models",
+    "Other"
+  ],
+  "hideGenerator": false,
+  "searchInComments": true,
+  "plugin": ["typedoc-plugin-markdown"],
+  "githubPages": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "treatWarningsAsErrors": false,
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Interface",
+    "Class",
+    "Function",
+    "Variable",
+    "TypeAlias",
+    "Enum"
+  ]
+}

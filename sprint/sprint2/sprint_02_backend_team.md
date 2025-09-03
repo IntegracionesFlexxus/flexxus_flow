@@ -1,3 +1,17 @@
+---
+title: "Sprint 02 - Backend Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["backend", "auth", "jwt", "multi-tenancy", "feature-flags", "nodejs", "typescript"]
+responsable: "Backend Team"
+fecha_inicio: "2024-01-15"
+fecha_fin: "2024-01-28"
+dependencias: ["sprint_01_backend_team", "sprint_01_database_team"]
+version: "1.0"
+sprint: 2
+---
+
 # Sprint 02 - Backend Team
 
 ## Información del Sprint

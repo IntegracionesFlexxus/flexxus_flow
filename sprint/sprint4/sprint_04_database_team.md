@@ -1,3 +1,17 @@
+---
+title: "Sprint 04 - Database Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["database", "postgres", "backup", "monitoring", "performance", "seguridad"]
+responsable: "Database Team"
+fecha_inicio: "2024-02-12"
+fecha_fin: "2024-02-25"
+dependencias: ["sprint_03_database_team"]
+version: "1.0"
+sprint: 4
+---
+
 # Sprint 04 - Database Team
 
 ## Información del Sprint

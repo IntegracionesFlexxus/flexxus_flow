@@ -1,328 +1,213 @@
-# 🗄️ Database Sprint 1 - Flexxus Flow
+# Database Sprint 2 - Sistema Completo de Multi-tenancy
 
-Sistema de base de datos multi-tenant para Flexxus Flow implementado con PostgreSQL, siguiendo lineamientos de **Nivel 1 (MVP Funcional)**.
+## Resumen
 
-## 📋 Resumen
+Este sprint implementa el sistema completo de multi-tenancy con planes dinámicos, feature flags granulares, gestión avanzada de sesiones JWT y auditoría completa de actividades.
 
-Este sprint implementa la infraestructura básica de bases de datos con:
-- ✅ 5 bases de datos PostgreSQL separadas por dominio
-- ✅ Tablas core para autenticación y multi-tenancy
-- ✅ Scripts de migración y seeding
-- ✅ Módulo de conexión para Node.js
-- ✅ Repositorios básicos para CRUD
-- ✅ Scripts de backup automatizado
-
-## 🏗️ Arquitectura
+## Estructura del Proyecto
 
 ```
 database/
-├── migrations/          # Scripts SQL de creación de tablas
-├── seeds/              # Datos iniciales de prueba
-├── scripts/            # Scripts de utilidad (setup, migrate, backup)
-├── config/             # Módulo de conexión Node.js
-├── repositories/       # Repositorios con operaciones CRUD
-└── backups/           # Directorio para backups (generado)
+├── migrations/          # Scripts de migración
+│   ├── 005_create_plans.sql
+│   ├── 006_create_feature_flags.sql
+│   ├── 007_create_user_sessions.sql
+│   └── 008_create_audit_log.sql
+├── seeds/              # Datos iniciales
+│   ├── 003_seed_plans.sql
+│   └── 004_seed_feature_flags.sql
+├── procedures/         # Funciones y procedimientos
+│   └── maintenance_procedures.sql
+└── README.md          # Esta documentación
 ```
 
-## 🚀 Inicio Rápido
+## Nuevas Tablas Implementadas
 
-### 1. Prerequisitos
+### 1. Plans
+- **Propósito**: Sistema de planes de suscripción
+- **Características clave**: Precios dinámicos, features en JSON, límites configurables
+- **Índices**: Optimizados para búsquedas por estado y features
 
-- PostgreSQL 14+ instalado
-- Node.js 18+
-- Usuario postgres con permisos de creación de BD
+### 2. Feature Flags
+- **Propósito**: Control granular de funcionalidades por empresa
+- **Características clave**: Rollout percentage, reglas dinámicas, multi-environment
+- **Índices**: Hot path optimizado para evaluación < 5ms
 
-### 2. Setup Inicial
+### 3. User Sessions
+- **Propósito**: Gestión segura de sesiones JWT
+- **Características clave**: Token hashing, device fingerprinting, cleanup automático
+- **Índices**: Optimizados para validación y cleanup
 
-```bash
-# Navegar al directorio de database
-cd database/scripts
+### 4. User Activity Log
+- **Propósito**: Auditoría completa de actividades
+- **Características clave**: Triggers automáticos, partitioning-ready, correlación con requests
+- **Índices**: Optimizados para reporting y búsquedas
 
-# Dar permisos de ejecución
-chmod +x *.sh
+## Funciones Clave Implementadas
 
-# Ejecutar setup inicial (crea las 5 bases de datos)
-./setup_databases.sh
+### Gestión de Sesiones
+- `cleanup_expired_sessions()`: Limpieza automática de sesiones expiradas
+- `invalidate_user_sessions()`: Invalidación de sesiones de usuario
+- `is_session_valid()`: Validación rápida de tokens
+- `get_session_info()`: Información completa de sesión
 
-# Ejecutar migraciones
-./migrate.sh
-```
+### Feature Flags
+- `is_feature_enabled()`: Evaluación de feature flags con rollout
+- Hot path optimizado para < 5ms de respuesta
 
-### 3. Credenciales de Prueba
+### Auditoría
+- `audit_trigger_function()`: Función genérica para audit trail
+- `log_user_activity()`: Logging manual de actividades
+- `get_user_recent_activity()`: Actividad reciente de usuarios
 
-Después de ejecutar las migraciones con datos de seed:
+### Mantenimiento
+- `daily_maintenance()`: Rutina de mantenimiento diario
+- `verify_data_integrity()`: Verificación de integridad
+- `database_health_report()`: Reporte de salud de BD
+- `backup_critical_configs()`: Backup de configuraciones
 
-```
-Email: admin@demo.com
-Password: admin123
-```
+## Planes de Suscripción
 
-## 📊 Bases de Datos
+### Plan Básico ($99/mes)
+- Usuarios: 5
+- Canales: WhatsApp, Email
+- Conversaciones: 1,000/mes
+- Landing pages: 3
+- Storage: 1GB
 
-| Base de Datos | Propósito | Tablas Principales |
-|--------------|-----------|-------------------|
-| `flexxus_shared` | Autenticación y multi-tenancy | companies, users, user_companies |
-| `flexxus_personas` | CRM y contactos | contacts |
-| `flexxus_omni` | Omnicanalidad | (Sprint 2) |
-| `flexxus_notificaciones` | Sistema de notificaciones | (Sprint 2) |
-| `flexxus_organizaciones` | Estructura organizacional | (Sprint 3) |
+### Plan Profesional ($299/mes)
+- Usuarios: 25
+- Canales: WhatsApp, Instagram, Facebook, Email, SMS
+- Conversaciones: 10,000/mes
+- CRM completo + Workflows básicos
+- Storage: 10GB
 
-## 🔌 Uso en Node.js
+### Plan Enterprise ($599/mes)
+- Usuarios: Ilimitados
+- Todos los canales + API personalizada
+- Conversaciones ilimitadas
+- CRM + Workflows avanzados + ERP integration
+- Storage: 100GB
 
-### Conexión Básica
+## Feature Flags Implementados
 
-```javascript
-const db = require('./database/config/database');
+### Categorías:
+- **UI**: dark_mode, new_dashboard, advanced_filters
+- **API**: api_rate_limiting_v2, graphql_api
+- **Integration**: flexxus_integration, webhook_v2
+- **Analytics**: real_time_analytics, custom_reports
+- **Workflow**: advanced_workflows, workflow_templates
+- **Security**: two_factor_auth, session_management_v2
+- **Performance**: redis_caching, database_optimization
 
-// Query simple
-const result = await db.query(
-  'SELECT * FROM users WHERE email = $1',
-  ['admin@demo.com'],
-  'shared'  // nombre de la base de datos
-);
+## Optimizaciones de Performance
 
-// Transacción
-await db.transaction(async (client) => {
-  await client.query('INSERT INTO companies ...');
-  await client.query('INSERT INTO users ...');
-}, 'shared');
-```
+### Índices Especializados
+- Feature flags: hot lookup < 5ms
+- Sessions: validación < 10ms
+- Activity log: no impacta operaciones normales
 
-### Usando Repositorios
+### Estrategias de Cleanup
+- Sesiones expiradas: automático
+- Audit logs: retention de 1 año
+- System logs: retention de 90 días
 
-```javascript
-const userRepository = require('./database/repositories/userRepository');
-const companyRepository = require('./database/repositories/companyRepository');
+## Seguridad Implementada
 
-// Crear usuario
-const user = await userRepository.create({
-  email: 'nuevo@ejemplo.com',
-  password: 'password123',
-  firstName: 'Juan',
-  lastName: 'Pérez'
-});
+### Sesiones
+- Tokens hasheados (nunca plain text)
+- Device fingerprinting
+- Detección de actividad sospechosa
+- Force logout capability
 
-// Verificar login
-const { valid, user } = await userRepository.verifyPassword(
-  'admin@demo.com',
-  'admin123'
-);
+### Auditoría
+- Triggers automáticos en tablas críticas
+- Correlación con request IDs
+- Contexto completo de sesión
+- PII protection
 
-// Obtener empresas del usuario
-const companies = await userRepository.getCompanies(user.id);
-```
+## Ejecución de Migrations
 
-## 🛠️ Scripts Disponibles
-
-### setup_databases.sh
-Crea las 5 bases de datos y configura usuario de aplicación.
-
-```bash
-./scripts/setup_databases.sh
-```
-
-### migrate.sh
-Ejecuta todas las migraciones SQL en orden.
-
-```bash
-./scripts/migrate.sh
-```
-
-### backup.sh
-Realiza backup de todas las bases de datos.
-
-```bash
-./scripts/backup.sh
-```
-
-Los backups se guardan en `database/backups/` con formato:
-- `flexxus_shared_20240115_143022.sql.gz`
-- `flexxus_personas_20240115_143022.sql.gz`
-- etc.
-
-## 🏷️ Esquema de Tablas
-
-### companies
 ```sql
-- id (UUID, PK)
-- name (VARCHAR)
-- tax_id (VARCHAR, UNIQUE)
-- plan (VARCHAR) -- basic, professional, enterprise
-- status (VARCHAR) -- active, suspended, cancelled
-- settings (JSONB)
-- created_at, updated_at (TIMESTAMP)
+-- Ejecutar en orden:
+\i database/migrations/005_create_plans.sql
+\i database/migrations/006_create_feature_flags.sql
+\i database/migrations/007_create_user_sessions.sql
+\i database/migrations/008_create_audit_log.sql
+
+-- Datos iniciales:
+\i database/seeds/003_seed_plans.sql
+\i database/seeds/004_seed_feature_flags.sql
+
+-- Procedimientos de mantenimiento:
+\i database/procedures/maintenance_procedures.sql
 ```
 
-### users
+## Mantenimiento Recomendado
+
+### Diario
 ```sql
-- id (UUID, PK)
-- email (VARCHAR, UNIQUE)
-- password_hash (VARCHAR)
-- first_name, last_name (VARCHAR)
-- phone (VARCHAR)
-- is_active (BOOLEAN)
-- email_verified (BOOLEAN)
-- last_login_at (TIMESTAMP)
-- created_at, updated_at (TIMESTAMP)
+SELECT daily_maintenance();
 ```
 
-### user_companies
+### Semanal
 ```sql
-- id (UUID, PK)
-- user_id (UUID, FK → users)
-- company_id (UUID, FK → companies)
-- role (VARCHAR) -- admin, manager, member
-- is_default (BOOLEAN)
-- status (VARCHAR) -- active, invited, suspended
-- created_at, updated_at (TIMESTAMP)
+SELECT * FROM database_health_report();
+SELECT * FROM verify_data_integrity();
 ```
 
-### contacts
+### Mensual
 ```sql
-- id (UUID, PK)
-- company_id (UUID)
-- first_name, last_name (VARCHAR)
-- email, phone (VARCHAR)
-- contact_type (VARCHAR) -- lead, customer, prospect
-- status (VARCHAR)
-- extra_data (JSONB)
-- assigned_user_id (UUID)
-- created_at, updated_at (TIMESTAMP)
+SELECT optimize_indexes();
+SELECT backup_critical_configs();
 ```
 
-## ⚠️ TODOs para Nivel 2
+## Monitoreo
 
-Los siguientes elementos están hardcodeados y deben moverse a variables de entorno:
+### Métricas Clave
+- Feature flag evaluation time < 5ms
+- Session validation time < 10ms
+- Audit log insertion < 2ms
+- Database growth rate
 
-1. **Credenciales de BD**
-   - Usuario: `flexxus_app`
-   - Password: `app_password_123`
-   - Host/Puerto: `localhost:5432`
+### Vistas de Monitoreo
+- `v_performance_metrics`: Métricas en tiempo real
+- `v_activity_statistics`: Estadísticas de actividad
+- `v_session_activity`: Actividad por sesión
 
-2. **Configuración de Pools**
-   - Max conexiones: 20
-   - Timeout: 30000ms
+## Criterios de Aceptación ✅
 
-3. **Bcrypt Rounds**
-   - Salt rounds: 10
+### Funcionales
+- ✅ Sistema de planes con 4 planes (básico, profesional, enterprise, custom)
+- ✅ Feature flags con rollout percentage y configuración granular
+- ✅ Sesiones JWT con refresh tokens y cleanup automático
+- ✅ Auditoría completa con triggers automáticos
+- ✅ Procedimientos de mantenimiento automatizados
 
-4. **Nombres de Bases de Datos**
-   - Todos los nombres están hardcodeados
+### Técnicos
+- ✅ Queries de feature flags optimizadas para < 5ms
+- ✅ Session lookup optimizado para < 10ms
+- ✅ Audit log insertions sin impacto en performance
+- ✅ Índices especializados para todos los access patterns
+- ✅ Estrategia de partitioning preparada
 
-### Archivo .env futuro
-```env
-# Database
-DB_USER=flexxus_app
-DB_PASSWORD=secure_password_here
-DB_HOST=localhost
-DB_PORT=5432
+### Seguridad
+- ✅ Session tokens hasheados
+- ✅ Feature flags sin información sensible
+- ✅ Audit trail completo sin PII innecesaria
+- ✅ Session invalidation funcionando
+- ✅ Detección básica de actividad sospechosa
 
-# Database Names
-DB_NAME_SHARED=flexxus_shared
-DB_NAME_PERSONAS=flexxus_personas
-DB_NAME_OMNI=flexxus_omni
+## Próximos Pasos (Sprint 3)
 
-# Pool Config
-DB_POOL_MAX=20
-DB_POOL_IDLE_TIMEOUT=30000
+1. Implementar RLS (Row Level Security) policies
+2. Configurar partitioning automático para audit_log
+3. Implementar caching layer para feature flags
+4. Agregar métricas de business intelligence
+5. Configurar alertas automáticas de seguridad
 
-# Security
-BCRYPT_ROUNDS=10
-```
+## Contacto
 
-## 🧪 Testing
-
-Para verificar que todo funciona:
-
-```javascript
-// test-db.js
-const db = require('./database/config/database');
-const userRepo = require('./database/repositories/userRepository');
-
-async function test() {
-  // Verificar conexiones
-  await db.checkConnection('shared');
-  await db.checkConnection('personas');
-  
-  // Probar login
-  const result = await userRepo.verifyPassword('admin@demo.com', 'admin123');
-  console.log('Login exitoso:', result.valid);
-  
-  // Cerrar conexiones
-  await db.closeAll();
-}
-
-test().catch(console.error);
-```
-
-## 🔒 Seguridad
-
-### Implementado (Nivel 1)
-- ✅ Passwords hasheados con bcrypt
-- ✅ Separación de bases de datos por dominio
-- ✅ Validación básica de roles
-- ✅ SQL injection prevention (parametrized queries)
-
-### Pendiente (Nivel 2+)
-- ⏳ Row Level Security (RLS)
-- ⏳ Auditoría de cambios
-- ⏳ Encriptación de datos sensibles
-- ⏳ SSL para conexiones
-- ⏳ Rotación de credenciales
-
-## 📈 Performance
-
-### Índices Creados
-- `idx_companies_status` - Búsquedas por estado
-- `idx_users_email` - Login rápido
-- `idx_user_companies_user_id` - Empresas de usuario
-- `idx_contacts_company_id` - Contactos por empresa
-
-### Optimizaciones Aplicadas
-- Connection pooling (20 conexiones max)
-- Índices en campos de búsqueda frecuente
-- JSONB para datos flexibles
-- Triggers para updated_at automático
-
-## 🐛 Troubleshooting
-
-### Error: "FATAL: password authentication failed"
-```bash
-# Verificar credenciales en postgresql.conf
-sudo nano /etc/postgresql/14/main/pg_hba.conf
-# Cambiar "peer" a "md5" para conexiones locales
-```
-
-### Error: "database does not exist"
-```bash
-# Ejecutar setup inicial
-./scripts/setup_databases.sh
-```
-
-### Error: "permission denied"
-```bash
-# Dar permisos de ejecución
-chmod +x scripts/*.sh
-```
-
-## 📚 Referencias
-
-- [PostgreSQL 14 Docs](https://www.postgresql.org/docs/14/)
-- [node-postgres](https://node-postgres.com/)
-- [bcrypt](https://www.npmjs.com/package/bcrypt)
-
-## ✅ Checklist de Entrega
-
-- [x] 5 bases de datos creadas
-- [x] Tablas core implementadas
-- [x] Scripts de migración funcionando
-- [x] Datos de seed para testing
-- [x] Módulo de conexión Node.js
-- [x] Repositorios básicos CRUD
-- [x] Script de backup
-- [x] Documentación completa
-- [x] TODOs marcados para Nivel 2
-
----
-
-**Sprint 1 - Database Team** | Nivel 1 (MVP) | Enero 2024
+Para dudas sobre la implementación de base de datos:
+- Database Team Leader
+- Documentación técnica en `/database/docs/` (próximo sprint)

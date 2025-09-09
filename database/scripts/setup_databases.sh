@@ -28,9 +28,9 @@ echo "📦 Creando bases de datos..."
 databases=(
     "flexxus_shared"
     "flexxus_omni"
-    "flexxus_personas"
-    "flexxus_notificaciones"
-    "flexxus_organizaciones"
+    "flexxus_crm"
+    "flexxus_workflow"
+    "flexxus_analytics"
 )
 
 for db in "${databases[@]}"

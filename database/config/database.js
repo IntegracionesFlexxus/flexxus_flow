@@ -32,19 +32,19 @@ const pools = {
     database: 'flexxus_omni'      // TODO: Variable de entorno DB_NAME_OMNI
   }),
   
-  personas: new Pool({
+  crm: new Pool({
     ...DB_CONFIG,
-    database: 'flexxus_personas'  // TODO: Variable de entorno DB_NAME_PERSONAS
+    database: 'flexxus_crm'  // TODO: Variable de entorno DB_NAME_CRM
   }),
   
-  notificaciones: new Pool({
+  workflow: new Pool({
     ...DB_CONFIG,
-    database: 'flexxus_notificaciones' // TODO: Variable de entorno DB_NAME_NOTIF
+    database: 'flexxus_workflow' // TODO: Variable de entorno DB_NAME_WORKFLOW
   }),
   
-  organizaciones: new Pool({
+  analytics: new Pool({
     ...DB_CONFIG,
-    database: 'flexxus_organizaciones' // TODO: Variable de entorno DB_NAME_ORG
+    database: 'flexxus_analytics' // TODO: Variable de entorno DB_NAME_ANALYTICS
   })
 };
 
@@ -151,7 +151,7 @@ if (process.env.NODE_ENV !== 'production') {
   // Verificar cada base de datos
   Promise.all([
     checkConnection('shared'),
-    checkConnection('personas'),
+    checkConnection('crm'),
     // Comentadas para no sobrecargar en desarrollo
     // checkConnection('omni'),
     // checkConnection('notificaciones'),

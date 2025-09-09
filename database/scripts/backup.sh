@@ -34,9 +34,9 @@ mkdir -p $BACKUP_DIR
 databases=(
     "flexxus_shared"
     "flexxus_omni"
-    "flexxus_personas"
-    "flexxus_notificaciones"
-    "flexxus_organizaciones"
+    "flexxus_crm"
+    "flexxus_workflow"
+    "flexxus_analytics"
 )
 
 # Realizar backup de cada base de datos

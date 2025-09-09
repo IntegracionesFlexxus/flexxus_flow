@@ -59,7 +59,7 @@ echo -e "${GREEN}[1/4] Configurando funciones RLS en shared_db${NC}"
 echo "----------------------------------------"
 
 execute_sql "flexxus_shared" \
-    "${MIGRATIONS_DIR}/005_setup_rls_functions.sql" \
+    "${MIGRATIONS_DIR}/009_setup_rls_functions.sql" \
     "Creando funciones de contexto RLS"
 
 # =====================================================
@@ -69,18 +69,18 @@ echo -e "${GREEN}[2/4] Habilitando RLS en tablas principales${NC}"
 echo "----------------------------------------"
 
 execute_sql "flexxus_shared" \
-    "${MIGRATIONS_DIR}/006_enable_rls_tables.sql" \
+    "${MIGRATIONS_DIR}/010_enable_rls_tables.sql" \
     "Habilitando RLS y políticas en tablas core"
 
 # =====================================================
 # PASO 3: Aplicar RLS en tabla contacts
 # =====================================================
-echo -e "${GREEN}[3/4] Configurando RLS en flexxus_personas${NC}"
+echo -e "${GREEN}[3/4] Configurando RLS en flexxus_crm${NC}"
 echo "----------------------------------------"
 
-# Primero crear las funciones en flexxus_personas
-echo -e "${YELLOW}→ Replicando funciones RLS en flexxus_personas${NC}"
-PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d flexxus_personas <<EOF
+# Primero crear las funciones en flexxus_crm
+echo -e "${YELLOW}→ Replicando funciones RLS en flexxus_crm${NC}"
+PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d flexxus_crm <<EOF
 -- Replicar funciones de contexto
 CREATE OR REPLACE FUNCTION get_current_user_id() 
 RETURNS UUID AS \$\$
@@ -130,8 +130,8 @@ else
     exit 1
 fi
 
-execute_sql "flexxus_personas" \
-    "${MIGRATIONS_DIR}/007_rls_contacts_table.sql" \
+execute_sql "flexxus_crm" \
+    "${MIGRATIONS_DIR}/017_rls_contacts_table.sql" \
     "Aplicando RLS en tabla contacts"
 
 # =====================================================
@@ -141,12 +141,12 @@ echo -e "${GREEN}[4/4] Configurando triggers automáticos${NC}"
 echo "----------------------------------------"
 
 execute_sql "flexxus_shared" \
-    "${MIGRATIONS_DIR}/008_automatic_timestamps.sql" \
+    "${MIGRATIONS_DIR}/018_automatic_timestamps.sql" \
     "Creando triggers para timestamps automáticos"
 
-# Aplicar trigger en flexxus_personas para contacts
+# Aplicar trigger en flexxus_crm para contacts
 echo -e "${YELLOW}→ Aplicando trigger updated_at en contacts${NC}"
-PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d flexxus_personas <<EOF
+PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d flexxus_crm <<EOF
 -- Trigger para contacts
 DROP TRIGGER IF EXISTS update_contacts_updated_at ON contacts;
 CREATE TRIGGER update_contacts_updated_at

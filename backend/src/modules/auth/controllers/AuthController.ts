@@ -1,329 +1,453 @@
-// Auth Controller - Sprint 1 con principios Nivel 2
-// Aplicando SOLID: Single Responsibility, Dependency Inversion
-
-import { Request, Response, NextFunction } from 'express';
-import { injectable, inject } from 'inversify';
-import { IAuthService } from '../interfaces/IAuthService';
-import { IUserService } from '../interfaces/IUserService';
-import { ICompanyService } from '../interfaces/ICompanyService';
-import { TYPES } from '../../../container/types';
-import winston from 'winston';
-import { 
-  LoginDto, 
-  RegisterDto, 
-  ChangePasswordDto,
-  ForgotPasswordDto,
-  ResetPasswordDto,
-  SwitchCompanyDto
-} from '../types/auth.types';
-
 /**
- * AuthController - Controlador REST para autenticación
- * SOLID: Single Responsibility - Solo maneja requests/responses HTTP
- * Clean Code: Métodos pequeños y enfocados
+ * Authentication Controller - Sprint 2 & 3 Enhanced
+ * Implementación completa de autenticación multi-empresa con refresh tokens
+ * Siguiendo principios SOLID y Clean Code del Nivel 2
  */
+import { Request, Response } from 'express';
+import { injectable, inject } from 'inversify';
+import { Logger } from 'winston';
+import { TYPES } from '@/container/types';
+import { IAuthService } from '@/modules/auth/interfaces/IAuthService';
+import { ISessionService } from '@/modules/auth/interfaces/ISessionService';
+import { AppError } from '@shared/errors/AppError';
+import { environment } from '@/config/environment';
+import { 
+  LoginSchema,
+  RefreshTokenSchema,
+  SwitchCompanySchema,
+  ChangePasswordSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+  RegisterSchema
+} from '@/modules/auth/validators/authSchemas';
+// Extend Request for authenticated requests
+export interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    companyId: string;
+    role: string;
+    permissions: string[];
+    sessionId: string;
+  };
+}
 @injectable()
 export class AuthController {
   constructor(
     @inject(TYPES.AuthService) private authService: IAuthService,
-    @inject(TYPES.UserService) private userService: IUserService,
-    @inject(TYPES.CompanyService) private companyService: ICompanyService,
-    @inject(TYPES.Logger) private logger: winston.Logger
+    @inject(TYPES.SessionService) private sessionService: ISessionService,
+    @inject(TYPES.Logger) private logger: Logger
   ) {}
-
   /**
-   * POST /auth/login
-   * Clean Code: Manejo consistente de respuestas
+   * Login endpoint - Autenticación con soporte multi-empresa
+   * POST /api/auth/login
    */
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async login(req: Request, res: Response): Promise<void> {
     try {
-      const dto: LoginDto = req.body;
-      const result = await this.authService.login(dto);
-      
-      this.sendAuthResponse(res, 200, result);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /auth/register
-   * Patrón: Command pattern implícito con DTOs
-   */
-  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const dto: RegisterDto = req.body;
-      const result = await this.authService.register(dto);
-      
-      this.sendAuthResponse(res, 201, result);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /auth/refresh
-   * Seguridad: Refresh token desde cookie o header
-   */
-  async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const refreshToken = this.extractRefreshToken(req);
-      
-      if (!refreshToken) {
-        return this.sendErrorResponse(res, 401, 'Refresh token is required');
+      // Validate input
+      const validatedData = LoginSchema.parse(req.body);
+      // Extract metadata
+      const metadata = {
+        ipAddress: this.getClientIp(req),
+        userAgent: req.headers['user-agent'] || '',
+        deviceFingerprint: req.headers['x-device-fingerprint'] as string
+      };
+      // Perform login
+      const result = await this.authService.login(validatedData, metadata);
+      // Set refresh token as httpOnly cookie
+      if (result.refreshToken) {
+        this.setRefreshTokenCookie(res, result.refreshToken);
       }
-      
-      const result = await this.authService.refreshToken(refreshToken);
-      this.sendAuthResponse(res, 200, result);
+      // Send response
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            firstName: result.user.first_name || '',
+            lastName: result.user.last_name || '',
+            avatar: result.user.avatar || null
+          },
+          companies: result.availableCompanies || (result.company ? [{
+            id: result.company.id,
+            name: result.company.name,
+            plan: result.company.plan,
+            role: result.company.role,
+            permissions: result.company.permissions
+          }] : []),
+          accessToken: result.accessToken,
+          expiresIn: result.expiresIn,
+          sessionId: result.sessionId
+        }
+      });
     } catch (error) {
-      next(error);
+      this.handleAuthError(res, error);
     }
   }
-
   /**
-   * POST /auth/logout
-   * Clean Code: Función simple y directa
+   * Register endpoint - Registro de nuevo usuario
+   * POST /api/auth/register
    */
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async register(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).userId; // Viene del middleware de auth
-      await this.authService.logout(userId);
-      
-      res.status(200).json({
+      const validatedData = RegisterSchema.parse(req.body);
+      const metadata = {
+        ipAddress: this.getClientIp(req),
+        userAgent: req.headers['user-agent'] || ''
+      };
+      const result = await this.authService.register(validatedData, metadata);
+      if (result.refreshToken) {
+        this.setRefreshTokenCookie(res, result.refreshToken);
+      }
+      res.status(201).json({
+        success: true,
+        data: {
+          user: result.user,
+          company: result.company,
+          accessToken: result.accessToken,
+          expiresIn: result.expiresIn,
+          sessionId: result.sessionId
+        }
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Refresh token endpoint - Renovación de token de acceso
+   * POST /api/auth/refresh
+   */
+  async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      const refreshToken = this.getRefreshToken(req);
+      if (!refreshToken) {
+        throw new AppError('Refresh token not provided', 401);
+      }
+      // Optional: Allow company switching during refresh
+      const companyId = req.body.companyId;
+      const result = await this.authService.refreshToken({
+        refreshToken,
+        companyId
+      });
+      // Rotate refresh token for security
+      this.setRefreshTokenCookie(res, result.refreshToken);
+      res.json({
+        success: true,
+        data: {
+          user: result.user,
+          company: result.company,
+          accessToken: result.accessToken,
+          expiresIn: result.expiresIn,
+          permissions: result.company?.permissions || [],
+          sessionId: result.sessionId
+        }
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Switch company endpoint - Cambio de empresa activa
+   * POST /api/auth/switch-company
+   */
+  async switchCompany(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const validatedData = SwitchCompanySchema.parse(req.body);
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+      const result = await this.authService.switchCompany(
+        req.user.id,
+        validatedData
+      );
+      // Update refresh token with new company context
+      this.setRefreshTokenCookie(res, result.refreshToken);
+      res.json({
+        success: true,
+        data: {
+          user: result.user,
+          company: result.company,
+          accessToken: result.accessToken,
+          expiresIn: result.expiresIn,
+          permissions: result.company.permissions,
+          sessionId: result.sessionId
+        }
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Logout endpoint - Cerrar sesión actual
+   * POST /api/auth/logout
+   */
+  async logout(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const refreshToken = this.getRefreshToken(req);
+      if (req.user) {
+        await this.authService.logout(req.user.id, refreshToken);
+      }
+      // Clear cookies
+      this.clearAuthCookies(res);
+      res.json({
         success: true,
         message: 'Logged out successfully'
       });
     } catch (error) {
-      next(error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
     }
   }
-
   /**
-   * GET /auth/me
-   * Obtener información del usuario autenticado
+   * Logout all devices endpoint - Cerrar todas las sesiones
+   * POST /api/auth/logout-all
    */
-  async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logoutAllDevices(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const userId = (req as any).userId;
-      const companyId = (req as any).companyId;
-      
-      const user = await this.userService.getUserById(userId);
-      if (!user) {
-        return this.sendErrorResponse(res, 404, 'User not found');
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
       }
-      
-      const company = await this.companyService.getCompanyById(companyId);
-      const userCompanies = await this.companyService.getUserCompanies(userId);
-      
-      // Remover información sensible
-      const { password_hash, ...userWithoutPassword } = user;
-      
-      res.status(200).json({
+      await this.authService.logoutAllDevices(req.user.id);
+      // Clear cookies
+      this.clearAuthCookies(res);
+      res.json({
         success: true,
-        data: {
-          user: userWithoutPassword,
-          currentCompany: company,
-          companies: userCompanies
-        }
+        message: 'Logged out from all devices successfully'
       });
     } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * PUT /auth/change-password
-   * Seguridad: Requiere autenticación
-   */
-  async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = (req as any).userId;
-      const dto: ChangePasswordDto = req.body;
-      
-      await this.authService.changePassword(userId, dto);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Password changed successfully'
+      res.status(500).json({
+        success: false,
+        error: error.message
       });
-    } catch (error) {
-      next(error);
     }
   }
-
   /**
-   * POST /auth/forgot-password
-   * Seguridad: No revelar si el email existe
+   * Get user companies endpoint - Obtener empresas del usuario
+   * GET /api/auth/companies
    */
-  async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getUserCompanies(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const dto: ForgotPasswordDto = req.body;
-      await this.authService.forgotPassword(dto);
-      
-      // Siempre devolver éxito por seguridad
-      res.status(200).json({
-        success: true,
-        message: 'If the email exists, a reset link has been sent'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /auth/reset-password
-   * Resetear contraseña con token
-   */
-  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const dto: ResetPasswordDto = req.body;
-      await this.authService.resetPassword(dto);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Password reset successfully'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /auth/switch-company
-   * Cambiar empresa activa del usuario
-   */
-  async switchCompany(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = (req as any).userId;
-      const dto: SwitchCompanyDto = req.body;
-      
-      const result = await this.authService.switchCompany(userId, dto);
-      this.sendAuthResponse(res, 200, result);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * GET /auth/companies
-   * Obtener empresas del usuario autenticado
-   */
-  async getUserCompanies(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = (req as any).userId;
-      const companies = await this.companyService.getUserCompanies(userId);
-      
-      res.status(200).json({
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+      const companies = await this.authService.getUserCompanies(req.user.id);
+      res.json({
         success: true,
         data: companies
       });
     } catch (error) {
-      next(error);
+      this.handleAuthError(res, error);
     }
   }
-
   /**
-   * POST /auth/verify-token
-   * Verificar validez de un token
+   * Get active sessions endpoint - Obtener sesiones activas
+   * GET /api/auth/sessions
    */
-  async verifyToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getActiveSessions(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const token = this.extractToken(req);
-      
-      if (!token) {
-        return this.sendErrorResponse(res, 401, 'Token is required');
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
       }
-      
-      const payload = await this.authService.verifyToken(token);
-      
-      res.status(200).json({
+      const sessions = await this.sessionService.getUserActiveSessions(req.user.id);
+      res.json({
         success: true,
-        valid: true,
-        payload
+        data: sessions.map(session => ({
+          id: session.id,
+          deviceInfo: session.deviceInfo,
+          lastActivityAt: session.lastActivityAt,
+          createdAt: session.createdAt,
+          isActive: session.isActive,
+          isCurrent: session.id === req.user.sessionId
+        }))
       });
     } catch (error) {
-      res.status(401).json({
+      res.status(500).json({
         success: false,
-        valid: false,
-        message: 'Invalid or expired token'
+        error: error.message
       });
     }
   }
-
-  // ========== Métodos privados de utilidad ==========
-
   /**
-   * Enviar respuesta de autenticación
-   * Clean Code: DRY para respuestas consistentes
+   * Invalidate session endpoint - Invalidar sesión específica
+   * DELETE /api/auth/sessions/:sessionId
    */
-  private sendAuthResponse(res: Response, statusCode: number, data: any): void {
-    // Configurar cookies seguras en producción
-    if (process.env.NODE_ENV === 'production') {
-      res.cookie('refreshToken', data.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+  async invalidateSession(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+      const { sessionId } = req.params;
+      // Verify user owns the session
+      const sessions = await this.sessionService.getUserActiveSessions(req.user.id);
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        throw new AppError('Session not found', 404);
+      }
+      await this.sessionService.invalidateSession(sessionId);
+      res.json({
+        success: true,
+        message: 'Session invalidated successfully'
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Change password endpoint - Cambiar contraseña
+   * POST /api/auth/change-password
+   */
+  async changePassword(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+      const validatedData = ChangePasswordSchema.parse(req.body);
+      await this.authService.changePassword(req.user.id, validatedData);
+      res.json({
+        success: true,
+        message: 'Password changed successfully'
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Forgot password endpoint - Solicitar recuperación de contraseña
+   * POST /api/auth/forgot-password
+   */
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const validatedData = ForgotPasswordSchema.parse(req.body);
+      const metadata = {
+        ipAddress: this.getClientIp(req),
+        userAgent: req.headers['user-agent'] || ''
+      };
+      await this.authService.forgotPassword(validatedData, metadata);
+      // Always return success for security
+      res.json({
+        success: true,
+        message: 'If the email exists, a password reset link has been sent'
+      });
+    } catch (error) {
+      // Log error but don't expose details
+      this.logger.error('Forgot password error', { error: error.message });
+      res.json({
+        success: true,
+        message: 'If the email exists, a password reset link has been sent'
       });
     }
-
-    res.status(statusCode).json({
-      success: true,
-      data: {
-        user: data.user,
-        company: data.company,
-        token: data.token,
-        expiresIn: data.expiresIn
+  }
+  /**
+   * Reset password endpoint - Resetear contraseña con token
+   * POST /api/auth/reset-password
+   */
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const validatedData = ResetPasswordSchema.parse(req.body);
+      const metadata = {
+        ipAddress: this.getClientIp(req),
+        userAgent: req.headers['user-agent'] || ''
+      };
+      await this.authService.resetPassword(validatedData, metadata);
+      res.json({
+        success: true,
+        message: 'Password reset successfully'
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Verify email endpoint - Verificar email
+   * GET /api/auth/verify-email/:token
+   */
+  async verifyEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.params;
+      await this.authService.verifyEmail(token);
+      res.json({
+        success: true,
+        message: 'Email verified successfully'
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  /**
+   * Get current user endpoint - Obtener usuario actual
+   * GET /api/auth/me
+   */
+  async getCurrentUser(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
       }
+      const userData = await this.authService.getCurrentUser(req.user.id);
+      res.json({
+        success: true,
+        data: userData
+      });
+    } catch (error) {
+      this.handleAuthError(res, error);
+    }
+  }
+  // ========== Helper methods ==========
+  /**
+   * Set refresh token cookie with secure options
+   */
+  private setRefreshTokenCookie(res: Response, refreshToken: string): void {
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: environment.isProduction,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
     });
   }
-
   /**
-   * Enviar respuesta de error
+   * Get refresh token from cookie or header
    */
-  private sendErrorResponse(res: Response, statusCode: number, message: string): void {
+  private getRefreshToken(req: Request): string | undefined {
+    return req.cookies?.refreshToken || 
+           req.headers['x-refresh-token'] as string ||
+           req.body?.refreshToken;
+  }
+  /**
+   * Clear authentication cookies
+   */
+  private clearAuthCookies(res: Response): void {
+    res.clearCookie('refreshToken', { path: '/' });
+    res.clearCookie('accessToken', { path: '/' });
+  }
+  /**
+   * Get client IP address
+   */
+  private getClientIp(req: Request): string {
+    return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 
+           (req.headers['x-real-ip'] as string) ||
+           req.socket?.remoteAddress || 
+           '';
+  }
+  /**
+   * Handle authentication errors consistently
+   */
+  private handleAuthError(res: Response, error: any): void {
+    // Log the error
+    this.logger.error('Authentication error', {
+      error: error.message,
+      stack: error.stack
+    });
+    // Determine status code
+    const statusCode = error.statusCode || 
+                      (error.name === 'ValidationError' ? 400 : 401);
+    // Send response
     res.status(statusCode).json({
       success: false,
-      error: {
-        message,
-        statusCode
-      }
+      error: error.message || 'Authentication error',
+      code: error.code
     });
-  }
-
-  /**
-   * Extraer token del header Authorization
-   */
-  private extractToken(req: Request): string | null {
-    const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
-    
-    return null;
-  }
-
-  /**
-   * Extraer refresh token de cookie o body
-   */
-  private extractRefreshToken(req: Request): string | null {
-    // Primero intentar desde cookie
-    if (req.cookies && req.cookies.refreshToken) {
-      return req.cookies.refreshToken;
-    }
-    
-    // Luego desde body
-    if (req.body && req.body.refreshToken) {
-      return req.body.refreshToken;
-    }
-    
-    // Finalmente desde header
-    const authHeader = req.headers['x-refresh-token'] as string;
-    if (authHeader) {
-      return authHeader;
-    }
-    
-    return null;
   }
 }

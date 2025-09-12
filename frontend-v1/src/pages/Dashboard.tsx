@@ -9,6 +9,38 @@ function Dashboard() {
   // Cards de módulos con navegación
   const modules = [
     { 
+      title: 'Usuarios',
+      description: 'Gestión de usuarios del sistema',
+      value: '2',
+      label: 'Usuarios activos',
+      path: '/users',
+      color: '#0288d1'
+    },
+    { 
+      title: 'Roles',
+      description: 'Administración de roles y permisos',
+      value: '3',
+      label: 'Roles configurados',
+      path: '/roles',
+      color: '#00796b'
+    },
+    { 
+      title: 'Empresas',
+      description: 'Gestión multi-empresa',
+      value: '1',
+      label: 'Empresas activas',
+      path: '/companies',
+      color: '#5e35b1'
+    },
+    { 
+      title: 'Feature Flags',
+      description: 'Control de funcionalidades',
+      value: '5',
+      label: 'Flags activos',
+      path: '/feature-flags',
+      color: '#d32f2f'
+    },
+    { 
       title: 'Omnicanalidad',
       description: 'Gestiona todos tus canales de comunicación',
       value: '0',
@@ -65,7 +97,10 @@ function Dashboard() {
                   boxShadow: 3
                 }
               }}
-              onClick={() => navigate(module.path)}
+              onClick={() => {
+                console.log('📍 Dashboard: Navigating to:', module.path)
+                navigate(module.path)
+              }}
             >
               <CardContent>
                 <Typography 

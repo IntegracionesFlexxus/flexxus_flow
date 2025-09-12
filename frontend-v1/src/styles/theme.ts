@@ -1,7 +1,8 @@
 import { createTheme } from '@mui/material/styles'
+import { Z_INDEX, TRANSITIONS, SHADOWS, RADIUS } from './constants'
 
-// Configuración de tema para MVP - Nivel 1
-// TODO: En Nivel 2 agregar modo oscuro y más variantes de color
+// Configuración de tema unificado con sistemas completos
+// Incluye z-index, transiciones, sombras y más
 
 // Paleta de colores personalizada
 const palette = {
@@ -96,14 +97,40 @@ const typography = {
 // Espaciado base
 const spacing = 8
 
+// Sistema de z-index personalizado
+const zIndex = {
+  ...Z_INDEX,
+  mobileStepper: Z_INDEX.fixed,
+  fab: Z_INDEX.fixed,
+  speedDial: Z_INDEX.fixed,
+  appBar: Z_INDEX.fixed,
+  drawer: Z_INDEX.drawer,
+  modal: Z_INDEX.modal,
+  snackbar: Z_INDEX.snackbar,
+  tooltip: Z_INDEX.tooltip,
+}
+
+// Sistema de transiciones
+const transitions = {
+  easing: {
+    easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    easeOut: 'cubic-bezier(0.0, 0, 0.2, 1)',
+    easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
+    sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
+  },
+  duration: TRANSITIONS,
+}
+
 // Tema principal
 export const theme = createTheme({
   palette,
   typography,
   spacing,
   shape: {
-    borderRadius: 8,
+    borderRadius: RADIUS.md,
   },
+  zIndex,
+  transitions,
   components: {
     // Personalización de Button
     MuiButton: {
@@ -207,12 +234,19 @@ export const theme = createTheme({
   },
 })
 
-// Exportar colores y breakpoints para uso directo
+// Exportar sistemas para uso directo
 export const colors = palette
 export const breakpoints = theme.breakpoints
+export const shadows = SHADOWS
+export const radius = RADIUS
 
-// TODO: En Nivel 2 agregar:
-// - Tema oscuro
-// - Temas personalizados por módulo
-// - Variables CSS custom properties
-// - Animaciones y transiciones
+// Helpers para uso consistente
+export const getSpacing = (value: number) => theme.spacing(value)
+export const getColor = (path: string) => {
+  const keys = path.split('.')
+  let result: any = theme.palette
+  for (const key of keys) {
+    result = result[key]
+  }
+  return result
+}

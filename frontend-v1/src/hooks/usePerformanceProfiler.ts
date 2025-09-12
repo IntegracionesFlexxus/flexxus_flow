@@ -25,7 +25,7 @@ export function usePerformanceProfiler(
 ) {
   const {
     componentName = 'Component',
-    logToConsole = process.env.NODE_ENV === 'development',
+    logToConsole = import.meta.env.DEV,
     warnThreshold = 16.67 // ~60 FPS
   } = options;
 
@@ -156,7 +156,7 @@ export function useAsyncPerformance() {
         return updated;
       });
       
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log(`⏱️ ${operationName}: ${duration.toFixed(2)}ms`);
       }
       
@@ -174,7 +174,7 @@ export function useAsyncPerformance() {
       const result = await asyncFn();
       const duration = performance.now() - startTime;
       
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log(`⏱️ ${operationName}: ${duration.toFixed(2)}ms`);
       }
       
@@ -248,7 +248,7 @@ export function useMemoryMonitor(componentName = 'Component') {
   // Check for leaks on unmount
   useEffect(() => {
     return () => {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         if (listenerCount.current > 0) {
           console.warn(
             `⚠️ ${componentName} has ${listenerCount.current} active event listeners on unmount`

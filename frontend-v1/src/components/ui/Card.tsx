@@ -188,4 +188,19 @@ export const InfoCard: React.FC<CardProps> = (props) => (
   />
 )
 
+// Re-exportar componentes de MUI para uso consistente
+export { CardContent, CardHeader, CardActions, CardMedia } from '@mui/material'
+
+export const CardTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Typography variant="h6" component="div">
+    {children}
+  </Typography>
+)
+
+export const CardDescription: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Typography variant="body2" color="text.secondary">
+    {children}
+  </Typography>
+)
+
 export default Card

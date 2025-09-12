@@ -22,7 +22,7 @@ class EventBus {
   private subscriptions: Map<string, EventSubscription[]> = new Map();
   private eventHistory: Map<string, any[]> = new Map();
   private maxHistorySize = 100;
-  private debug = process.env.NODE_ENV === 'development';
+  private debug = import.meta.env.DEV;
   private subscriptionIdCounter = 0;
 
   private constructor() {

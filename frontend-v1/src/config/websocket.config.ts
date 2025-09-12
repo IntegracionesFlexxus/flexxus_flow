@@ -1,10 +1,10 @@
-// Configuración de WebSocket - MVP Nivel 1
-// TODO: En Nivel 2 mover a variables de entorno y agregar configuración avanzada
+// Configuración de WebSocket
+// Usar variables VITE_ en producción para configuración dinámica
 
 export const WEBSOCKET_CONFIG = {
   // URL base del servidor WebSocket
-  // TODO: Mover a .env en Nivel 2
-  url: process.env.REACT_APP_WS_URL || 'ws://localhost:3001',
+  // Usar VITE_WS_URL en producción
+  url: import.meta.env.VITE_WS_URL || 'ws://localhost:3001',
   
   // Configuración de reconexión
   reconnect: {
@@ -27,7 +27,7 @@ export const WEBSOCKET_CONFIG = {
   messageQueue: {
     enabled: true,
     maxSize: 100, // Máximo de mensajes en cola
-    persistQueue: false // TODO: En Nivel 2 persistir en localStorage
+    persistQueue: false // [ROADMAP] Persistencia planeada para v2.0
   },
   
   // Timeouts
@@ -38,14 +38,14 @@ export const WEBSOCKET_CONFIG = {
   },
   
   // Configuración de debug
-  debug: process.env.NODE_ENV === 'development',
+  debug: import.meta.env.DEV,
   
   // Protocolos WebSocket
   protocols: [],
   
   // Opciones de compresión
   compression: {
-    enabled: false, // TODO: Habilitar en Nivel 2
+    enabled: false, // [ROADMAP] Compresión WebSocket en v2.0
     threshold: 1024 // bytes
   }
 };
@@ -161,7 +161,7 @@ export const RETRY_CONFIG = {
 
 // Configuración de logging
 export const LOGGING_CONFIG = {
-  enabled: process.env.NODE_ENV === 'development',
+  enabled: import.meta.env.DEV,
   level: 'debug', // 'error' | 'warn' | 'info' | 'debug'
   includeTimestamp: true,
   includeStackTrace: false

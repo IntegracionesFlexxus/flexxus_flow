@@ -149,7 +149,7 @@ const UserMenu: React.FC = () => {
             </Avatar>
             <Box>
               <Typography variant="body1" fontWeight={600}>
-                {user.firstName} {user.lastName}
+                {user.firstName || ''} {user.lastName || ''}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {user.email}

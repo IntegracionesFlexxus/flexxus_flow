@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// Configuración optimizada para performance - MVP Nivel 1
-// TODO: En Nivel 2 agregar PWA, compression, y más optimizaciones
+// Configuración optimizada para performance - MVP
+// [ROADMAP] PWA y optimizaciones avanzadas planeadas para v2.0
 
 export default defineConfig({
   plugins: [react()],
@@ -60,11 +60,11 @@ export default defineConfig({
   
   // Server config
   server: {
-    port: 3000,
+    port: 5173,
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001', // TODO: Mover a .env en Nivel 2
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true,
         secure: false
       }

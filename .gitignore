@@ -175,5 +175,26 @@ dist/
 *.temp
 .tmp/
 
+# Backup files - NO PERMITIDOS
+*.backup
+*.backup.*
+*.old
+*.old.*
+*.new
+*.new.*
+*.refactored
+*.refactored.*
+*.orig
+*_backup
+*_old
+*_new
+.cleanup-backup/
+
 # Claude Code settings
 .claude/
+
+# Documentation folder
+Documentacion/
+
+# Old and obsolete files
+OLD/

@@ -1,7 +1,5 @@
 // User Service Interface - Sprint 1
-
-import { User } from '../types/auth.types';
-
+import { User } from '@/modules/auth/types/auth.types';
 export interface IUserService {
   getUserById(id: string): Promise<User | null>;
   getUserByEmail(email: string): Promise<User | null>;

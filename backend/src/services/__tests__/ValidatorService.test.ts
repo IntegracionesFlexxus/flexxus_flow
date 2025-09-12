@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { ValidatorService, ValidationError } from '../ValidatorService';
+import { ValidatorService, ValidationError } from '@/services/ValidatorService';
 
 describe('ValidatorService', () => {
   let validatorService: ValidatorService;

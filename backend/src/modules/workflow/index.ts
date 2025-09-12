@@ -1,10 +1,27 @@
-import { Router } from 'express';
+/**
+ * Workflow Module - MVP Mock Implementation
+ * 
+ * ESTADO: Mock funcional para desarrollo
+ * VERSIÓN: 0.1 (Mock)
+ * PRODUCCIÓN: Planeado para v2.0
+ * 
+ * ⚠️ IMPORTANTE: Este módulo es intencionalmente mock para el MVP.
+ * Permite desarrollo frontend sin bloqueos.
+ * 
+ * Endpoints disponibles:
+ * - GET /workflows - Lista workflows de ejemplo
+ * - POST /workflows/:id/execute - Simula ejecución
+ * - GET /executions/:id/status - Retorna status mock
+ * 
+ * Ver MODULE_STATUS.md para más detalles.
+ */
 
+import { Router } from 'express';
 const router = Router();
 
 // Rutas básicas de Workflow
 router.get('/workflows', (req, res) => {
-  // TODO: Implementar listado real de workflows en Nivel 2
+  // [MOCK DATA] - Implementación real pendiente v2.0
   res.json({
     success: true,
     data: [
@@ -14,12 +31,10 @@ router.get('/workflows', (req, res) => {
     ]
   });
 });
-
 router.post('/workflows/:id/execute', (req, res) => {
-  // TODO: Implementar ejecución real de workflow en Nivel 2
+  // [MOCK DATA] - Ejecución real pendiente v2.0
   const { id } = req.params;
   const { data } = req.body;
-  
   res.json({
     success: true,
     message: 'Workflow iniciado (mock)',
@@ -31,11 +46,9 @@ router.post('/workflows/:id/execute', (req, res) => {
     }
   });
 });
-
 router.get('/executions/:id/status', (req, res) => {
-  // TODO: Implementar seguimiento real de ejecución en Nivel 2
+  // [MOCK DATA] - Seguimiento real pendiente v2.0
   const { id } = req.params;
-  
   res.json({
     success: true,
     data: {
@@ -46,7 +59,6 @@ router.get('/executions/:id/status', (req, res) => {
     }
   });
 });
-
 // Endpoint de status del módulo
 router.get('/status', (req, res) => {
   res.json({ 
@@ -55,5 +67,4 @@ router.get('/status', (req, res) => {
     message: 'Módulo Workflow funcionando'
   });
 });
-
 export default router;

@@ -222,7 +222,7 @@ export function LoginForm() {
       </Box>
 
       {/* Demo credentials hint - Solo para desarrollo */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.DEV && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="caption">
             <strong>Demo:</strong> admin@flexxus.com / admin123

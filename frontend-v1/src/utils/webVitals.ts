@@ -233,7 +233,7 @@ export function useWebVitals() {
 
 // Reportar métricas a consola (desarrollo)
 export function logWebVitals() {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     onMetric((metric) => {
       const emoji = metric.rating === 'good' ? '✅' : 
                    metric.rating === 'needs-improvement' ? '⚠️' : '❌';

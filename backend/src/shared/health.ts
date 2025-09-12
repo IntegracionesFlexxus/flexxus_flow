@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { config } from '@config/environment';
-
 const router = Router();
-
 // Función auxiliar para verificar conexión a BD
 async function checkDatabase(dbConfig: any): Promise<{ status: string; responseTime: number }> {
   const startTime = Date.now();
@@ -15,7 +13,6 @@ async function checkDatabase(dbConfig: any): Promise<{ status: string; responseT
     password: dbConfig.password,
     connectionTimeoutMillis: 3000
   });
-  
   try {
     await pool.query('SELECT 1');
     await pool.end();
@@ -31,7 +28,6 @@ async function checkDatabase(dbConfig: any): Promise<{ status: string; responseT
     };
   }
 }
-
 // Health check básico
 router.get('/', async (req: Request, res: Response) => {
   const health = {
@@ -42,7 +38,6 @@ router.get('/', async (req: Request, res: Response) => {
       server: 'healthy'
     } as any
   };
-  
   // TODO: Descomentar cuando las BDs estén configuradas en Nivel 2
   // Solo verificar si las credenciales no son placeholders
   /*
@@ -54,7 +49,6 @@ router.get('/', async (req: Request, res: Response) => {
       { name: 'workflow_db', config: config.database.workflow },
       { name: 'analytics_db', config: config.database.analytics }
     ];
-    
     for (const db of databases) {
       const result = await checkDatabase(db.config);
       health.services[db.name] = result.status;
@@ -64,11 +58,9 @@ router.get('/', async (req: Request, res: Response) => {
     }
   }
   */
-  
   const statusCode = health.status === 'healthy' ? 200 : 503;
   res.status(statusCode).json(health);
 });
-
 // Readiness check
 router.get('/ready', (req: Request, res: Response) => {
   // Verificación simple de que el servidor está listo
@@ -78,7 +70,6 @@ router.get('/ready', (req: Request, res: Response) => {
     version: '1.0.0'
   });
 });
-
 // Liveness check
 router.get('/live', (req: Request, res: Response) => {
   // Verificación de que el proceso está vivo
@@ -88,5 +79,4 @@ router.get('/live', (req: Request, res: Response) => {
     pid: process.pid
   });
 });
-
 export { router as healthRouter };

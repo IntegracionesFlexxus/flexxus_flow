@@ -27,8 +27,19 @@
       "@/*": ["*"],
       "@components/*": ["components/*"],
       "@pages/*": ["pages/*"],
+      "@modules/*": ["modules/*"],
       "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"]
+      "@shared/*": ["shared/*"],
+      "@utils/*": ["utils/*"],
+      "@hooks/*": ["hooks/*"],
+      "@stores/*": ["stores/*"],
+      "@styles/*": ["styles/*"],
+      "@assets/*": ["assets/*"],
+      "@config/*": ["config/*"],
+      "@navigation/*": ["navigation/*"],
+      "@loading-states/*": ["loading-states/*"],
+      "@error-handling/*": ["error-handling/*"],
+      "@notifications/*": ["notifications/*"]
     }
   },
   "include": ["src"],

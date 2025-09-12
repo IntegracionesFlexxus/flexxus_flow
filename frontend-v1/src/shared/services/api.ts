@@ -73,7 +73,12 @@ api.interceptors.response.use(
     const { addNotification } = getUIState()
     const { logout } = getAuthState()
     
-    // Log detallado del error
+    // Ignorar errores de solicitudes canceladas
+    if (error.code === 'ERR_CANCELED' || error.message === 'canceled') {
+      return Promise.reject(error)
+    }
+    
+    // Log detallado del error (solo si no es cancelado)
     if (import.meta.env.DEV) {
       console.error('❌ Response Error:', {
         url: error.config?.url,

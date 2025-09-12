@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
-import { CacheService } from '../CacheService';
+import { CacheService } from '@/services/CacheService';
 import { IConfig } from '@interfaces/IConfig';
 import { ILoggerService } from '@interfaces/IServices';
 import { TYPES } from '@container/types';

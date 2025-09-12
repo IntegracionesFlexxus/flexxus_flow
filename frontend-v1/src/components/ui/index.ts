@@ -13,9 +13,11 @@ export {
 // Inputs
 export { 
   Input, 
-  PasswordInput, 
-  SearchInput 
+  PasswordInput
 } from './Input'
+
+// Search Input Component
+export { SearchInput, useSearchWithHistory } from './SearchInput'
 
 // Cards
 export { 
@@ -30,6 +32,28 @@ export {
   ConfirmModal, 
   InfoModal 
 } from './Modal'
+
+// Confirm Dialog Component
+export { ConfirmDialog, useConfirmDialog } from './ConfirmDialog'
+
+// Data Table Component
+export { DataTable } from './DataTable'
+export type { DataTableColumn, DataTableProps } from './DataTable'
+
+// Color Picker Component (already exists)
+export { ColorPicker } from './ColorPicker'
+
+// Empty State Component
+export { EmptyState, EmptyStatePresets } from './EmptyState'
+export type { EmptyStateProps, EmptyStateAction } from './EmptyState'
+
+// Status Badge Component
+export { StatusBadge, StatusUtils } from './StatusBadge'
+export type { StatusBadgeProps, StatusType, StatusConfig } from './StatusBadge'
+
+// File Upload Component
+export { FileUpload } from './FileUpload'
+export type { FileUploadProps, FileWithProgress } from './FileUpload'
 
 // Loading
 export {

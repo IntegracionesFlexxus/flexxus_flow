@@ -1,27 +1,70 @@
-import { Router } from 'express';
+/**
+ * Analytics Module - MVP Mock Implementation
+ * 
+ * ESTADO: Mock funcional para desarrollo
+ * VERSIÓN: 0.1 (Mock)
+ * PRODUCCIÓN: Planeado para v1.5
+ * 
+ * ⚠️ IMPORTANTE: Este módulo es intencionalmente mock para el MVP.
+ * Retorna métricas de ejemplo para desarrollo y demos.
+ * 
+ * Endpoints disponibles:
+ * - GET /metrics - Métricas generales mock
+ * - GET /reports/:type - Reportes por tipo mock
+ * - GET /dashboard - Widgets de dashboard mock
+ * 
+ * Ver MODULE_STATUS.md para más detalles.
+ */
 
+import { Router } from 'express';
 const router = Router();
 
 // Rutas básicas de Analytics
 router.get('/metrics', (req, res) => {
-  // TODO: Implementar métricas reales desde BD en Nivel 2
+  // [MOCK DATA] - Métricas reales pendientes v1.5
+  const now = new Date();
   res.json({
     success: true,
     data: {
-      totalMessages: 1543,
-      totalContacts: 287,
-      activeWorkflows: 12,
-      avgResponseTime: '2.3 min',
-      satisfactionScore: 4.5
+      period: {
+        start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+        end: now.toISOString()
+      },
+      messages: {
+        total: 1543,
+        byChannel: {
+          whatsapp: 892,
+          email: 451,
+          webchat: 200
+        },
+        avgResponseTime: 138, // segundos
+        firstResponseTime: 45 // segundos
+      },
+      contacts: {
+        total: 287,
+        active: 203,
+        new: 34
+      },
+      workflows: {
+        active: 12,
+        completed: 89,
+        failed: 3
+      },
+      satisfaction: {
+        score: 4.5,
+        responses: 145
+      }
+    },
+    metadata: {
+      isDemo: true,
+      generatedAt: now.toISOString()
     }
   });
 });
-
 router.get('/reports/:type', (req, res) => {
-  // TODO: Implementar generación real de reportes en Nivel 2
+  // [MOCK DATA] - Reportes reales pendientes v1.5
   const { type } = req.params;
   const { startDate, endDate } = req.query;
-  
   res.json({
     success: true,
     data: {
@@ -35,9 +78,8 @@ router.get('/reports/:type', (req, res) => {
     }
   });
 });
-
 router.get('/dashboard', (req, res) => {
-  // TODO: Implementar datos reales de dashboard en Nivel 2
+  // [MOCK DATA] - Dashboard real pendiente v1.5
   res.json({
     success: true,
     data: {
@@ -49,7 +91,6 @@ router.get('/dashboard', (req, res) => {
     }
   });
 });
-
 // Endpoint de status del módulo
 router.get('/status', (req, res) => {
   res.json({ 
@@ -58,5 +99,4 @@ router.get('/status', (req, res) => {
     message: 'Módulo Analytics funcionando'
   });
 });
-
 export default router;

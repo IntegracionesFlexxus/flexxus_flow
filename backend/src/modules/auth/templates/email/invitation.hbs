@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitación a {{companyName}}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f4f4;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .header .subtitle {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .company-logo {
+            margin-bottom: 20px;
+        }
+        
+        .company-logo img {
+            max-height: 60px;
+            width: auto;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-section h2 {
+            color: #2d3748;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .invitation-details {
+            background-color: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .invitation-details h3 {
+            margin: 0 0 15px 0;
+            color: #2d3748;
+            font-size: 18px;
+        }
+        
+        .detail-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 100px;
+        }
+        
+        .detail-value {
+            color: #2d3748;
+        }
+        
+        .personal-message {
+            background-color: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .personal-message h4 {
+            margin: 0 0 10px 0;
+            color: #2c7a7b;
+            font-size: 16px;
+        }
+        
+        .personal-message p {
+            margin: 0;
+            color: #2d3748;
+            font-style: italic;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .alternative-link {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .alternative-link p {
+            margin: 0 0 10px 0;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        
+        .alternative-link a {
+            color: #667eea;
+            word-break: break-all;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .expiration-notice {
+            background-color: #fff5f5;
+            border-left: 4px solid #f56565;
+            padding: 15px;
+            margin: 30px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .expiration-notice .icon {
+            display: inline-block;
+            margin-right: 8px;
+            color: #e53e3e;
+        }
+        
+        .security-notice {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 30px 0;
+        }
+        
+        .security-notice h4 {
+            margin: 0 0 10px 0;
+            color: #0c4a6e;
+            font-size: 14px;
+        }
+        
+        .security-notice ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #0369a1;
+            font-size: 13px;
+        }
+        
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .footer-logo {
+            margin-bottom: 20px;
+        }
+        
+        .footer p {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #a0aec0;
+            text-decoration: none;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                box-shadow: none;
+            }
+            
+            .header, .content, .footer {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .cta-button {
+                display: block;
+                margin: 20px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {{#if companyLogo}}
+            <div class="company-logo">
+                <img src="{{companyLogo}}" alt="{{companyName}} Logo">
+            </div>
+            {{/if}}
+            <h1>¡Estás invitado!</h1>
+            <p class="subtitle">Te han invitado a unirte a {{companyName}}</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <div class="welcome-section">
+                <h2>Hola{{#if recipientName}}, {{recipientName}}{{/if}}!</h2>
+                <p><strong>{{inviterName}}</strong> te ha invitado a unirte al equipo de <strong>{{companyName}}</strong> en FlexxusFlow.</p>
+            </div>
+            
+            <!-- Invitation Details -->
+            <div class="invitation-details">
+                <h3>📋 Detalles de la invitación</h3>
+                <div class="detail-item">
+                    <span class="detail-label">Empresa:</span>
+                    <span class="detail-value">{{companyName}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Rol:</span>
+                    <span class="detail-value">{{roleName}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Invitado por:</span>
+                    <span class="detail-value">{{inviterName}} ({{inviterEmail}})</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Válida hasta:</span>
+                    <span class="detail-value">{{formatDate expiresAt}}</span>
+                </div>
+            </div>
+            
+            {{#if personalMessage}}
+            <!-- Personal Message -->
+            <div class="personal-message">
+                <h4>💌 Mensaje personal</h4>
+                <p>"{{personalMessage}}"</p>
+            </div>
+            {{/if}}
+            
+            <!-- Call to Action -->
+            <div class="cta-section">
+                <a href="{{invitationUrl}}" class="cta-button">
+                    🚀 Aceptar Invitación
+                </a>
+                <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                    Haz clic en el botón para crear tu cuenta y unirte al equipo
+                </p>
+            </div>
+            
+            <!-- Alternative Link -->
+            <div class="alternative-link">
+                <p><strong>¿No puedes hacer clic en el botón?</strong></p>
+                <p>Copia y pega este enlace en tu navegador:</p>
+                <a href="{{invitationUrl}}">{{invitationUrl}}</a>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Expiration Notice -->
+            <div class="expiration-notice">
+                <p><span class="icon">⏰</span> <strong>Importante:</strong> Esta invitación expira el <strong>{{formatDate expiresAt}}</strong>. Asegúrate de aceptarla antes de esa fecha.</p>
+            </div>
+            
+            <!-- Security Notice -->
+            <div class="security-notice">
+                <h4>🔒 Nota de seguridad</h4>
+                <ul>
+                    <li>Esta invitación es personal e intransferible</li>
+                    <li>Si no esperabas este email, puedes ignorarlo de forma segura</li>
+                    <li>Tu información está protegida y no será compartida</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-logo">
+                <h3 style="margin: 0; color: #667eea;">FlexxusFlow</h3>
+            </div>
+            <p>La plataforma todo-en-uno para la gestión empresarial</p>
+            <div class="social-links">
+                <a href="#">LinkedIn</a>
+                <a href="#">Twitter</a>
+                <a href="{{helpCenterUrl}}">Centro de Ayuda</a>
+            </div>
+            <div class="divider" style="background: linear-gradient(to right, transparent, #4a5568, transparent);"></div>
+            <p>&copy; {{year}} FlexxusFlow. Todos los derechos reservados.</p>
+            <p>
+                <a href="{{supportEmail}}">{{supportEmail}}</a> | 
+                <a href="#">Política de Privacidad</a> | 
+                <a href="#">Términos de Servicio</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

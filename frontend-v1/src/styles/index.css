@@ -1,36 +1,16 @@
-/* Estilos globales básicos para MVP */
-/* TODO: En Nivel 2 migrar a CSS modules o styled-components */
+/* 
+ * Estilos globales mínimos
+ * La mayoría de estilos se manejan a través del theme de Material-UI
+ */
 
+/* Reset básico - complementa CssBaseline de MUI */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* Fuente monoespaciada para código */
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
-
-/* Clase utility básica */
-.text-center {
-  text-align: center;
-}
-
-.mt-2 {
-  margin-top: 16px;
-}
-
-.mb-2 {
-  margin-bottom: 16px;
-}
-
-/* TODO: En Nivel 2 agregar sistema de diseño completo */

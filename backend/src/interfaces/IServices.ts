@@ -1,13 +1,10 @@
 // Service interfaces following Single Responsibility Principle (SRP)
-
 import { Request, Response, NextFunction } from 'express';
-
 // Base service interface
 export interface IService {
   initialize(): Promise<void>;
   shutdown(): Promise<void>;
 }
-
 // Logger Service
 export interface ILoggerService extends IService {
   info(message: string, meta?: any): void;
@@ -16,7 +13,6 @@ export interface ILoggerService extends IService {
   debug(message: string, meta?: any): void;
   http(message: string, meta?: any): void;
 }
-
 // Cache Service
 export interface ICacheService extends IService {
   get<T>(key: string): Promise<T | null>;
@@ -26,7 +22,6 @@ export interface ICacheService extends IService {
   exists(key: string): Promise<boolean>;
   getTTL(key: string): Promise<number>;
 }
-
 // Event Bus Service
 export interface IEventBusService extends IService {
   emit(event: string, data: any): void;
@@ -35,7 +30,6 @@ export interface IEventBusService extends IService {
   once(event: string, handler: Function): void;
   removeAllListeners(event?: string): void;
 }
-
 // Validator Service
 export interface IValidatorService {
   isEmail(email: string): boolean;
@@ -44,7 +38,6 @@ export interface IValidatorService {
   required<T>(value: T, fieldName: string): T;
   validateSchema(data: any, schema: any): { isValid: boolean; errors?: string[] };
 }
-
 // Auth Service
 export interface IAuthService extends IService {
   login(email: string, password: string): Promise<IAuthResult>;
@@ -55,7 +48,6 @@ export interface IAuthService extends IService {
   hashPassword(password: string): Promise<string>;
   comparePassword(password: string, hash: string): Promise<boolean>;
 }
-
 // User Service
 export interface IUserService extends IService {
   findById(id: string): Promise<IUser | null>;
@@ -65,7 +57,6 @@ export interface IUserService extends IService {
   delete(id: string): Promise<boolean>;
   list(filters: IUserFilters, pagination: IPagination): Promise<IPaginatedResult<IUser>>;
 }
-
 // Company Service
 export interface ICompanyService extends IService {
   findById(id: string): Promise<ICompany | null>;
@@ -76,7 +67,6 @@ export interface ICompanyService extends IService {
   addUser(companyId: string, userId: string, role: string): Promise<void>;
   removeUser(companyId: string, userId: string): Promise<void>;
 }
-
 // Health Service
 export interface IHealthService extends IService {
   checkLiveness(): Promise<IHealthStatus>;
@@ -86,7 +76,6 @@ export interface IHealthService extends IService {
   getMetrics(): Promise<IHealthMetrics>;
   getHistory(limit?: number): Promise<IHealthStatus[]>;
 }
-
 // Error Handler Service
 export interface IErrorHandlerService {
   handleError(error: Error, req?: Request, res?: Response): void;
@@ -94,7 +83,6 @@ export interface IErrorHandlerService {
   isOperationalError(error: Error): boolean;
   logError(error: Error, context?: any): void;
 }
-
 // DTOs and supporting interfaces
 export interface IUser {
   id: string;
@@ -105,25 +93,21 @@ export interface IUser {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface IUserRegistration {
   email: string;
   password: string;
   name: string;
   role?: string;
 }
-
 export interface IUserCreation extends IUserRegistration {
   companyId?: string;
 }
-
 export interface IUserFilters {
   role?: string;
   isActive?: boolean;
   companyId?: string;
   search?: string;
 }
-
 export interface ICompany {
   id: string;
   name: string;
@@ -132,25 +116,21 @@ export interface ICompany {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface ICompanyCreation {
   name: string;
   description?: string;
   ownerId: string;
 }
-
 export interface ICompanyFilters {
   isActive?: boolean;
   search?: string;
 }
-
 export interface IAuthResult {
   user: IUser;
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
 }
-
 export interface ITokenPayload {
   userId: string;
   email: string;
@@ -158,14 +138,12 @@ export interface ITokenPayload {
   iat?: number;
   exp?: number;
 }
-
 export interface IPagination {
   page: number;
   limit: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
-
 export interface IPaginatedResult<T> {
   data: T[];
   total: number;
@@ -174,14 +152,12 @@ export interface IPaginatedResult<T> {
   hasNext: boolean;
   hasPrev: boolean;
 }
-
 export interface IHealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
   timestamp: Date;
   responseTime?: number;
   details?: any;
 }
-
 export interface IHealthMetrics {
   uptime: number;
   totalChecks: number;

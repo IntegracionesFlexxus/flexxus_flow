@@ -47,19 +47,19 @@ export class UserService implements IUserService {
       });
       return {
         users: users.map(user => ({
-          id: user.id,
+          id: user.userId,  // Corregido: usar userId que viene del repository
           email: user.email,
-          firstName: user.first_name || '',
-          lastName: user.last_name || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
           role: user.role || 'company_user',
           status: user.status || 'active',
           avatar: null,
           phone: null,
           isActive: user.status === 'active',
-          emailVerified: user.email_verified || false,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at,
-          lastLoginAt: user.last_login_at || null
+          emailVerified: user.emailVerified || false,
+          createdAt: user.joinedAt,
+          updatedAt: user.joinedAt,  // No tenemos updatedAt, usamos joinedAt
+          lastLoginAt: user.lastActiveAt || null
         })),
         total
       };
@@ -256,6 +256,14 @@ export class UserService implements IUserService {
     }
   }
   async deleteUser(userId: string, companyId: string): Promise<boolean> {
+    // Log detallado al inicio del proceso de eliminación
+    this.logger.info('[UserService.deleteUser] START', {
+      userId,
+      companyId,
+      timestamp: new Date().toISOString(),
+      operation: 'DELETE_USER'
+    });
+
     console.log('[UserService.deleteUser] START:', {
       userId,
       companyId,
@@ -264,53 +272,117 @@ export class UserService implements IUserService {
 
     try {
       // Verify user belongs to company
+      this.logger.debug('[UserService.deleteUser] Checking if user belongs to company', {
+        userId,
+        companyId
+      });
       console.log('[UserService.deleteUser] Checking if user belongs to company...');
       const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
 
+      this.logger.debug('[UserService.deleteUser] User company check result', {
+        userId,
+        companyId,
+        userCompany,
+        exists: !!userCompany,
+        roleId: userCompany?.roleId,
+        role: userCompany?.role
+      });
       console.log('[UserService.deleteUser] User company check result:', {
         userCompany,
         exists: !!userCompany
       });
 
       if (!userCompany) {
+        this.logger.warn('[UserService.deleteUser] User does not belong to company', {
+          userId,
+          companyId,
+          message: 'User not found in company or already removed'
+        });
         console.log('[UserService.deleteUser] User does not belong to company, returning false');
         return false;
       }
 
       // Soft delete user
+      this.logger.debug('[UserService.deleteUser] Starting soft delete', {
+        userId,
+        companyId,
+        action: 'SOFT_DELETE'
+      });
       console.log('[UserService.deleteUser] Soft deleting user...');
+
       await this.userRepository.update(userId, {
         status: 'inactive',
         deleted_at: new Date(),
         updated_at: new Date()
       });
+
+      this.logger.info('[UserService.deleteUser] User soft deleted successfully', {
+        userId,
+        companyId,
+        status: 'inactive',
+        deletedAt: new Date().toISOString()
+      });
       console.log('[UserService.deleteUser] User soft deleted successfully');
 
       // Invalidate all user sessions
-      console.log('[UserService.deleteUser] Invalidating user sessions...');
-      await this.sessionRepository.invalidateUserSessions(userId);
-      console.log('[UserService.deleteUser] Sessions invalidated');
-
-      this.logger.info('User deleted', {
+      this.logger.debug('[UserService.deleteUser] Invalidating user sessions', {
         userId,
-        companyId
+        action: 'INVALIDATE_SESSIONS'
+      });
+      console.log('[UserService.deleteUser] Invalidating user sessions...');
+
+      let invalidatedCount = 0;
+      try {
+        // Check if sessionRepository exists
+        if (!this.sessionRepository) {
+          this.logger.warn('[UserService.deleteUser] SessionRepository not available, skipping session invalidation');
+          console.log('[UserService.deleteUser] SessionRepository not available');
+        } else {
+          invalidatedCount = await this.sessionRepository.invalidateUserSessions(userId);
+          this.logger.info('[UserService.deleteUser] Sessions invalidated', {
+            userId,
+            companyId,
+            invalidatedSessionsCount: invalidatedCount
+          });
+          console.log('[UserService.deleteUser] Sessions invalidated:', invalidatedCount);
+        }
+      } catch (sessionError) {
+        // Log the error but don't fail the deletion
+        this.logger.error('[UserService.deleteUser] Error invalidating sessions (non-fatal)', {
+          userId,
+          error: sessionError instanceof Error ? sessionError.message : String(sessionError),
+          stack: sessionError instanceof Error ? sessionError.stack : undefined
+        });
+        console.error('[UserService.deleteUser] Non-fatal error invalidating sessions:', sessionError);
+        // Continue with the deletion process
+      }
+
+      this.logger.info('[UserService.deleteUser] User deletion completed successfully', {
+        userId,
+        companyId,
+        timestamp: new Date().toISOString(),
+        result: 'SUCCESS',
+        operations: ['VERIFY_USER_COMPANY', 'SOFT_DELETE', 'INVALIDATE_SESSIONS']
       });
 
       console.log('[UserService.deleteUser] COMPLETED SUCCESSFULLY');
       return true;
     } catch (error) {
-      console.error('[UserService.deleteUser] ERROR:', {
-        error: error instanceof Error ? error.message : error,
+      const errorDetails = {
+        userId,
+        companyId,
+        error: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorCode: (error as any).code,
         stack: error instanceof Error ? error.stack : undefined,
-        userId,
-        companyId
-      });
+        timestamp: new Date().toISOString(),
+        operation: 'DELETE_USER_FAILED'
+      };
 
-      this.logger.error('Error deleting user', {
-        error: error.message,
-        userId,
-        companyId
-      });
+      console.error('[UserService.deleteUser] ERROR:', errorDetails);
+
+      this.logger.error('[UserService.deleteUser] Error deleting user', errorDetails);
+
       throw error;
     }
   }

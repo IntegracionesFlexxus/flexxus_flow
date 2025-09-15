@@ -155,8 +155,9 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query, [sessionId]);
+      const affectedRows = result?.rowCount || (result as any)?.affectedRows || 0;
 
-      if (!result || result.length === 0) {
+      if (affectedRows === 0) {
         this.logger.warn('No session found for last activity update', {
           sessionId
         });
@@ -180,8 +181,9 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query, [sessionId, tokenHash, refreshTokenHash]);
+      const affectedRows = result?.rowCount || (result as any)?.affectedRows || 0;
 
-      if (!result || result.length === 0) {
+      if (affectedRows === 0) {
         throw new Error('Session not found or inactive');
       }
 
@@ -203,8 +205,9 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query, [sessionId]);
+      const affectedRows = result?.rowCount || (result as any)?.affectedRows || 0;
 
-      if (!result || result.length === 0) {
+      if (affectedRows === 0) {
         this.logger.warn('No session found for invalidation', {
           sessionId
         });
@@ -220,8 +223,14 @@ export class SessionRepository implements ISessionRepository {
   }
 
   async invalidateUserSessions(userId: string, exceptSessionId?: string): Promise<number> {
+    this.logger.info('[SessionRepository.invalidateUserSessions] START', {
+      userId,
+      exceptSessionId,
+      timestamp: new Date().toISOString()
+    });
+
     let query = `
-      UPDATE user_sessions 
+      UPDATE user_sessions
       SET active = false, force_logout = true, updated_at = NOW()
       WHERE user_id = $1 AND active = true
     `;
@@ -235,15 +244,56 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query, params);
-      return result ? result.length : 0;
+
+      // Log the actual result structure for debugging
+      this.logger.debug('[SessionRepository.invalidateUserSessions] Query result', {
+        resultType: typeof result,
+        resultIsArray: Array.isArray(result),
+        resultKeys: result ? Object.keys(result) : null,
+        rowCount: (result as any)?.rowCount,
+        affectedRows: (result as any)?.affectedRows,
+        userId
+      });
+
+      // Handle different result formats
+      let affectedRows = 0;
+      if (result && typeof result === 'object') {
+        if ('rowCount' in result) {
+          affectedRows = (result as any).rowCount || 0;
+        } else if ('affectedRows' in result) {
+          affectedRows = (result as any).affectedRows || 0;
+        } else if (Array.isArray(result)) {
+          // Some drivers return array for UPDATE with RETURNING clause
+          affectedRows = result.length;
+        }
+      }
+
+      this.logger.info('[SessionRepository.invalidateUserSessions] Sessions invalidated', {
+        userId,
+        exceptSessionId,
+        affectedRows,
+        timestamp: new Date().toISOString()
+      });
+
+      return affectedRows;
 
     } catch (error) {
-      this.logger.error('User sessions invalidation failed', {
+      this.logger.error('[SessionRepository.invalidateUserSessions] User sessions invalidation failed', {
         error: error.message,
+        errorName: error.name,
+        errorCode: (error as any).code,
+        errorDetail: (error as any).detail,
+        errorHint: (error as any).hint,
+        query: query,
+        params: params,
+        stack: error.stack,
         userId,
-        exceptSessionId
+        exceptSessionId,
+        timestamp: new Date().toISOString()
       });
-      throw new Error('Database error during user sessions invalidation');
+
+      // Re-throw the original error with more context
+      throw error;
     }
   }
 
@@ -256,8 +306,9 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query, [sessionId]);
+      const affectedRows = result?.rowCount || (result as any)?.affectedRows || 0;
 
-      if (!result || result.length === 0) {
+      if (affectedRows === 0) {
         this.logger.warn('No session found for suspicious marking', {
           sessionId
         });
@@ -290,8 +341,9 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query, [sessionId]);
+      const affectedRows = result?.rowCount || (result as any)?.affectedRows || 0;
 
-      if (!result || result.length === 0) {
+      if (affectedRows === 0) {
         this.logger.warn('No session found for force logout', {
           sessionId
         });
@@ -325,7 +377,7 @@ export class SessionRepository implements ISessionRepository {
 
     try {
       const result = await this.db.query(query);
-      const cleanedCount = result ? result.length : 0;
+      const cleanedCount = result?.rowCount || (result as any)?.affectedRows || 0;
 
       if (cleanedCount > 0) {
         this.logger.info('Cleaned up expired sessions', {

@@ -25,6 +25,8 @@ export interface UserInCompany {
   email: string;
   firstName: string;
   lastName: string;
+  status: string;
+  emailVerified: boolean;
   role: string;
   roleId: string;
   joinedAt: Date;

@@ -286,6 +286,14 @@ export abstract class BaseRepository<T extends BaseEntity> {
     if (fields.length === 0) {
       return this.findById(id, options);
     }
+
+    this.logger?.debug(`[BaseRepository.update] START`, {
+      tableName: this.tableName,
+      id,
+      fields,
+      timestamp: new Date().toISOString()
+    });
+
     // Validate field names to prevent SQL injection
     this.validateFieldNames(fields);
     const setClause = fields.map((field, i) => `${field} = $${i + 2}`).join(', ');
@@ -301,10 +309,34 @@ export abstract class BaseRepository<T extends BaseEntity> {
       const results = await this.db.query<T>(query, values, options?.transaction);
       // Invalidate cache
       this.invalidateCache(id);
-      this.logger?.info(`Updated in ${this.tableName}`, { id, fields: fields.length });
+
+      if (results.length > 0) {
+        this.logger?.info(`[BaseRepository.update] Successfully updated`, {
+          tableName: this.tableName,
+          id,
+          fields: fields.length,
+          updatedFields: fields,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        this.logger?.warn(`[BaseRepository.update] No record found to update`, {
+          tableName: this.tableName,
+          id,
+          message: 'Record may be deleted or does not exist'
+        });
+      }
+
       return results.length > 0 ? results[0] : null;
     } catch (error) {
-      this.logger?.error(`Error updating in ${this.tableName}`, { id, data, error });
+      this.logger?.error(`[BaseRepository.update] Error updating`, {
+        tableName: this.tableName,
+        id,
+        fields,
+        error: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -320,6 +352,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
    */
   async softDelete(id: string, options?: QueryOptions): Promise<boolean> {
     this.validateParams([id]);
+
+    this.logger?.info(`[BaseRepository.softDelete] START`, {
+      tableName: this.tableName,
+      id,
+      timestamp: new Date().toISOString()
+    });
+
     const query = `
       UPDATE ${this.tableName}
       SET deleted_at = NOW(), updated_at = NOW()
@@ -329,14 +368,33 @@ export abstract class BaseRepository<T extends BaseEntity> {
     try {
       const results = await this.db.query(query, [id], options?.transaction);
       const success = results.length > 0;
+
       if (success) {
         // Invalidate cache
         this.invalidateCache(id);
-        this.logger?.info(`Soft deleted in ${this.tableName}`, { id });
+        this.logger?.info(`[BaseRepository.softDelete] Successfully soft deleted`, {
+          tableName: this.tableName,
+          id,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        this.logger?.warn(`[BaseRepository.softDelete] No record found to delete`, {
+          tableName: this.tableName,
+          id,
+          message: 'Record may already be deleted or does not exist'
+        });
       }
+
       return success;
     } catch (error) {
-      this.logger?.error(`Error soft deleting in ${this.tableName}`, { id, error });
+      this.logger?.error(`[BaseRepository.softDelete] Error soft deleting`, {
+        tableName: this.tableName,
+        id,
+        error: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

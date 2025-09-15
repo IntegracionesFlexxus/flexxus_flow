@@ -29,6 +29,8 @@ export interface UserInCompany {
   email: string;
   firstName: string;
   lastName: string;
+  status: string;
+  emailVerified: boolean;
   role: string;
   roleId: string;
   joinedAt: Date;
@@ -185,11 +187,13 @@ export class UserCompanyRepository implements IUserCompanyRepository {
     status?: string;
   }): Promise<UserInCompany[]> {
     let query = `
-      SELECT 
+      SELECT
         u.id as user_id,
         u.email,
         u.first_name,
         u.last_name,
+        u.status,
+        u.email_verified_at,
         uc.role,
         COALESCE(ur.role_id::text, uc.role) as role_id,
         uc.created_at as joined_at,
@@ -243,6 +247,8 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,
+      status: row.status,
+      emailVerified: !!row.email_verified_at,
       role: row.role,
       roleId: row.role_id,
       joinedAt: row.joined_at,
@@ -528,24 +534,62 @@ export class UserCompanyRepository implements IUserCompanyRepository {
    * Get user's role in a specific company
    */
   async getUserRoleInCompany(userId: string, companyId: string): Promise<{ roleId: string; role: string } | null> {
+    this.logger?.debug('[UserCompanyRepository.getUserRoleInCompany] START', {
+      userId,
+      companyId
+    });
+
     const query = `
-      SELECT 
+      SELECT
         COALESCE(ur.role_id::text, uc.role) as role_id,
         uc.role
       FROM ${this.tableName} uc
       LEFT JOIN user_roles ur ON ur.user_id = uc.user_id AND ur.company_id = uc.company_id
-      WHERE uc.user_id = $1 
-        AND uc.company_id = $2 
+      WHERE uc.user_id = $1
+        AND uc.company_id = $2
         AND uc.status = 'active'
     `;
-    const result = await this.db.query<{ role_id: string; role: string }>(query, [userId, companyId]);
-    if (result.length === 0) {
-      return null;
+
+    try {
+      const result = await this.db.query<{ role_id: string; role: string }>(query, [userId, companyId]);
+
+      this.logger?.debug('[UserCompanyRepository.getUserRoleInCompany] Query result', {
+        userId,
+        companyId,
+        resultCount: result.length,
+        result: result.length > 0 ? result[0] : null
+      });
+
+      if (result.length === 0) {
+        this.logger?.info('[UserCompanyRepository.getUserRoleInCompany] No active role found', {
+          userId,
+          companyId,
+          message: 'User not found in company or status is not active'
+        });
+        return null;
+      }
+
+      const roleData = {
+        roleId: result[0].role_id,
+        role: result[0].role
+      };
+
+      this.logger?.info('[UserCompanyRepository.getUserRoleInCompany] Role found', {
+        userId,
+        companyId,
+        roleData
+      });
+
+      return roleData;
+    } catch (error) {
+      this.logger?.error('[UserCompanyRepository.getUserRoleInCompany] ERROR', {
+        userId,
+        companyId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
     }
-    return {
-      roleId: result[0].role_id,
-      role: result[0].role
-    };
   }
   /**
    * Update user's role in a company

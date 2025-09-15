@@ -68,7 +68,15 @@ class UserService {
     const response = await api.get<PaginatedResponse<User>>(
       `${this.baseUrl}/company/${companyId}?${params.toString()}`
     );
-    
+
+    // Debug log para verificar la estructura de los usuarios
+    console.log('📊 [UserService.getCompanyUsers] Response data:', response.data);
+    if (response.data?.data?.users && Array.isArray(response.data.data.users)) {
+      console.log('👥 [UserService.getCompanyUsers] Primer usuario:', response.data.data.users[0]);
+      console.log('🔑 [UserService.getCompanyUsers] Propiedades del primer usuario:',
+        response.data.data.users[0] ? Object.keys(response.data.data.users[0]) : 'No hay usuarios');
+    }
+
     return response.data;
   }
 
@@ -131,7 +139,29 @@ class UserService {
    * Eliminar usuario
    */
   async deleteUser(userId: string): Promise<void> {
-    await api.delete(`${this.baseUrl}/${userId}`);
+    // Debug logs para identificar el problema
+    console.log('🗑️ [UserService.deleteUser] Usuario a eliminar - ID:', userId);
+    console.log('📍 [UserService.deleteUser] Base URL:', this.baseUrl);
+    console.log('🔗 [UserService.deleteUser] URL completa construida:', `${this.baseUrl}/${userId}`);
+    console.log('🔍 [UserService.deleteUser] Tipo de userId:', typeof userId);
+    console.log('📡 [UserService.deleteUser] API defaults baseURL:', api.defaults.baseURL);
+
+    // Validación del userId
+    if (!userId || userId === 'undefined') {
+      console.error('❌ [UserService.deleteUser] ERROR: userId es inválido:', userId);
+      throw new Error('User ID is required for deletion');
+    }
+
+    const deleteUrl = `${this.baseUrl}/${userId}`;
+    console.log('🚀 [UserService.deleteUser] Ejecutando DELETE a:', deleteUrl);
+
+    try {
+      await api.delete(deleteUrl);
+      console.log('✅ [UserService.deleteUser] Usuario eliminado exitosamente');
+    } catch (error) {
+      console.error('❌ [UserService.deleteUser] Error al eliminar usuario:', error);
+      throw error;
+    }
   }
 
   /**

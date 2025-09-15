@@ -200,8 +200,13 @@ export const UserManagement: React.FC = () => {
 
   // Mutations
   const deleteUserMutation = useMutation({
-    mutationFn: userService.deleteUser,
+    mutationFn: (userId: string) => {
+      console.log('🔥 [deleteUserMutation] Llamando userService.deleteUser con ID:', userId);
+      console.log('🔍 [deleteUserMutation] Tipo de userId:', typeof userId);
+      return userService.deleteUser(userId);
+    },
     onSuccess: () => {
+      console.log('✅ [deleteUserMutation] Usuario eliminado exitosamente');
       queryClient.invalidateQueries({ queryKey: ['users'] });
       addNotification({
         type: 'success',
@@ -211,6 +216,12 @@ export const UserManagement: React.FC = () => {
       closeDialog('delete');
     },
     onError: (error: any) => {
+      console.error('❌ [deleteUserMutation] Error al eliminar usuario:', {
+        error,
+        response: error.response,
+        message: error.response?.data?.message,
+        status: error.response?.status
+      });
       addNotification({
         type: 'error',
         title: 'Error al eliminar usuario',
@@ -251,7 +262,15 @@ export const UserManagement: React.FC = () => {
   });
 
   // Memoized values (Performance optimization)
-  const users = useMemo(() => usersData?.data?.users || [], [usersData]);
+  const users = useMemo(() => {
+    const usersList = usersData?.data?.users || [];
+    // Debug log para verificar la estructura de los usuarios
+    if (usersList.length > 0) {
+      console.log('🔍 [UserManagement] Estructura del primer usuario:', usersList[0]);
+      console.log('🔑 [UserManagement] Propiedades del primer usuario:', Object.keys(usersList[0]));
+    }
+    return usersList;
+  }, [usersData]);
   const invitations = useMemo(() => invitationsData || [], [invitationsData]);
   
   const filteredUsers = useMemo(() => {
@@ -287,6 +306,9 @@ export const UserManagement: React.FC = () => {
 
   const handleMenuClick = useCallback((event: React.MouseEvent<HTMLElement>, user: User) => {
     event.stopPropagation();
+    console.log('📌 [handleMenuClick] Usuario recibido para el menú:', user);
+    console.log('🔑 [handleMenuClick] Propiedades del usuario:', Object.keys(user));
+    console.log('🆔 [handleMenuClick] ID del usuario:', user.id);
     setSelectedUser(user);
     setAnchorEl(event.currentTarget);
   }, []);
@@ -311,8 +333,17 @@ export const UserManagement: React.FC = () => {
   }, [handleOpenDialog, handleMenuClose]);
 
   const handleConfirmDelete = useCallback(() => {
+    // Debug logs para rastrear el problema de eliminación
+    console.log('🗑️ [UserManagement.handleConfirmDelete] Iniciando eliminación de usuario');
+    console.log('👤 [UserManagement.handleConfirmDelete] Usuario seleccionado:', selectedUser);
+    console.log('🆔 [UserManagement.handleConfirmDelete] ID del usuario:', selectedUser?.id);
+    console.log('📧 [UserManagement.handleConfirmDelete] Email del usuario:', selectedUser?.email);
+
     if (selectedUser) {
+      console.log('✅ [UserManagement.handleConfirmDelete] Usuario válido, llamando deleteUserMutation');
       deleteUserMutation.mutate(selectedUser.id);
+    } else {
+      console.error('❌ [UserManagement.handleConfirmDelete] No hay usuario seleccionado');
     }
   }, [selectedUser, deleteUserMutation]);
 
@@ -446,15 +477,24 @@ export const UserManagement: React.FC = () => {
     {
       key: 'actions',
       header: '',
-      render: (user: User) => (
-        <IconButton
-          size="small"
-          onClick={(e) => handleMenuClick(e, user)}
-          disabled={user.id === currentUser?.id}
-        >
-          <MoreVertical size={16} />
-        </IconButton>
-      )
+      render: (user: User) => {
+        // Debug log para cada usuario en la tabla
+        console.log('🔍 [userColumns.actions] Usuario en la tabla:', {
+          email: user.email,
+          id: user.id,
+          hasId: 'id' in user,
+          allKeys: Object.keys(user)
+        });
+        return (
+          <IconButton
+            size="small"
+            onClick={(e) => handleMenuClick(e, user)}
+            disabled={user.id === currentUser?.id}
+          >
+            <MoreVertical size={16} />
+          </IconButton>
+        );
+      }
     }
   ], [handleMenuClick, currentUser]);
 

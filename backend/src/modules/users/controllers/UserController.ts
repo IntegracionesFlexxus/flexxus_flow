@@ -373,6 +373,17 @@ export class UserController {
       const { id } = req.params;
       const companyId = req.headers['x-company-id'] as string || req.user?.companyId;
 
+      // Log inicial detallado
+      this.logger.info('[UserController.deleteUser] Request received', {
+        userId: id,
+        companyId,
+        userContext: req.user,
+        headers: Object.keys(req.headers),
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        path: req.path
+      });
+
       console.log('[UserController.deleteUser] Request received:', {
         userId: id,
         companyId,
@@ -382,6 +393,11 @@ export class UserController {
       });
 
       if (!companyId) {
+        this.logger.error('[UserController.deleteUser] No companyId found in request', {
+          userId: id,
+          headers: req.headers,
+          userContext: req.user
+        });
         console.log('[UserController.deleteUser] No companyId found in request');
         res.status(400).json({
           success: false,
@@ -390,12 +406,26 @@ export class UserController {
         return;
       }
 
+      this.logger.debug('[UserController.deleteUser] Calling userService.deleteUser', {
+        userId: id,
+        companyId
+      });
       console.log('[UserController.deleteUser] Calling userService.deleteUser...');
       const success = await this.userService.deleteUser(id, companyId);
 
+      this.logger.debug('[UserController.deleteUser] Service response', {
+        userId: id,
+        companyId,
+        success
+      });
       console.log('[UserController.deleteUser] Service response:', { success });
 
       if (!success) {
+        this.logger.warn('[UserController.deleteUser] User not found or not in company', {
+          userId: id,
+          companyId,
+          message: 'User not found or does not belong to this company'
+        });
         console.log('[UserController.deleteUser] User not found or not in company');
         res.status(404).json({
           success: false,
@@ -404,10 +434,12 @@ export class UserController {
         return;
       }
 
-      this.logger.info('User deleted successfully', {
+      this.logger.info('[UserController.deleteUser] User deleted successfully', {
         userId: id,
         companyId,
-        deletedBy: req.user?.id
+        deletedBy: req.user?.id,
+        timestamp: new Date().toISOString(),
+        responseStatus: 200
       });
 
       console.log('[UserController.deleteUser] SUCCESS - User deleted');
@@ -416,18 +448,20 @@ export class UserController {
         message: 'User deleted successfully'
       });
     } catch (error: any) {
-      console.error('[UserController.deleteUser] ERROR:', {
+      const errorDetails = {
+        userId: req.params.id,
+        companyId: req.headers['x-company-id'] || req.user?.companyId,
         error: error.message,
         stack: error.stack,
-        userId: req.params.id,
-        companyId: req.headers['x-company-id'] || req.user?.companyId
-      });
+        errorCode: error.code,
+        errorName: error.name,
+        timestamp: new Date().toISOString()
+      };
 
-      this.logger.error('Delete user error', {
-        userId: req.params.id,
-        error: error.message,
-        stack: error.stack
-      });
+      console.error('[UserController.deleteUser] ERROR:', errorDetails);
+
+      this.logger.error('[UserController.deleteUser] Delete user error', errorDetails);
+
       res.status(500).json({
         success: false,
         message: 'Error deleting user'

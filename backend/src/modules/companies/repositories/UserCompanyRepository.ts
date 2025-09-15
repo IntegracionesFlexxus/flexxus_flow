@@ -157,30 +157,22 @@ export class UserCompanyRepository implements IUserCompanyRepository {
    * Set user's default company
    */
   async setDefaultCompany(userId: string, companyId: string): Promise<void> {
-    const connection = await this.db.getConnection();
-    try {
-      await connection.query('BEGIN');
+    await this.db.transaction(async (trx) => {
       // Remove default flag from all user's companies
-      await connection.query(
+      await trx.query(
         `UPDATE ${this.tableName} 
          SET is_default = false, updated_at = NOW()
          WHERE user_id = $1 AND deleted_at IS NULL`,
         [userId]
       );
       // Set new default company
-      await connection.query(
+      await trx.query(
         `UPDATE ${this.tableName}
          SET is_default = true, updated_at = NOW()
          WHERE user_id = $1 AND company_id = $2 AND deleted_at IS NULL`,
         [userId, companyId]
       );
-      await connection.query('COMMIT');
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    } finally {
-      connection.release();
-    }
+    });
   }
   /**
    * Get all users in a company with filtering and pagination
@@ -305,13 +297,70 @@ export class UserCompanyRepository implements IUserCompanyRepository {
   /**
    * Add a user to a company with a specific role
    */
-  async addUserToCompany(userId: string, companyId: string, roleId: string, options?: {
+  async addUserToCompany(userId: string, companyId: string, roleIdOrName: string, options?: {
     isDefault?: boolean;
     permissions?: string[];
   }): Promise<void> {
-    const connection = await this.db.getConnection();
-    try {
-      await connection.query('BEGIN');
+    await this.db.transaction(async (trx) => {
+      // First, determine if we have a role ID (UUID) or role name
+      let roleId: string;
+      let roleName: string;
+      
+      // Check if it's a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUID = uuidRegex.test(roleIdOrName);
+      
+      if (isUUID) {
+        // It's a UUID, get the role name
+        const roleQuery = `SELECT id, name FROM roles WHERE id = $1`;
+        const roleResult = await trx.query(roleQuery, [roleIdOrName]);
+
+        // Handle both possible result structures (rows array or full result object)
+        const rows = roleResult.rows || roleResult;
+
+        if (!rows || rows.length === 0) {
+          throw new Error(`Role with ID ${roleIdOrName} not found`);
+        }
+        roleId = rows[0].id;
+        roleName = rows[0].name;
+      } else {
+        // It's a role name, get or create the role ID
+        const roleQuery = `SELECT id, name FROM roles WHERE LOWER(name) = LOWER($1)`;
+        const roleResult = await trx.query(roleQuery, [roleIdOrName]);
+
+        // Handle both possible result structures (rows array or full result object)
+        const rows = roleResult.rows || roleResult;
+
+        this.logger?.debug('Role query result:', {
+          roleIdOrName,
+          rowsLength: rows?.length,
+          firstRow: rows?.[0]
+        });
+
+        if (!rows || rows.length === 0) {
+          // Create a new role if it doesn't exist
+          const createRoleQuery = `
+            INSERT INTO roles (id, name, description, is_system_role, status, created_at, updated_at)
+            VALUES (gen_random_uuid(), $1, $2, false, 'active', NOW(), NOW())
+            RETURNING id, name
+          `;
+          const newRoleResult = await trx.query(
+            createRoleQuery,
+            [roleIdOrName, `${roleIdOrName} role`]
+          );
+
+          // Handle both possible result structures
+          const newRows = newRoleResult.rows || newRoleResult;
+          if (!newRows || newRows.length === 0) {
+            throw new Error(`Failed to create role ${roleIdOrName}`);
+          }
+          roleId = newRows[0].id;
+          roleName = newRows[0].name;
+        } else {
+          roleId = rows[0].id;
+          roleName = rows[0].name;
+        }
+      }
       
       // Insert or update user_companies
       const ucQuery = `
@@ -320,12 +369,11 @@ export class UserCompanyRepository implements IUserCompanyRepository {
           is_default, status, permissions, 
           created_at, updated_at
         ) 
-        SELECT 
-          gen_random_uuid(), $1, $2, r.name,
-          $3, 'active', $4,
+        VALUES (
+          gen_random_uuid(), $1, $2, $3,
+          $4, 'active', $5,
           NOW(), NOW()
-        FROM roles r
-        WHERE r.id = $5
+        )
         ON CONFLICT (user_id, company_id) 
         DO UPDATE SET 
           role = EXCLUDED.role,
@@ -333,12 +381,12 @@ export class UserCompanyRepository implements IUserCompanyRepository {
           status = 'active',
           updated_at = NOW()
       `;
-      await connection.query(ucQuery, [
+      await trx.query(ucQuery, [
         userId,
         companyId,
+        roleName,
         options?.isDefault || false,
-        options?.permissions || [],
-        roleId
+        options?.permissions || []
       ]);
       
       // Insert or update user_roles
@@ -352,48 +400,61 @@ export class UserCompanyRepository implements IUserCompanyRepository {
           role_id = EXCLUDED.role_id,
           updated_at = NOW()
       `;
-      await connection.query(urQuery, [userId, companyId, roleId]);
-      
-      await connection.query('COMMIT');
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    } finally {
-      connection.release();
-    }
+      await trx.query(urQuery, [userId, companyId, roleId]);
+    });
   }
   /**
    * Remove a user from a company (soft delete)
    */
   async removeUserFromCompany(userId: string, companyId: string): Promise<void> {
-    const connection = await this.db.getConnection();
-    try {
-      await connection.query('BEGIN');
-      
+    console.log('[UserCompanyRepository.removeUserFromCompany] START:', {
+      userId,
+      companyId,
+      timestamp: new Date().toISOString()
+    });
+
+    await this.db.transaction(async (trx) => {
+      console.log('[UserCompanyRepository.removeUserFromCompany] Transaction started');
+
       // Soft delete from user_companies
       const ucQuery = `
         UPDATE ${this.tableName}
         SET status = 'inactive',
             updated_at = NOW()
-        WHERE user_id = $1 
-          AND company_id = $2 
+        WHERE user_id = $1
+          AND company_id = $2
                `;
-      await connection.query(ucQuery, [userId, companyId]);
-      
+
+      console.log('[UserCompanyRepository.removeUserFromCompany] Executing user_companies update:', {
+        query: 'UPDATE user_companies SET status=inactive...',
+        params: [userId, companyId]
+      });
+
+      const ucResult = await trx.query(ucQuery, [userId, companyId]);
+
+      console.log('[UserCompanyRepository.removeUserFromCompany] user_companies update result:', {
+        rowCount: ucResult.rowCount || (ucResult as any).affectedRows || 'unknown'
+      });
+
       // Delete from user_roles
       const urQuery = `
         DELETE FROM user_roles
         WHERE user_id = $1 AND company_id = $2
       `;
-      await connection.query(urQuery, [userId, companyId]);
-      
-      await connection.query('COMMIT');
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    } finally {
-      connection.release();
-    }
+
+      console.log('[UserCompanyRepository.removeUserFromCompany] Executing user_roles delete:', {
+        query: 'DELETE FROM user_roles...',
+        params: [userId, companyId]
+      });
+
+      const urResult = await trx.query(urQuery, [userId, companyId]);
+
+      console.log('[UserCompanyRepository.removeUserFromCompany] user_roles delete result:', {
+        rowCount: urResult.rowCount || (urResult as any).affectedRows || 'unknown'
+      });
+    });
+
+    console.log('[UserCompanyRepository.removeUserFromCompany] COMPLETED SUCCESSFULLY');
   }
   /**
    * Update user's status in a company
@@ -490,10 +551,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
    * Update user's role in a company
    */
   async updateUserRoleInCompany(userId: string, companyId: string, newRoleId: string): Promise<void> {
-    const connection = await this.db.getConnection();
-    try {
-      await connection.query('BEGIN');
-      
+    await this.db.transaction(async (trx) => {
       // Update user_companies
       const ucQuery = `
         UPDATE ${this.tableName} uc
@@ -503,7 +561,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         WHERE uc.user_id = $1 
           AND uc.company_id = $2 
       `;
-      await connection.query(ucQuery, [userId, companyId, newRoleId]);
+      await trx.query(ucQuery, [userId, companyId, newRoleId]);
       
       // Update or insert user_roles
       const urQuery = `
@@ -516,14 +574,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
           role_id = EXCLUDED.role_id,
           updated_at = NOW()
       `;
-      await connection.query(urQuery, [userId, companyId, newRoleId]);
-      
-      await connection.query('COMMIT');
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    } finally {
-      connection.release();
-    }
+      await trx.query(urQuery, [userId, companyId, newRoleId]);
+    });
   }
 }

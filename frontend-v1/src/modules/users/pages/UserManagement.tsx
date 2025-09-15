@@ -124,9 +124,9 @@ export const UserManagement: React.FC = () => {
   const { addNotification } = useUIStore();
   const queryClient = useQueryClient();
 
-  // Feature flags - Habilitados por defecto para desarrollo
-  const { isEnabled: canManageUsers } = useFeatureFlag('user_management', { defaultValue: true });
-  const canInviteUsers = true; // Siempre habilitado para poder crear usuarios
+  // Validación de permisos basada en el rol del usuario - Sincronizado con backend
+  const canManageUsers = ['admin', 'manager', 'Admin', 'Manager'].includes(currentCompany?.role || currentUser?.role || '');
+  const canInviteUsers = canManageUsers; // Sincronizado con canManageUsers para consistencia
   const { isEnabled: canManagePermissions } = useFeatureFlag('permission_management', { defaultValue: true });
 
   // Custom hook para lógica de negocio (Principio SRP)
@@ -317,8 +317,17 @@ export const UserManagement: React.FC = () => {
   }, [selectedUser, deleteUserMutation]);
 
   const handleCreateUser = useCallback(async (userData: any) => {
+    console.log('🚀 [Frontend] Starting user creation...');
+    console.log('📦 [Frontend] User data to send:', userData);
+    console.log('🏢 [Frontend] Current company:', currentCompany);
+    console.log('👤 [Frontend] Current user:', currentUser);
+    console.log('🔐 [Frontend] Access token:', localStorage.getItem('auth_access_token')?.substring(0, 50) + '...');
+    
     try {
-      await userService.createUser(currentCompany!.id, userData);
+      console.log('📡 [Frontend] Calling userService.createUser...');
+      const result = await userService.createUser(currentCompany!.id, userData);
+      console.log('✅ [Frontend] User created successfully:', result);
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       addNotification({
         type: 'success',
@@ -327,6 +336,14 @@ export const UserManagement: React.FC = () => {
       });
       closeDialog('create');
     } catch (error: any) {
+      console.error('❌ [Frontend] Error creating user:', {
+        error: error,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      
       addNotification({
         type: 'error',
         title: 'Error al crear usuario',
@@ -334,7 +351,7 @@ export const UserManagement: React.FC = () => {
       });
       throw error;
     }
-  }, [currentCompany, queryClient, addNotification]);
+  }, [currentCompany, currentUser, queryClient, addNotification]);
 
   const handleEditUser = useCallback(async (userData: any) => {
     if (!selectedUser) return;

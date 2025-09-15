@@ -48,11 +48,23 @@ export const authenticateToken = async (
 
   const startTime = Date.now();
 
+  console.log('\n========================================');
+  console.log('🔐 [Backend Auth] authenticateToken middleware called');
+  console.log('📍 [Backend Auth] Path:', req.path);
+  console.log('📋 [Backend Auth] Method:', req.method);
+  console.log('🎯 [Backend Auth] Headers:', {
+    authorization: req.headers.authorization ? 'Present' : 'Missing',
+    'x-company-id': req.headers['x-company-id']
+  });
+
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
+      console.log('❌ [Backend Auth] No token provided');
+      console.log('========================================\n');
+      
       logger.warn('Authentication failed - no token provided', {
         path: req.path,
         method: req.method,
@@ -68,8 +80,12 @@ export const authenticateToken = async (
       return;
     }
 
+    console.log('🔍 [Backend Auth] Token found, verifying...');
+    console.log('🔑 [Backend Auth] Token (first 50 chars):', token.substring(0, 50) + '...');
+    
     // Verify JWT token
     const payload = await jwtService.verifyAccessToken(token);
+    console.log('✅ [Backend Auth] Token verified, payload:', payload);
 
     // Validate session
     const tokenHash = jwtService.hashToken(token);
@@ -100,6 +116,10 @@ export const authenticateToken = async (
       role: payload.role,
       sessionId: payload.sessionId
     };
+    
+    console.log('👤 [Backend Auth] User context set:', req.user);
+    console.log('✅ [Backend Auth] Authentication successful');
+    console.log('========================================\n');
 
     // Set database context for RLS (Row Level Security)
     try {
@@ -195,7 +215,17 @@ export const requireRole = (allowedRoles: string | string[], options?: {
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 
   return (req: Request, res: Response, next: NextFunction): void => {
+    console.log('\n========================================');
+    console.log('🛡️ [Backend RequireRole] Middleware called');
+    console.log('📍 [Backend RequireRole] Path:', req.path);
+    console.log('📋 [Backend RequireRole] Method:', req.method);
+    console.log('🎯 [Backend RequireRole] Required roles:', roles);
+    console.log('👤 [Backend RequireRole] User context:', req.user);
+    
     if (!req.user) {
+      console.log('❌ [Backend RequireRole] No user context - authentication required');
+      console.log('========================================\n');
+      
       res.status(401).json({
         success: false,
         message: 'Authentication required',
@@ -204,10 +234,20 @@ export const requireRole = (allowedRoles: string | string[], options?: {
       return;
     }
 
-    const userRole = req.user.role.toLowerCase();
+    const userRole = req.user.role?.toLowerCase() || '';
     const normalizedRoles = roles.map(role => role.toLowerCase());
+    
+    console.log('🔍 [Backend RequireRole] User role:', req.user.role);
+    console.log('🔍 [Backend RequireRole] Normalized user role:', userRole);
+    console.log('🔍 [Backend RequireRole] Normalized required roles:', normalizedRoles);
+    console.log('🔍 [Backend RequireRole] Role check result:', normalizedRoles.includes(userRole));
 
     if (!normalizedRoles.includes(userRole)) {
+      console.log('❌ [Backend RequireRole] AUTHORIZATION FAILED');
+      console.log('  User role:', userRole);
+      console.log('  Required roles:', normalizedRoles);
+      console.log('========================================\n');
+      
       const logger = container.get<Logger>(TYPES.Logger);
       logger.warn('Authorization failed - insufficient role', {
         userId: req.user.id,
@@ -228,6 +268,8 @@ export const requireRole = (allowedRoles: string | string[], options?: {
       return;
     }
 
+    console.log('✅ [Backend RequireRole] Authorization passed');
+    console.log('========================================\n');
     next();
   };
 };

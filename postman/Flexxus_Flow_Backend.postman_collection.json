@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Flexxus Flow Backend",
-    "description": "Colección completa de endpoints del backend Flexxus Flow - Actualizada para pruebas de Login",
-    "version": "2.0.0",
+    "name": "Flexxus Flow Backend - Complete API",
+    "description": "Colección completa de endpoints del backend Flexxus Flow - Sprint 4 actualizado",
+    "version": "3.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -18,7 +18,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3004",
+      "value": "http://localhost:3001",
       "type": "string"
     },
     {
@@ -43,13 +43,18 @@
     },
     {
       "key": "company_id",
+      "value": "0a8e08a1-fdad-4caa-b90e-d8d791fa82ee",
+      "type": "string"
+    },
+    {
+      "key": "role_id",
       "value": "",
       "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Health Check",
+      "name": "🏥 Health Check",
       "item": [
         {
           "name": "Health Check",
@@ -78,21 +83,19 @@
       ]
     },
     {
-      "name": "Authentication",
+      "name": "🔐 Authentication",
       "item": [
         {
-          "name": "Login - Test Admin",
+          "name": "Login - Admin",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Verificar status",
                   "pm.test(\"Status code is 200\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "// Guardar tokens si el login es exitoso",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    ",
@@ -110,20 +113,7 @@
                   "        ",
                   "        console.log(\"✅ Login exitoso - Tokens guardados\");",
                   "    }",
-                  "} else {",
-                  "    console.log(\"❌ Login fallido:\", pm.response.json());",
                   "}"
-                ],
-                "type": "text/javascript"
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "// Log del request para debugging",
-                  "console.log(\"Enviando login request a:\", pm.request.url.toString());",
-                  "console.log(\"Body:\", pm.request.body.raw);"
                 ],
                 "type": "text/javascript"
               }
@@ -143,43 +133,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"admin@flexxus.com\",\n    \"password\": \"admin123\",\n    \"rememberMe\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n    \"email\": \"admin@flexxus.com\",\n    \"password\": \"admin123\",\n    \"rememberMe\": false\n}"
             },
             "url": {
               "raw": "{{apiUrl}}/auth/login",
               "host": ["{{apiUrl}}"],
               "path": ["auth", "login"]
-            },
-            "description": "Login con usuario admin de prueba.\n\nCredenciales:\n- Email: admin@flexxus.com\n- Password: admin123\n\nEste endpoint retorna:\n- accessToken\n- refreshToken\n- user (información del usuario)\n- companies (empresas del usuario)"
+            }
           }
         },
         {
-          "name": "Login - Custom User",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const response = pm.response.json();",
-                  "",
-                  "if (response.data && response.data.accessToken) {",
-                  "    pm.collectionVariables.set(\"access_token\", response.data.accessToken);",
-                  "    pm.collectionVariables.set(\"refresh_token\", response.data.refreshToken);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Register",
           "request": {
             "auth": {
               "type": "noauth"
@@ -194,42 +158,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\",\n    \"rememberMe\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"Password123!\",\n    \"firstName\": \"New\",\n    \"lastName\": \"User\",\n    \"companyName\": \"New Company\"\n}"
             },
             "url": {
-              "raw": "{{apiUrl}}/auth/login",
+              "raw": "{{apiUrl}}/auth/register",
               "host": ["{{apiUrl}}"],
-              "path": ["auth", "login"]
-            },
-            "description": "Login con credenciales personalizadas"
+              "path": ["auth", "register"]
+            }
           }
         },
         {
           "name": "Logout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "// Limpiar tokens",
-                  "pm.collectionVariables.set(\"access_token\", \"\");",
-                  "pm.collectionVariables.set(\"refresh_token\", \"\");",
-                  "pm.collectionVariables.set(\"user_id\", \"\");",
-                  "pm.collectionVariables.set(\"company_id\", \"\");"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "request": {
             "method": "POST",
             "header": [],
@@ -251,25 +190,6 @@
         },
         {
           "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const response = pm.response.json();",
-                  "",
-                  "if (response.data && response.data.accessToken) {",
-                  "    pm.collectionVariables.set(\"access_token\", response.data.accessToken);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -284,12 +204,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
             },
             "url": {
               "raw": "{{apiUrl}}/auth/refresh",
@@ -316,36 +231,71 @@
               "raw": "{{apiUrl}}/auth/validate",
               "host": ["{{apiUrl}}"],
               "path": ["auth", "validate"]
-            },
-            "description": "Valida si el token actual es válido"
+            }
+          }
+        },
+        {
+          "name": "Get User Companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/auth/companies",
+              "host": ["{{apiUrl}}"],
+              "path": ["auth", "companies"]
+            }
           }
         }
       ]
     },
     {
-      "name": "Users",
+      "name": "👥 Users",
       "item": [
-        {
-          "name": "Get Current User",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiUrl}}/users/me",
-              "host": ["{{apiUrl}}"],
-              "path": ["users", "me"]
-            }
-          }
-        },
         {
           "name": "Get All Users",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Company-ID",
+                "value": "{{company_id}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{apiUrl}}/users",
               "host": ["{{apiUrl}}"],
               "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/users/profile",
+              "host": ["{{apiUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Users by Company",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Company-ID",
+                "value": "{{company_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{apiUrl}}/users/company/{{company_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["users", "company", "{{company_id}}"]
             }
           }
         },
@@ -360,26 +310,159 @@
               "path": ["users", "{{user_id}}"]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "Companies",
-      "item": [
+        },
         {
-          "name": "Get User Companies",
+          "name": "✨ Create User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generar email único para evitar duplicados",
+                  "const timestamp = new Date().getTime();",
+                  "const randomEmail = `user_${timestamp}@flexxus.com`;",
+                  "pm.variables.set(\"random_email\", randomEmail);",
+                  "",
+                  "console.log(\"Email generado:\", randomEmail);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 or 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    console.log(\"✅ Usuario creado:\", response);",
+                  "} else {",
+                  "    console.log(\"❌ Error:\", pm.response.json());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Company-ID",
+                "value": "{{company_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{random_email}}\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"role\": \"user\",\n    \"status\": \"active\",\n    \"password\": \"Test123!@#\",\n    \"phone\": \"1234567890\",\n    \"timezone\": \"America/Mexico_City\",\n    \"language\": \"es\",\n    \"twoFactorEnabled\": false,\n    \"emailVerified\": false,\n    \"notifications\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{apiUrl}}/companies",
+              "raw": "{{apiUrl}}/users",
               "host": ["{{apiUrl}}"],
-              "path": ["companies"]
+              "path": ["users"]
+            },
+            "description": "Crear un nuevo usuario.\n\n**Roles válidos:**\n- admin\n- manager\n- user\n- viewer\n\n**Requisitos de contraseña:**\n- Mínimo 8 caracteres\n- Al menos una mayúscula\n- Al menos una minúscula\n- Al menos un número\n- Al menos un carácter especial (@$!%*?&#)\n- Sin patrones débiles (123, abc, qwerty, etc.)\n\n**Ejemplo de contraseña válida:** Test123!@#"
+          }
+        },
+        {
+          "name": "Create Admin User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Company-ID",
+                "value": "{{company_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin_{{$timestamp}}@flexxus.com\",\n    \"firstName\": \"Admin\",\n    \"lastName\": \"User\",\n    \"role\": \"admin\",\n    \"status\": \"active\",\n    \"password\": \"Admin123!@#\",\n    \"phone\": \"9876543210\",\n    \"timezone\": \"America/Mexico_City\",\n    \"language\": \"es\",\n    \"twoFactorEnabled\": true,\n    \"emailVerified\": true,\n    \"notifications\": {\n        \"email\": true,\n        \"sms\": true,\n        \"push\": true\n    }\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/users",
+              "host": ["{{apiUrl}}"],
+              "path": ["users"]
             }
           }
         },
         {
-          "name": "Switch Company",
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Name\",\n    \"phone\": \"5551234567\",\n    \"timezone\": \"America/New_York\",\n    \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/users/profile",
+              "host": ["{{apiUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Updated\",\n    \"lastName\": \"User\",\n    \"role\": \"manager\",\n    \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/users/{{user_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/users/{{user_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Assign User to Company",
           "request": {
             "method": "POST",
             "header": [
@@ -391,27 +474,523 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"companyId\": \"{{company_id}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n    \"companyId\": \"{{company_id}}\",\n    \"roleId\": \"{{role_id}}\"\n}"
             },
             "url": {
-              "raw": "{{apiUrl}}/companies/switch",
+              "raw": "{{apiUrl}}/users/{{user_id}}/companies",
               "host": ["{{apiUrl}}"],
-              "path": ["companies", "switch"]
+              "path": ["users", "{{user_id}}", "companies"]
+            }
+          }
+        },
+        {
+          "name": "Remove User from Company",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/users/{{user_id}}/companies/{{company_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["users", "{{user_id}}", "companies", "{{company_id}}"]
             }
           }
         }
       ]
     },
     {
-      "name": "Test Requests",
+      "name": "🏢 Companies",
       "item": [
         {
-          "name": "Test 401 Error",
+          "name": "Get All Companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/companies",
+              "host": ["{{apiUrl}}"],
+              "path": ["companies"]
+            }
+          }
+        },
+        {
+          "name": "Get Company by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/companies/{{company_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["companies", "{{company_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"New Company\",\n    \"taxId\": \"12345678901\",\n    \"email\": \"info@newcompany.com\",\n    \"phone\": \"555-0100\",\n    \"address\": \"123 Business St\",\n    \"city\": \"Mexico City\",\n    \"state\": \"CDMX\",\n    \"country\": \"Mexico\",\n    \"postalCode\": \"01000\",\n    \"website\": \"https://newcompany.com\",\n    \"industry\": \"Technology\",\n    \"size\": \"medium\",\n    \"plan\": \"professional\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/companies",
+              "host": ["{{apiUrl}}"],
+              "path": ["companies"]
+            }
+          }
+        },
+        {
+          "name": "Update Company",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Company Name\",\n    \"phone\": \"555-0200\",\n    \"website\": \"https://updated-company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/companies/{{company_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["companies", "{{company_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Company",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/companies/{{company_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["companies", "{{company_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👮 Roles",
+      "item": [
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/roles?companyId={{company_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["roles"],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "{{company_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/roles/{{role_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["roles", "{{role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Custom Role\",\n    \"description\": \"A custom role for specific permissions\",\n    \"companyId\": \"{{company_id}}\",\n    \"permissions\": [\n        \"users:read\",\n        \"companies:read\"\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/roles",
+              "host": ["{{apiUrl}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Role\",\n    \"description\": \"Updated description\",\n    \"permissions\": [\n        \"users:read\",\n        \"users:write\",\n        \"companies:read\"\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/roles/{{role_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["roles", "{{role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/roles/{{role_id}}",
+              "host": ["{{apiUrl}}"],
+              "path": ["roles", "{{role_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚩 Feature Flags",
+      "item": [
+        {
+          "name": "Get All Feature Flags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/feature-flags",
+              "host": ["{{apiUrl}}"],
+              "path": ["feature-flags"]
+            }
+          }
+        },
+        {
+          "name": "Evaluate Feature Flag",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"context\": {\n        \"userId\": \"{{user_id}}\",\n        \"companyId\": \"{{company_id}}\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/feature-flags/:flagName/evaluate",
+              "host": ["{{apiUrl}}"],
+              "path": ["feature-flags", ":flagName", "evaluate"],
+              "variable": [
+                {
+                  "key": "flagName",
+                  "value": "new_feature"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Feature Flag",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"new_feature\",\n    \"description\": \"A new feature flag\",\n    \"enabled\": true,\n    \"type\": \"boolean\",\n    \"defaultValue\": false,\n    \"companyId\": \"{{company_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/feature-flags",
+              "host": ["{{apiUrl}}"],
+              "path": ["feature-flags"]
+            }
+          }
+        },
+        {
+          "name": "Update Feature Flag",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"enabled\": false,\n    \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/feature-flags/:flagId",
+              "host": ["{{apiUrl}}"],
+              "path": ["feature-flags", ":flagId"],
+              "variable": [
+                {
+                  "key": "flagId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/analytics/dashboard",
+              "host": ["{{apiUrl}}"],
+              "path": ["analytics", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get User Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/analytics/users?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{apiUrl}}"],
+              "path": ["analytics", "users"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💼 CRM",
+      "item": [
+        {
+          "name": "Contacts",
+          "item": [
+            {
+              "name": "Get All Contacts",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{apiUrl}}/crm/contacts",
+                  "host": ["{{apiUrl}}"],
+                  "path": ["crm", "contacts"]
+                }
+              }
+            },
+            {
+              "name": "Create Contact",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"555-0123\",\n    \"company\": \"Example Corp\",\n    \"position\": \"Manager\",\n    \"source\": \"website\",\n    \"status\": \"lead\"\n}"
+                },
+                "url": {
+                  "raw": "{{apiUrl}}/crm/contacts",
+                  "host": ["{{apiUrl}}"],
+                  "path": ["crm", "contacts"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Opportunities",
+          "item": [
+            {
+              "name": "Get All Opportunities",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{apiUrl}}/crm/opportunities",
+                  "host": ["{{apiUrl}}"],
+                  "path": ["crm", "opportunities"]
+                }
+              }
+            },
+            {
+              "name": "Create Opportunity",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"New Deal\",\n    \"value\": 50000,\n    \"stage\": \"qualification\",\n    \"probability\": 20,\n    \"closeDate\": \"2024-12-31\",\n    \"contactId\": \"{{contact_id}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{apiUrl}}/crm/opportunities",
+                  "host": ["{{apiUrl}}"],
+                  "path": ["crm", "opportunities"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔄 Workflow",
+      "item": [
+        {
+          "name": "Get All Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/workflows",
+              "host": ["{{apiUrl}}"],
+              "path": ["workflows"]
+            }
+          }
+        },
+        {
+          "name": "Create Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Lead Nurturing\",\n    \"description\": \"Automated lead nurturing workflow\",\n    \"trigger\": \"contact_created\",\n    \"actions\": [\n        {\n            \"type\": \"send_email\",\n            \"delay\": 0,\n            \"config\": {\n                \"template\": \"welcome\"\n            }\n        },\n        {\n            \"type\": \"wait\",\n            \"delay\": 86400,\n            \"config\": {}\n        },\n        {\n            \"type\": \"send_email\",\n            \"delay\": 0,\n            \"config\": {\n                \"template\": \"follow_up\"\n            }\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/workflows",
+              "host": ["{{apiUrl}}"],
+              "path": ["workflows"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📱 Omnichannel",
+      "item": [
+        {
+          "name": "Get Channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/omni/channels",
+              "host": ["{{apiUrl}}"],
+              "path": ["omni", "channels"]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"channel\": \"email\",\n    \"to\": \"customer@example.com\",\n    \"subject\": \"Hello\",\n    \"content\": \"This is a test message\",\n    \"templateId\": null\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/omni/messages",
+              "host": ["{{apiUrl}}"],
+              "path": ["omni", "messages"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔌 WebSocket",
+      "item": [
+        {
+          "name": "Get WebSocket Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiUrl}}/websocket/info",
+              "host": ["{{apiUrl}}"],
+              "path": ["websocket", "info"]
+            },
+            "description": "Get WebSocket connection information"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧪 Test Requests",
+      "item": [
+        {
+          "name": "Test 401 Unauthorized",
           "request": {
             "auth": {
               "type": "noauth"
@@ -419,9 +998,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiUrl}}/users/me",
+              "raw": "{{apiUrl}}/users/profile",
               "host": ["{{apiUrl}}"],
-              "path": ["users", "me"]
+              "path": ["users", "profile"]
             },
             "description": "Request sin token para probar error 401"
           }
@@ -442,7 +1021,34 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"invalid@example.com\",\n    \"password\": \"wrongpassword\"\n}",
+              "raw": "{\n    \"email\": \"invalid@example.com\",\n    \"password\": \"wrongpassword\"\n}"
+            },
+            "url": {
+              "raw": "{{apiUrl}}/auth/login",
+              "host": ["{{apiUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Test Role Validation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Company-ID",
+                "value": "{{company_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"role\": \"invalid_role\",\n    \"password\": \"Test123!@#\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -450,11 +1056,44 @@
               }
             },
             "url": {
-              "raw": "{{apiUrl}}/auth/login",
+              "raw": "{{apiUrl}}/users",
               "host": ["{{apiUrl}}"],
-              "path": ["auth", "login"]
+              "path": ["users"]
             },
-            "description": "Test con credenciales inválidas"
+            "description": "Test con rol inválido para verificar validación"
+          }
+        },
+        {
+          "name": "Test Password Validation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Company-ID",
+                "value": "{{company_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"role\": \"user\",\n    \"password\": \"weak\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{apiUrl}}/users",
+              "host": ["{{apiUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Test con contraseña débil para verificar validación"
           }
         }
       ]

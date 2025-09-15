@@ -1,85 +1,49 @@
-/**
- * User Controller - Sprint 2
- * Siguiendo lineamientos nivel 2: CRUD completo con multi-tenancy
- */
-
 import { Request, Response } from 'express';
-import { injectable, inject } from 'inversify';
-import { Logger } from 'winston';
-import { validate } from 'class-validator';
-import { plainToInstance } from 'class-transformer';
+import { inject, injectable } from 'tsyringe';
 import { TYPES } from '@/container/types';
-import { IUserService } from '@/modules/users/interfaces/IUserService';
-import { 
-  CreateUserDto, 
-  UpdateUserDto, 
-  UpdateProfileDto,
-  AssignUserToCompanyDto,
-  RemoveUserFromCompanyDto 
-} from '@/shared/validators/user.validators';
+import { IUserService } from '@modules/users/interfaces/IUserService';
+import { ILoggerService } from '@/shared/services/logger/LoggerService';
+import { CreateUserDto } from '@modules/users/dto/CreateUserDto';
+import { UpdateUserDto } from '@modules/users/dto/UpdateUserDto';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
+/**
+ * User Controller
+ * Sprint 3 - User Management
+ */
 @injectable()
 export class UserController {
   constructor(
     @inject(TYPES.UserService) private userService: IUserService,
-    @inject(TYPES.Logger) private logger: Logger
+    @inject(TYPES.Logger) private logger: ILoggerService
   ) {}
 
   /**
-   * Get all users in company (paginated)
+   * Get all users
    * GET /api/users
    */
   getAllUsers = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
+      const { page = 1, limit = 10, search = '', role = '', status = '' } = req.query;
 
-      // Extract pagination params
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const search = req.query.search as string;
-      const role = req.query.role as string;
-      const isActive = req.query.isActive === 'true' ? true : 
-                      req.query.isActive === 'false' ? false : undefined;
-
-      // Get users for current company
-      const result = await this.userService.getUsersByCompany(req.user.companyId, {
-        page,
-        limit,
-        search,
-        role,
-        isActive
+      const users = await this.userService.getAllUsers({
+        page: Number(page),
+        limit: Number(limit),
+        search: String(search),
+        role: String(role),
+        status: String(status)
       });
 
-      res.status(200).json({
+      res.json({
         success: true,
-        data: {
-          users: result.users,
-          pagination: {
-            total: result.total,
-            page,
-            limit,
-            totalPages: Math.ceil(result.total / limit)
-          }
-        }
+        data: users
       });
-
-    } catch (error) {
-      this.logger.error('Get users error', {
-        error: error.message,
-        companyId: req.user?.companyId,
-        userId: req.user?.id
-      });
-
+    } catch (error: any) {
+      this.logger.error('Get all users error', { error: error.message, stack: error.stack });
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Error fetching users'
       });
     }
   };
@@ -90,58 +54,108 @@ export class UserController {
    */
   getUserById = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
+      const { id } = req.params;
 
-      const userId = req.params.id;
-
-      // Get user with company validation
-      const user = await this.userService.getUserById(userId, req.user.companyId);
+      const user = await this.userService.getUserById(id);
 
       if (!user) {
         res.status(404).json({
           success: false,
-          message: 'User not found or access denied'
+          message: 'User not found'
         });
         return;
       }
 
-      res.status(200).json({
+      res.json({
         success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            avatar: user.avatar,
-            phone: user.phone,
-            isActive: user.isActive,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-            lastLoginAt: user.lastLoginAt
-          }
-        }
+        data: { user }
       });
-
-    } catch (error) {
-      this.logger.error('Get user by ID error', {
-        error: error.message,
-        userId: req.params.id,
-        companyId: req.user?.companyId,
-        requesterId: req.user?.id
+    } catch (error: any) {
+      this.logger.error('Get user by ID error', { 
+        userId: req.params.id, 
+        error: error.message, 
+        stack: error.stack 
       });
-
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Error fetching user'
+      });
+    }
+  };
+
+  /**
+   * Get current user profile
+   * GET /api/users/profile
+   */
+  getProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+        return;
+      }
+
+      const user = await this.userService.getUserById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User profile not found'
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: { user }
+      });
+    } catch (error: any) {
+      this.logger.error('Get profile error', { 
+        userId: req.user?.id, 
+        error: error.message, 
+        stack: error.stack 
+      });
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching profile'
+      });
+    }
+  };
+
+  /**
+   * Get users by company
+   * GET /api/users/company/:companyId
+   */
+  getUsersByCompany = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { companyId } = req.params;
+      const { page = 1, limit = 10, search = '', role = '', status = '' } = req.query;
+
+      const users = await this.userService.getUsersByCompany(companyId, {
+        page: Number(page),
+        limit: Number(limit),
+        search: String(search),
+        role: String(role),
+        status: String(status)
+      });
+
+      res.json({
+        success: true,
+        data: users
+      });
+    } catch (error: any) {
+      this.logger.error('Get users by company error', { 
+        companyId: req.params.companyId, 
+        error: error.message, 
+        stack: error.stack 
+      });
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching company users'
       });
     }
   };
@@ -152,13 +166,8 @@ export class UserController {
    */
   createUser = async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log('🚀 [Backend] POST /api/v1/users - Creating user');
-      console.log('📝 [Backend] Request body:', req.body);
-      console.log('👤 [Backend] Authenticated user:', { id: req.user?.id, role: req.user?.role });
-      
-      // Require authentication and admin/manager role
+      // Check user authentication from middleware
       if (!req.user) {
-        console.log('❌ [Backend] Authentication required');
         res.status(401).json({
           success: false,
           message: 'Authentication required'
@@ -166,24 +175,12 @@ export class UserController {
         return;
       }
 
-      if (!['admin', 'manager', 'Admin', 'Manager'].includes(req.user.role)) {
-        console.log('❌ [Backend] Insufficient permissions. User role:', req.user.role);
-        res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions. Admin or Manager role required.'
-        });
-        return;
-      }
-      
-      console.log('✅ [Backend] Authorization passed');
-
       // Validate input
-      console.log('🔍 [Backend] Validating input data');
       const createUserDto = plainToInstance(CreateUserDto, req.body);
       const errors = await validate(createUserDto);
 
       if (errors.length > 0) {
-        console.log('❌ [Backend] Validation errors:', errors);
+        this.logger.debug('Validation errors:', errors);
         const errorMessages = errors.map(error => 
           Object.values(error.constraints || {}).join(', ')
         );
@@ -197,14 +194,13 @@ export class UserController {
       }
 
       // Check if email already exists
-      console.log('🔍 [Backend] Checking if email exists:', createUserDto.email);
       const emailExists = await this.userService.emailExistsInCompany(
         createUserDto.email, 
         req.user.companyId
       );
 
       if (emailExists) {
-        console.log('❌ [Backend] Email already exists in company');
+        this.logger.debug('Email already exists in company:', createUserDto.email);
         res.status(400).json({
           success: false,
           message: 'Email already exists in this company'
@@ -212,15 +208,12 @@ export class UserController {
         return;
       }
 
-      console.log('✅ [Backend] Email is available, creating user...');
       // Create user
       const user = await this.userService.createUser({
         ...createUserDto,
         companyId: req.user.companyId,
         createdBy: req.user.id
       });
-      
-      console.log('✅ [Backend] User created in database:', { id: user.id, email: user.email });
 
       this.logger.info('User created successfully', {
         userId: user.id,
@@ -230,34 +223,19 @@ export class UserController {
         createdBy: req.user.id
       });
 
-      console.log('✅ [Backend] Sending success response');
       res.status(201).json({
         success: true,
         message: 'User created successfully',
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            avatar: user.avatar,
-            phone: user.phone,
-            isActive: user.isActive,
-            createdAt: user.createdAt
-          }
-        }
+        data: { user }
       });
-
-    } catch (error) {
-      this.logger.error('Create user error', {
-        error: error.message,
-        stack: error.stack,
-        email: req.body?.email,
+    } catch (error: any) {
+      this.logger.error('Create user error', { 
+        email: req.body.email,
         companyId: req.user?.companyId,
-        createdBy: req.user?.id
+        createdBy: req.user?.id,
+        error: error.message, 
+        stack: error.stack 
       });
-
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -271,24 +249,7 @@ export class UserController {
    */
   updateUser = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication and admin/manager role
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
-
-      if (!['admin', 'manager'].includes(req.user.role)) {
-        res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions. Admin or Manager role required.'
-        });
-        return;
-      }
-
-      const userId = req.params.id;
+      const { id } = req.params;
 
       // Validate input
       const updateUserDto = plainToInstance(UpdateUserDto, req.body);
@@ -307,268 +268,58 @@ export class UserController {
         return;
       }
 
-      // Prevent self-role modification
-      if (req.user.id === userId && updateUserDto.role) {
-        res.status(400).json({
-          success: false,
-          message: 'Cannot modify your own role'
-        });
-        return;
-      }
+      const user = await this.userService.updateUser(id, updateUserDto);
 
-      // Update user
-      const updatedUser = await this.userService.updateUser(
-        userId, 
-        req.user.companyId,
-        updateUserDto
-      );
-
-      if (!updatedUser) {
+      if (!user) {
         res.status(404).json({
           success: false,
-          message: 'User not found or access denied'
+          message: 'User not found'
         });
         return;
       }
 
       this.logger.info('User updated successfully', {
-        userId,
-        updatedFields: Object.keys(updateUserDto),
-        companyId: req.user.companyId,
-        updatedBy: req.user.id
-      });
-
-      res.status(200).json({
-        success: true,
-        message: 'User updated successfully',
-        data: {
-          user: {
-            id: updatedUser.id,
-            email: updatedUser.email,
-            firstName: updatedUser.firstName,
-            lastName: updatedUser.lastName,
-            role: updatedUser.role,
-            avatar: updatedUser.avatar,
-            phone: updatedUser.phone,
-            isActive: updatedUser.isActive,
-            updatedAt: updatedUser.updatedAt
-          }
-        }
-      });
-
-    } catch (error) {
-      this.logger.error('Update user error', {
-        error: error.message,
-        userId: req.params.id,
-        companyId: req.user?.companyId,
+        userId: id,
         updatedBy: req.user?.id
       });
 
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  };
-
-  /**
-   * Delete user (soft delete)
-   * DELETE /api/users/:id
-   */
-  deleteUser = async (req: Request, res: Response): Promise<void> => {
-    try {
-      // Require authentication and admin role
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
-
-      if (req.user.role !== 'admin') {
-        res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions. Admin role required.'
-        });
-        return;
-      }
-
-      const userId = req.params.id;
-
-      // Prevent self-deletion
-      if (req.user.id === userId) {
-        res.status(400).json({
-          success: false,
-          message: 'Cannot delete your own account'
-        });
-        return;
-      }
-
-      // Soft delete user
-      const deleted = await this.userService.deleteUser(userId, req.user.companyId);
-
-      if (!deleted) {
-        res.status(404).json({
-          success: false,
-          message: 'User not found or access denied'
-        });
-        return;
-      }
-
-      this.logger.warn('User deleted', {
-        userId,
-        companyId: req.user.companyId,
-        deletedBy: req.user.id
-      });
-
-      res.status(200).json({
+      res.json({
         success: true,
-        message: 'User deleted successfully'
+        message: 'User updated successfully',
+        data: { user }
       });
-
-    } catch (error) {
-      this.logger.error('Delete user error', {
-        error: error.message,
-        userId: req.params.id,
-        companyId: req.user?.companyId,
-        deletedBy: req.user?.id
+    } catch (error: any) {
+      this.logger.error('Update user error', { 
+        userId: req.params.id, 
+        error: error.message, 
+        stack: error.stack 
       });
-
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Error updating user'
       });
     }
   };
 
   /**
-   * Get current user's profile
-   * GET /api/users/profile
-   */
-  getProfile = async (req: Request, res: Response): Promise<void> => {
-    try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
-
-      // Get user profile
-      const profile = await this.userService.getUserById(req.user.id, req.user.companyId);
-
-      if (!profile) {
-        res.status(404).json({
-          success: false,
-          message: 'User profile not found'
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        data: {
-          user: profile
-        }
-      });
-
-    } catch (error) {
-      this.logger.error('Get profile error', {
-        error: error.message,
-        userId: req.user?.id
-      });
-
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  };
-
-  /**
-   * Get users by company
-   * GET /api/users/company/:companyId
-   */
-  getUsersByCompany = async (req: Request, res: Response): Promise<void> => {
-    try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
-
-      const companyId = req.params.companyId;
-
-      // Check permissions - only allow viewing users from own company or admin
-      if (req.user.companyId !== companyId && req.user.role !== 'admin') {
-        res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions'
-        });
-        return;
-      }
-
-      // Extract pagination params
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-
-      // Get users by company
-      const result = await this.userService.getUsersByCompany(companyId, {
-        page,
-        limit
-      });
-
-      res.status(200).json({
-        success: true,
-        data: {
-          users: result.users,
-          pagination: {
-            total: result.total,
-            page,
-            limit,
-            totalPages: Math.ceil(result.total / limit)
-          }
-        }
-      });
-
-    } catch (error) {
-      this.logger.error('Get users by company error', {
-        error: error.message,
-        companyId: req.params.companyId,
-        requesterId: req.user?.id
-      });
-
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  };
-
-  /**
-   * Update own profile
+   * Update current user profile
    * PUT /api/users/profile
    */
   updateProfile = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication
-      if (!req.user) {
+      const userId = req.user?.id;
+
+      if (!userId) {
         res.status(401).json({
           success: false,
-          message: 'Authentication required'
+          message: 'User not authenticated'
         });
         return;
       }
 
       // Validate input
-      const updateProfileDto = plainToInstance(UpdateProfileDto, req.body);
-      const errors = await validate(updateProfileDto);
+      const updateUserDto = plainToInstance(UpdateUserDto, req.body);
+      const errors = await validate(updateUserDto);
 
       if (errors.length > 0) {
         const errorMessages = errors.map(error => 
@@ -583,207 +334,103 @@ export class UserController {
         return;
       }
 
-      // Update own profile
-      const updatedUser = await this.userService.updateUserProfile(
-        req.user.id,
-        updateProfileDto
-      );
+      const user = await this.userService.updateUser(userId, updateUserDto);
 
-      this.logger.info('Profile updated successfully', {
-        userId: req.user.id,
-        updatedFields: Object.keys(updateProfileDto)
-      });
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
 
-      res.status(200).json({
+      this.logger.info('Profile updated successfully', { userId });
+
+      res.json({
         success: true,
         message: 'Profile updated successfully',
-        data: {
-          user: {
-            id: updatedUser.id,
-            email: updatedUser.email,
-            firstName: updatedUser.firstName,
-            lastName: updatedUser.lastName,
-            role: updatedUser.role,
-            avatar: updatedUser.avatar,
-            phone: updatedUser.phone,
-            updatedAt: updatedUser.updatedAt
-          }
-        }
+        data: { user }
       });
-
-    } catch (error) {
-      this.logger.error('Update profile error', {
-        error: error.message,
-        userId: req.user?.id
+    } catch (error: any) {
+      this.logger.error('Update profile error', { 
+        userId: req.user?.id, 
+        error: error.message, 
+        stack: error.stack 
       });
-
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Error updating profile'
       });
     }
   };
 
   /**
-   * Activate/Deactivate user
-   * PATCH /api/users/:id/status
+   * Delete user
+   * DELETE /api/users/:id
    */
-  toggleUserStatus = async (req: Request, res: Response): Promise<void> => {
+  deleteUser = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication and admin/manager role
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
+      const { id } = req.params;
+      const companyId = req.headers['x-company-id'] as string || req.user?.companyId;
 
-      if (!['admin', 'manager'].includes(req.user.role)) {
-        res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions. Admin or Manager role required.'
-        });
-        return;
-      }
+      console.log('[UserController.deleteUser] Request received:', {
+        userId: id,
+        companyId,
+        userContext: req.user,
+        headers: req.headers,
+        timestamp: new Date().toISOString()
+      });
 
-      const userId = req.params.id;
-      const { isActive } = req.body;
-
-      if (typeof isActive !== 'boolean') {
+      if (!companyId) {
+        console.log('[UserController.deleteUser] No companyId found in request');
         res.status(400).json({
           success: false,
-          message: 'isActive field is required and must be boolean'
+          message: 'Company ID is required'
         });
         return;
       }
 
-      // Prevent self-deactivation
-      if (req.user.id === userId && !isActive) {
-        res.status(400).json({
-          success: false,
-          message: 'Cannot deactivate your own account'
-        });
-        return;
-      }
+      console.log('[UserController.deleteUser] Calling userService.deleteUser...');
+      const success = await this.userService.deleteUser(id, companyId);
 
-      // Update user status
-      const updatedUser = await this.userService.updateUser(
-        userId,
-        req.user.companyId,
-        { isActive }
-      );
+      console.log('[UserController.deleteUser] Service response:', { success });
 
-      if (!updatedUser) {
+      if (!success) {
+        console.log('[UserController.deleteUser] User not found or not in company');
         res.status(404).json({
           success: false,
-          message: 'User not found or access denied'
+          message: 'User not found or does not belong to this company'
         });
         return;
       }
 
-      this.logger.info('User status changed', {
-        userId,
-        newStatus: isActive ? 'active' : 'inactive',
-        companyId: req.user.companyId,
-        changedBy: req.user.id
+      this.logger.info('User deleted successfully', {
+        userId: id,
+        companyId,
+        deletedBy: req.user?.id
       });
 
-      res.status(200).json({
+      console.log('[UserController.deleteUser] SUCCESS - User deleted');
+      res.json({
         success: true,
-        message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-        data: {
-          user: {
-            id: updatedUser.id,
-            email: updatedUser.email,
-            firstName: updatedUser.firstName,
-            lastName: updatedUser.lastName,
-            isActive: updatedUser.isActive,
-            updatedAt: updatedUser.updatedAt
-          }
-        }
+        message: 'User deleted successfully'
       });
-
-    } catch (error) {
-      this.logger.error('Toggle user status error', {
+    } catch (error: any) {
+      console.error('[UserController.deleteUser] ERROR:', {
         error: error.message,
+        stack: error.stack,
         userId: req.params.id,
-        companyId: req.user?.companyId,
-        changedBy: req.user?.id
+        companyId: req.headers['x-company-id'] || req.user?.companyId
       });
 
+      this.logger.error('Delete user error', {
+        userId: req.params.id,
+        error: error.message,
+        stack: error.stack
+      });
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
-      });
-    }
-  };
-
-  /**
-   * Get user activity/sessions
-   * GET /api/users/:id/activity
-   */
-  getUserActivity = async (req: Request, res: Response): Promise<void> => {
-    try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
-
-      const userId = req.params.id;
-
-      // Only allow viewing own activity or admin/manager viewing others
-      if (req.user.id !== userId && !['admin', 'manager'].includes(req.user.role)) {
-        res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions'
-        });
-        return;
-      }
-
-      // Get user activity
-      const activity = await this.userService.getUserActivity(userId, req.user.companyId);
-
-      if (!activity) {
-        res.status(404).json({
-          success: false,
-          message: 'User not found or access denied'
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        data: {
-          activity: {
-            lastLoginAt: activity.lastLoginAt,
-            totalSessions: activity.totalSessions,
-            activeSessions: activity.activeSessions,
-            recentSessions: activity.recentSessions?.map(session => ({
-              id: session.id,
-              deviceInfo: session.deviceInfo,
-              createdAt: session.createdAt,
-              lastActivityAt: session.lastActivityAt,
-              isActive: session.isActive
-            }))
-          }
-        }
-      });
-
-    } catch (error) {
-      this.logger.error('Get user activity error', {
-        error: error.message,
-        userId: req.params.id,
-        requesterId: req.user?.id
-      });
-
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
+        message: 'Error deleting user'
       });
     }
   };
@@ -794,60 +441,40 @@ export class UserController {
    */
   assignToCompany = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
+      const { id } = req.params;
+      const { companyId, roleId } = req.body;
 
-      const userId = req.params.id;
-      const { companyId, role } = req.body;
-
-      // Validate input
-      const assignDto = plainToInstance(AssignUserToCompanyDto, req.body);
-      const errors = await validate(assignDto);
-
-      if (errors.length > 0) {
+      if (!companyId || !roleId) {
         res.status(400).json({
           success: false,
-          message: 'Validation failed',
-          errors: errors.map(error => ({
-            field: error.property,
-            constraints: error.constraints
-          }))
+          message: 'Company ID and Role ID are required'
         });
         return;
       }
 
-      // Assign user to company
-      const result = await this.userService.assignUserToCompany(userId, companyId, role);
+      await this.userService.assignToCompany(id, companyId, roleId);
 
       this.logger.info('User assigned to company', {
-        userId,
+        userId: id,
         companyId,
-        role,
-        assignedBy: req.user.id
+        roleId,
+        assignedBy: req.user?.id
       });
 
-      res.status(200).json({
+      res.json({
         success: true,
-        message: 'User assigned to company successfully',
-        data: result
+        message: 'User assigned to company successfully'
       });
-
-    } catch (error) {
-      this.logger.error('Assign user to company error', {
-        error: error.message,
-        userId: req.params.id,
-        requesterId: req.user?.id
+    } catch (error: any) {
+      this.logger.error('Assign to company error', { 
+        userId: req.params.id, 
+        companyId: req.body.companyId,
+        error: error.message, 
+        stack: error.stack 
       });
-
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Error assigning user to company'
       });
     }
   };
@@ -858,43 +485,30 @@ export class UserController {
    */
   removeFromCompany = async (req: Request, res: Response): Promise<void> => {
     try {
-      // Require authentication
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-        return;
-      }
+      const { id, companyId } = req.params;
 
-      const userId = req.params.id;
-      const companyId = req.params.companyId;
-
-      // Remove user from company
-      await this.userService.removeUserFromCompany(userId, companyId);
+      await this.userService.removeFromCompany(id, companyId);
 
       this.logger.info('User removed from company', {
-        userId,
+        userId: id,
         companyId,
-        removedBy: req.user.id
+        removedBy: req.user?.id
       });
 
-      res.status(200).json({
+      res.json({
         success: true,
         message: 'User removed from company successfully'
       });
-
-    } catch (error) {
-      this.logger.error('Remove user from company error', {
-        error: error.message,
-        userId: req.params.id,
+    } catch (error: any) {
+      this.logger.error('Remove from company error', { 
+        userId: req.params.id, 
         companyId: req.params.companyId,
-        requesterId: req.user?.id
+        error: error.message, 
+        stack: error.stack 
       });
-
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Error removing user from company'
       });
     }
   };

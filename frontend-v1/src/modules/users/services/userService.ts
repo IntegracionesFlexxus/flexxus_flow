@@ -90,14 +90,20 @@ class UserService {
     companyId: string,
     userData: CreateUserRequest
   ): Promise<User> {
-    console.log('🚀 [Frontend] Creating user:', { companyId, userData });
+    console.log('🚀 [Frontend UserService] Creating user:', { companyId, userData });
+    console.log('🔐 [Frontend UserService] Current token:', localStorage.getItem('auth_access_token')?.substring(0, 50) + '...');
+    console.log('📡 [Frontend UserService] API Base URL:', api.defaults.baseURL);
+    console.log('📝 [Frontend UserService] Request URL:', `${this.baseUrl}`);
+    console.log('📦 [Frontend UserService] Request body:', userData);
     
     try {
       // Backend expects POST /api/v1/users and infers companyId from the authenticated user
+      console.log('🌐 [Frontend UserService] Making POST request to:', `${this.baseUrl}`);
       const response = await api.post<{ user: User }>(
         `${this.baseUrl}`,
         userData
       );
+      console.log('✅ [Frontend UserService] Response received:', response);
       
       console.log('✅ [Frontend] User created successfully:', response.data);
       return response.data.user;

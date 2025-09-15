@@ -228,23 +228,47 @@ export abstract class BaseRepository<T extends BaseEntity> {
     data.updated_at = now;
     const fields = Object.keys(data);
     const values = Object.values(data);
-    const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+    
+    // Filter out undefined values
+    const filteredData: any = {};
+    fields.forEach((field, index) => {
+      if (values[index] !== undefined) {
+        filteredData[field] = values[index];
+      }
+    });
+    
+    const finalFields = Object.keys(filteredData);
+    const finalValues = Object.values(filteredData);
+    const placeholders = finalFields.map((_, i) => `$${i + 1}`).join(', ');
+    
     // Validate field names to prevent SQL injection
-    this.validateFieldNames(fields);
-    this.validateParams(values);
+    this.validateFieldNames(finalFields);
+    this.validateParams(finalValues);
+    
+    // Debug logging
+    if (this.tableName === 'users') {
+      this.logger?.debug(`Creating user record`, {
+        fields: finalFields,
+        valueTypes: finalValues.map(v => typeof v)
+      });
+    }
+    
     const query = `
-      INSERT INTO ${this.tableName} (${fields.join(', ')})
+      INSERT INTO ${this.tableName} (${finalFields.join(', ')})
       VALUES (${placeholders})
       RETURNING *
     `;
     try {
-      const results = await this.db.query<T>(query, values, options?.transaction);
+      const results = await this.db.query<T>(query, finalValues, options?.transaction);
       // Invalidate cache
       this.invalidateCache();
-      this.logger?.info(`Created in ${this.tableName}`, { id: data.id });
+      this.logger?.info(`Created in ${this.tableName}`, { id: filteredData.id });
       return results[0];
     } catch (error) {
-      this.logger?.error(`Error creating in ${this.tableName}`, { data, error });
+      this.logger?.error(`Error creating in ${this.tableName}`, { 
+        fields: finalFields,
+        error 
+      });
       throw error;
     }
   }

@@ -76,8 +76,16 @@ const getValidationSchema = (mode: 'create' | 'edit') => Yup.object({
     ? Yup.string()
         .min(8, 'Mínimo 8 caracteres')
         .matches(
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-          'Debe contener mayúsculas, minúsculas y números'
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])/,
+          'Debe contener mayúsculas, minúsculas, números y al menos un carácter especial (@$!%*?&#)'
+        )
+        .test('no-weak-patterns', 'No debe contener patrones débiles (123, abc, qwerty, etc.)', 
+          (value) => {
+            if (!value) return true;
+            const weakPatterns = ['123', '234', '345', 'abc', 'qwerty', 'password', '111', '000'];
+            const lowerValue = value.toLowerCase();
+            return !weakPatterns.some(pattern => lowerValue.includes(pattern));
+          }
         )
         .required('Contraseña es requerida')
     : Yup.string().notRequired(),
@@ -158,17 +166,41 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
     setLoading(true);
     setError(null);
     try {
+      console.log('🎯 [UserEditDialog] Original form values:', values);
+      console.log('🎯 [UserEditDialog] Original role value:', values.role);
+      console.log('🎯 [UserEditDialog] Available roles:', roles);
+      
+      // Map role UUID to role name
+      let roleValue = values.role;
+      if (roleValue) {
+        // Find the role object by UUID
+        const selectedRole = roles.find(r => r.id === roleValue);
+        console.log('🎯 [UserEditDialog] Found role object:', selectedRole);
+        if (selectedRole) {
+          // Use the role name instead of UUID
+          roleValue = selectedRole.name.toLowerCase(); // Ensure lowercase (admin, manager, user, viewer)
+          console.log('🎯 [UserEditDialog] Mapped role to name:', roleValue);
+        } else {
+          console.log('⚠️ [UserEditDialog] Role not found in roles array, keeping original:', roleValue);
+        }
+      }
+      
       const userData = {
         ...values,
+        role: roleValue, // Use the mapped role name
         companies: selectedCompanies,
         mode
       };
+      
+      console.log('🎯 [UserEditDialog] Final userData before removing passwords:', userData);
       
       // Remove password fields if not set
       if (!userData.password) {
         delete userData.password;
         delete userData.confirmPassword;
       }
+      
+      console.log('🎯 [UserEditDialog] Final userData to send:', userData);
       
       if (onSave) {
         await onSave(userData);
@@ -387,7 +419,8 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
                           label={mode === 'create' ? 'Contraseña' : 'Nueva Contraseña (opcional)'}
                           type="password"
                           error={Boolean(errors.password)}
-                          helperText={errors.password?.message}
+                          helperText={errors.password?.message || (mode === 'create' && !errors.password ? 
+                            'Mín. 8 caracteres, mayúsculas, minúsculas, números y un carácter especial. Evitar: 123, abc, qwerty' : '')}
                           disabled={loading}
                           required={mode === 'create'}
                         />

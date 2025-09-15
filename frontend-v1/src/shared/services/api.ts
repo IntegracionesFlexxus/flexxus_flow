@@ -96,6 +96,32 @@ api.interceptors.response.use(
         case 401: // Unauthorized
           // Solo hacer logout si no es la ruta de login
           if (!error.config?.url?.includes('/auth/login')) {
+            // Try to refresh token before logging out
+            const refreshToken = localStorage.getItem('refreshToken')
+            if (refreshToken && !error.config._retry) {
+              error.config._retry = true
+              
+              try {
+                // Import authService to refresh token
+                const { authService } = await import('@/modules/auth/services/authService')
+                const refreshResult = await authService.refreshToken()
+                
+                if (refreshResult.success) {
+                  // Update the authorization header with new token
+                  const newToken = localStorage.getItem('accessToken')
+                  if (newToken) {
+                    error.config.headers = error.config.headers || {}
+                    error.config.headers['Authorization'] = `Bearer ${newToken}`
+                    // Retry the original request
+                    return api(error.config)
+                  }
+                }
+              } catch (refreshError) {
+                console.error('Token refresh failed:', refreshError)
+              }
+            }
+            
+            // If refresh fails, logout
             logout()
             window.location.href = '/auth/login'
             addNotification({
@@ -107,7 +133,31 @@ api.interceptors.response.use(
           }
           break
           
-        case 403: // Forbidden
+        case 403: // Forbidden - Try refresh for permission issues
+          // For 403, also try to refresh token in case permissions are outdated
+          if (!error.config._retry403) {
+            error.config._retry403 = true
+            const refreshToken = localStorage.getItem('refreshToken')
+            
+            if (refreshToken) {
+              try {
+                const { authService } = await import('@/modules/auth/services/authService')
+                const refreshResult = await authService.refreshToken()
+                
+                if (refreshResult.success) {
+                  const newToken = localStorage.getItem('accessToken')
+                  if (newToken) {
+                    error.config.headers = error.config.headers || {}
+                    error.config.headers['Authorization'] = `Bearer ${newToken}`
+                    return api(error.config)
+                  }
+                }
+              } catch (refreshError) {
+                console.error('Permission refresh failed:', refreshError)
+              }
+            }
+          }
+          
           addNotification({
             type: 'error',
             title: 'Acceso denegado',

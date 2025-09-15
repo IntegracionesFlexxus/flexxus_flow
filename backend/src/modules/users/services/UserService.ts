@@ -38,12 +38,11 @@ export class UserService implements IUserService {
         offset,
         limit,
         search: options?.search,
-        role: options?.role,
-        isActive: options?.isActive
+        roleId: options?.role
       });
       const total = await this.userCompanyRepository.countUsersInCompany(companyId, {
         search: options?.search,
-        role: options?.role,
+        roleId: options?.role,
         isActive: options?.isActive
       });
       return {
@@ -53,10 +52,10 @@ export class UserService implements IUserService {
           firstName: user.first_name || '',
           lastName: user.last_name || '',
           role: user.role || 'company_user',
-          status: user.is_active === false ? 'inactive' : 'active',
+          status: user.status || 'active',
           avatar: null,
           phone: null,
-          isActive: user.is_active !== false,
+          isActive: user.status === 'active',
           emailVerified: user.email_verified || false,
           createdAt: user.created_at,
           updatedAt: user.updated_at,
@@ -113,7 +112,7 @@ export class UserService implements IUserService {
     role: string;
     avatar?: string;
     phone?: string;
-    isActive?: boolean;
+    status?: boolean;
     companyId: string;
     createdBy: string;
     password?: string;
@@ -124,22 +123,29 @@ export class UserService implements IUserService {
       const passwordHash = await this.passwordService.hashPassword(password);
       // Create user
       const userId = uuidv4();
-      const user = await this.userRepository.create({
+      
+      // Build user data object - only include defined values
+      const userData: any = {
         id: userId,
         email: data.email,
         password_hash: passwordHash,
         first_name: data.firstName,
         last_name: data.lastName,
-        avatar: data.avatar,
-        phone: data.phone,
-        is_active: data.isActive !== false,
-        email_verified: false,
+        status: data.status || 'active',
         created_at: new Date(),
         updated_at: new Date()
-      });
+      };
+      
+      // Only add optional fields if they have values
+      if (data.avatar) userData.avatar = data.avatar;
+      if (data.phone) userData.phone = data.phone;
+      
+      const user = await this.userRepository.create(userData);
+
       // Assign user to company with role
       await this.userCompanyRepository.addUserToCompany(userId, data.companyId, data.role);
-      this.logger.info('User created successfully', {
+
+      this.logger.info('User Assigned successfully', {
         userId,
         email: data.email,
         companyId: data.companyId,
@@ -153,12 +159,12 @@ export class UserService implements IUserService {
         role: data.role,
         avatar: user.avatar,
         phone: user.phone,
-        isActive: user.is_active,
+        isActive: user.status === 'active',
         createdAt: user.created_at
       };
     } catch (error) {
       this.logger.error('Error creating user', {
-        error: error.message,
+        error: error,
         email: data.email,
         companyId: data.companyId
       });
@@ -187,7 +193,7 @@ export class UserService implements IUserService {
       if (data.lastName !== undefined) updates.last_name = data.lastName;
       if (data.avatar !== undefined) updates.avatar = data.avatar;
       if (data.phone !== undefined) updates.phone = data.phone;
-      if (data.isActive !== undefined) updates.is_active = data.isActive;
+      if (data.status !== undefined) updates.status = data.status;
       const user = await this.userRepository.update(userId, updates);
       // Update role if provided
       if (data.role && data.role !== userCompany.role) {
@@ -201,7 +207,7 @@ export class UserService implements IUserService {
         role: data.role || userCompany.role,
         avatar: user.avatar,
         phone: user.phone,
-        isActive: user.is_active,
+        isActive: user.status === 'active',
         updatedAt: user.updated_at
       };
     } catch (error) {
@@ -250,26 +256,56 @@ export class UserService implements IUserService {
     }
   }
   async deleteUser(userId: string, companyId: string): Promise<boolean> {
+    console.log('[UserService.deleteUser] START:', {
+      userId,
+      companyId,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       // Verify user belongs to company
+      console.log('[UserService.deleteUser] Checking if user belongs to company...');
       const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
+
+      console.log('[UserService.deleteUser] User company check result:', {
+        userCompany,
+        exists: !!userCompany
+      });
+
       if (!userCompany) {
+        console.log('[UserService.deleteUser] User does not belong to company, returning false');
         return false;
       }
+
       // Soft delete user
+      console.log('[UserService.deleteUser] Soft deleting user...');
       await this.userRepository.update(userId, {
-        is_active: false,
+        status: 'inactive',
         deleted_at: new Date(),
         updated_at: new Date()
       });
+      console.log('[UserService.deleteUser] User soft deleted successfully');
+
       // Invalidate all user sessions
+      console.log('[UserService.deleteUser] Invalidating user sessions...');
       await this.sessionRepository.invalidateUserSessions(userId);
+      console.log('[UserService.deleteUser] Sessions invalidated');
+
       this.logger.info('User deleted', {
         userId,
         companyId
       });
+
+      console.log('[UserService.deleteUser] COMPLETED SUCCESSFULLY');
       return true;
     } catch (error) {
+      console.error('[UserService.deleteUser] ERROR:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        companyId
+      });
+
       this.logger.error('Error deleting user', {
         error: error.message,
         userId,
@@ -378,7 +414,7 @@ export class UserService implements IUserService {
         id: c.company_id,
         name: c.company_name,
         role: c.role,
-        isActive: c.is_active
+        isActive: c.status === 'active'
       }));
     } catch (error) {
       this.logger.error('Error getting user companies', {

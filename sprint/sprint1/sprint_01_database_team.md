@@ -1,3 +1,17 @@
+---
+title: "Sprint 01 - Database Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["database", "postgres", "multi-tenancy", "arquitectura", "backend"]
+responsable: "Database Team"
+fecha_inicio: "2024-01-01"
+fecha_fin: "2024-01-14"
+dependencias: []
+version: "1.0"
+sprint: 1
+---
+
 # Sprint 01 - Database Team
 
 ## Información del Sprint

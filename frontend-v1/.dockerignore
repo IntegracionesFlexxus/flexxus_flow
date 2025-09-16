@@ -1,0 +1,68 @@
+# Docker ignore file - MVP Nivel 1
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+dist
+build
+.vite
+
+# Development files
+.env.local
+.env.*.local
+*.log
+
+# Version control
+.git
+.gitignore
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs
+
+# Test files
+coverage
+.nyc_output
+test
+tests
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Docker files (don't copy these into the image)
+Dockerfile*
+docker-compose*
+
+# Scripts (except needed ones)
+scripts/*.sh
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache

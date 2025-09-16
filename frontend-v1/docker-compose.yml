@@ -1,0 +1,35 @@
+version: '3.8'
+
+# Docker Compose para producción - MVP Nivel 1
+# TODO: En Nivel 2 agregar monitoring, logging, escalado
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flexxus-frontend:latest
+    container_name: flexxus-frontend
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - flexxus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  flexxus-network:
+    driver: bridge
+    name: flexxus-network

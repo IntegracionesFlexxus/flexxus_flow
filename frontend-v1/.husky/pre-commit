@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-commit hook - MVP Nivel 1
+# TODO: En Nivel 2 agregar más validaciones
+
+npx lint-staged

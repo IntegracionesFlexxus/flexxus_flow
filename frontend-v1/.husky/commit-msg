@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validación básica del mensaje de commit
+# Formato esperado: tipo: descripción
+# Tipos: feat, fix, docs, style, refactor, test, chore
+
+commit_regex='^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .{1,100}$'
+commit_message=$(cat "$1")
+
+if ! echo "$commit_message" | grep -qE "$commit_regex"; then
+  echo "❌ Formato de commit inválido!"
+  echo "📝 Formato esperado: tipo: descripción"
+  echo "   Tipos válidos: feat, fix, docs, style, refactor, test, chore"
+  echo "   Ejemplo: feat: agregar login de usuarios"
+  exit 1
+fi

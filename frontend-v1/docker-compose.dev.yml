@@ -1,0 +1,29 @@
+version: '3.8'
+
+# Docker Compose para desarrollo - MVP Nivel 1
+# Con hot reload y volúmenes para desarrollo
+
+services:
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: flexxus-frontend:dev
+    container_name: flexxus-frontend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - flexxus-network
+    stdin_open: true
+    tty: true
+
+networks:
+  flexxus-network:
+    driver: bridge
+    name: flexxus-network

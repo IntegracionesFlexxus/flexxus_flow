@@ -1,3 +1,17 @@
+---
+title: "Sprint 03 - Frontend Team"
+tipo: "funcionalidad"
+estado: "vigente"
+prioridad: "alta"
+tags: ["frontend", "react", "typescript", "rbac", "usuarios", "roles", "ui", "admin"]
+responsable: "Frontend Team"
+fecha_inicio: "2024-01-29"
+fecha_fin: "2024-02-11"
+dependencias: ["sprint_02_frontend_team", "sprint_03_backend_team"]
+version: "1.0"
+sprint: 3
+---
+
 # Sprint 03 - Frontend Team
 
 ## Información del Sprint

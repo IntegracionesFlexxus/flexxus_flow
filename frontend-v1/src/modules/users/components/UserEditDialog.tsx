@@ -126,14 +126,14 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   // console.log('👤 [UserEditDialog] Usuario recibido:', user);
   // console.log('🔑 [UserEditDialog] Propiedades del usuario:', user ? Object.keys(user) : 'No user');
   // console.log('📧 [UserEditDialog] Datos del usuario:', {
-    id: user?.id,
-    email: user?.email,
-    firstName: user?.firstName,
-    lastName: user?.lastName,
-    role: user?.role,
-    roleId: user?.roleId,
-    status: user?.status
-  });
+  //   id: user?.id,
+  //   email: user?.email,
+  //   firstName: user?.firstName,
+  //   lastName: user?.lastName,
+  //   role: user?.role,
+  //   roleId: user?.roleId,
+  //   status: user?.status
+  // });
   // console.log('🏭 [UserEditDialog] Company ID:', companyId);
 
   const [loading, setLoading] = useState(false);
@@ -169,12 +169,12 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
     if (open) {
       if (user && mode === 'edit') {
         // console.log('📋 [UserEditDialog.useEffect] Modo edición - Reseteando con datos del usuario:', {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-          status: user.status
-        });
+        //   email: user.email,
+        //   firstName: user.firstName,
+        //   lastName: user.lastName,
+        //   role: user.role,
+        //   status: user.status
+        // });
 
         // Resetear el formulario con los datos del usuario
         reset({

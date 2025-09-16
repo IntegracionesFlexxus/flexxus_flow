@@ -1,3 +1,5 @@
+/* eslint-disable import/no-cycle, import/namespace, import/no-duplicates, import/order, import/default */
+/* eslint-disable import/no-named-as-default, import/no-named-as-default-member */
 /**
  * Jest Global Setup
  * Sprint 4 - Configuración global para todos los tests
@@ -23,13 +25,14 @@ global.console = {
   info: jest.fn(),
   warn: jest.fn(),
   // Keep error for debugging
-  error: console.error
+  error: console.error,
 };
 // Mock Date.now for consistent timestamps
 const mockNow = new Date('2024-01-01T00:00:00.000Z').getTime();
 Date.now = jest.fn(() => mockNow);
 // Global test utilities
-global.testUtils = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+(global as any).testUtils = {
   // Generate random ID
   generateId: () => Math.random().toString(36).substring(7),
   // Generate test email
@@ -37,7 +40,7 @@ global.testUtils = {
   // Generate test token
   generateToken: () => 'test_token_' + Math.random().toString(36),
   // Wait utility
-  wait: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+  wait: async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
   // Create mock request
   createMockRequest: (overrides = {}) => ({
     body: {},
@@ -45,22 +48,31 @@ global.testUtils = {
     params: {},
     headers: {},
     user: null,
-    ...overrides
+    ...overrides,
   }),
-  // Create mock response  
+  // Create mock response
   createMockResponse: () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const res: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.status = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.json = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.send = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.cookie = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.clearCookie = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.header = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     res.redirect = jest.fn().mockReturnValue(res);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return res;
   },
   // Create mock next function
-  createMockNext: () => jest.fn()
+  createMockNext: () => jest.fn(),
 };
 // Extend Jest matchers
 expect.extend({
@@ -70,9 +82,10 @@ expect.extend({
     const pass = uuidRegex.test(received);
     return {
       pass,
-      message: () => pass
-        ? `expected ${received} not to be a valid UUID`
-        : `expected ${received} to be a valid UUID`
+      message: () =>
+        pass
+          ? `expected ${received} not to be a valid UUID`
+          : `expected ${received} to be a valid UUID`,
     };
   },
   // Check if value is JWT
@@ -81,9 +94,10 @@ expect.extend({
     const pass = jwtRegex.test(received);
     return {
       pass,
-      message: () => pass
-        ? `expected ${received} not to be a valid JWT`
-        : `expected ${received} to be a valid JWT`
+      message: () =>
+        pass
+          ? `expected ${received} not to be a valid JWT`
+          : `expected ${received} to be a valid JWT`,
     };
   },
   // Check if value is ISO date string
@@ -92,27 +106,35 @@ expect.extend({
     const pass = !isNaN(date.getTime()) && date.toISOString() === received;
     return {
       pass,
-      message: () => pass
-        ? `expected ${received} not to be a valid ISO date string`
-        : `expected ${received} to be a valid ISO date string`
+      message: () =>
+        pass
+          ? `expected ${received} not to be a valid ISO date string`
+          : `expected ${received} to be a valid ISO date string`,
     };
   },
   // Check if error matches expected
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   toMatchError(received: any, expectedMessage: string | RegExp, expectedCode?: string) {
-    const messageMatches = typeof expectedMessage === 'string'
-      ? received.message === expectedMessage
-      : expectedMessage.test(received.message);
+    const messageMatches =
+      typeof expectedMessage === 'string'
+        ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          received.message === expectedMessage
+        : // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+          expectedMessage.test(received.message);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const codeMatches = expectedCode ? received.code === expectedCode : true;
     const pass = messageMatches && codeMatches;
     return {
       pass,
-      message: () => pass
-        ? `expected error not to match`
-        : `expected error to match message "${expectedMessage}" ${expectedCode ? `and code "${expectedCode}"` : ''}`
+      message: () =>
+        pass
+          ? `expected error not to match`
+          : `expected error to match message "${expectedMessage}" ${expectedCode ? `and code "${expectedCode}"` : ''}`,
     };
-  }
+  },
 });
 // Clean up after all tests
+// eslint-disable-next-line @typescript-eslint/require-await
 afterAll(async () => {
   // Clear all timers
   jest.clearAllTimers();
@@ -126,6 +148,7 @@ afterAll(async () => {
   }
 });
 // TypeScript declarations for global test utilities
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 declare global {
   namespace NodeJS {
     interface Global {

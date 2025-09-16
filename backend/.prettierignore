@@ -1,11 +1,40 @@
-dist
-coverage
-node_modules
-*.log
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
 *.min.js
-*.map
+*.min.css
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
 .env
 .env.*
+
+# Generated files
+*.generated.ts
+*.generated.js
+
+# Documentation
+docs/api/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Package files
 package-lock.json
 yarn.lock
 pnpm-lock.yaml

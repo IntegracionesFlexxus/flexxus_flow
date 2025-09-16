@@ -8,6 +8,8 @@ import { Home, ArrowBack } from '@mui/icons-material'
 function NotFound() {
   const navigate = useNavigate()
   
+  console.log('❌ NotFound component rendered for path:', window.location.pathname)
+  
   return (
     <Container maxWidth="sm">
       <Box 

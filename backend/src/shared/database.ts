@@ -1,10 +1,13 @@
 import { Pool } from 'pg';
 import { config } from '@config/environment';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 // Conexión básica a base de datos - sin sobreingeniería
 // TODO: Implementar pool management avanzado en Nivel 2
-
 // Crear pools para cada base de datos
+// Logger instance
+const logger = LoggerFactory.create({ file: __filename });
+
 export const dbPools = {
   shared: new Pool({
     host: config.database.shared.host,
@@ -16,7 +19,6 @@ export const dbPools = {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000
   }),
-  
   omni: new Pool({
     host: config.database.omni.host,
     port: config.database.omni.port,
@@ -27,7 +29,6 @@ export const dbPools = {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000
   }),
-  
   crm: new Pool({
     host: config.database.crm.host,
     port: config.database.crm.port,
@@ -38,7 +39,6 @@ export const dbPools = {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000
   }),
-  
   workflow: new Pool({
     host: config.database.workflow.host,
     port: config.database.workflow.port,
@@ -49,7 +49,6 @@ export const dbPools = {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000
   }),
-  
   analytics: new Pool({
     host: config.database.analytics.host,
     port: config.database.analytics.port,
@@ -61,18 +60,16 @@ export const dbPools = {
     connectionTimeoutMillis: 5000
   })
 };
-
 // Función helper para queries básicas
 export async function query(pool: Pool, text: string, params?: any[]) {
   try {
     const result = await pool.query(text, params);
     return result.rows;
   } catch (error) {
-    console.error('Error en query:', error);
+    logger.error('Error en query:', error);
     throw error;
   }
 }
-
 // Cerrar todas las conexiones
 export async function closeAllConnections() {
   await Promise.all([

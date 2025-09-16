@@ -1,5 +1,4 @@
 // Configuration interfaces following Interface Segregation Principle (ISP)
-
 export interface IServerConfig {
   port: number;
   host: string;
@@ -7,7 +6,6 @@ export interface IServerConfig {
   apiVersion: string;
   corsOrigins: string[];
 }
-
 export interface IDatabaseConfig {
   shared: IDatabaseConnection;
   omni: IDatabaseConnection;
@@ -18,7 +16,6 @@ export interface IDatabaseConfig {
   retryDelay: number;
   poolSize: number;
 }
-
 export interface IDatabaseConnection {
   host: string;
   port: number;
@@ -29,7 +26,6 @@ export interface IDatabaseConnection {
   connectionTimeoutMillis?: number;
   idleTimeoutMillis?: number;
 }
-
 export interface ISecurityConfig {
   jwtSecret: string;
   jwtExpiresIn: string;
@@ -40,7 +36,6 @@ export interface ISecurityConfig {
   rateLimitWindow: number;
   rateLimitMax: number;
 }
-
 export interface ILoggingConfig {
   level: 'error' | 'warn' | 'info' | 'debug';
   format: 'json' | 'simple';
@@ -51,7 +46,6 @@ export interface ILoggingConfig {
   handleExceptions: boolean;
   handleRejections: boolean;
 }
-
 export interface ICacheConfig {
   defaultTTL: number;
   checkPeriod: number;
@@ -63,7 +57,6 @@ export interface ICacheConfig {
     db?: number;
   };
 }
-
 export interface IConfig {
   server: IServerConfig;
   database: IDatabaseConfig;

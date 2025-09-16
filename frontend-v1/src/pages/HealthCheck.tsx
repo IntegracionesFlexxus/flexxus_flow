@@ -63,7 +63,7 @@ export function HealthCheck() {
       metrics: {
         version: config.APP_VERSION,
         environment: config.APP_ENV,
-        buildTime: process.env.BUILD_TIME,
+        buildTime: import.meta.env.VITE_BUILD_TIME,
         uptime: performance.now()
       },
       timestamp: new Date().toISOString()

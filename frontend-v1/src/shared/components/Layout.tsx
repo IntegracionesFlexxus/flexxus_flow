@@ -3,6 +3,7 @@
 import { MainLayout } from '@/components/layout'
 
 function Layout() {
+  console.log('🏠 Layout component rendering, path:', window.location.pathname)
   return <MainLayout />
 }
 

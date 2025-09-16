@@ -39,6 +39,10 @@ export interface UIState {
   
   // Tema (preparación para Nivel 2)
   darkMode: boolean
+  theme: 'light' | 'dark' | 'system'
+  language: string
+  dateFormat: string
+  timeZone: string
   
   // Acciones - Sidebar
   toggleSidebar: () => void
@@ -65,6 +69,10 @@ export interface UIState {
   // Acciones - Tema
   toggleDarkMode: () => void
   setDarkMode: (dark: boolean) => void
+  setTheme: (theme: 'light' | 'dark' | 'system') => void
+  setLanguage: (language: string) => void
+  setDateFormat: (format: string) => void
+  setTimeZone: (timezone: string) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -80,6 +88,10 @@ export const useUIStore = create<UIState>()(
       modals: {},
       modalData: {},
       darkMode: false, // Por defecto tema claro
+      theme: 'system',
+      language: 'es',
+      dateFormat: 'DD/MM/YYYY',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       
       // Acciones - Sidebar
       toggleSidebar: () =>
@@ -183,6 +195,26 @@ export const useUIStore = create<UIState>()(
       setDarkMode: (dark) =>
         set((state) => {
           state.darkMode = dark
+        }),
+        
+      setTheme: (theme) =>
+        set((state) => {
+          state.theme = theme
+        }),
+        
+      setLanguage: (language) =>
+        set((state) => {
+          state.language = language
+        }),
+        
+      setDateFormat: (format) =>
+        set((state) => {
+          state.dateFormat = format
+        }),
+        
+      setTimeZone: (timezone) =>
+        set((state) => {
+          state.timeZone = timezone
         }),
     })),
     { 

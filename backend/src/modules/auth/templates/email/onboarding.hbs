@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continúa tu configuración - {{companyName}}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f4f4;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .progress-indicator {
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #ffffff;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: {{progressPercentage}}%;
+        }
+        
+        .progress-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .greeting-section h2 {
+            color: #2d3748;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .progress-summary {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .progress-summary h3 {
+            color: #3730a3;
+            margin: 0 0 15px 0;
+            font-size: 20px;
+        }
+        
+        .progress-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #4338ca;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6366f1;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .completed-tasks {
+            background-color: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            border-radius: 0 8px 8px 0;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .completed-tasks h4 {
+            color: #15803d;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+        }
+        
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #166534;
+        }
+        
+        .task-item .check {
+            color: #22c55e;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        
+        .pending-tasks {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            border-radius: 0 8px 8px 0;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .pending-tasks h4 {
+            color: #92400e;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+        }
+        
+        .pending-tasks .task-item {
+            color: #78350f;
+        }
+        
+        .pending-tasks .task-item .pending {
+            color: #f59e0b;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 18px 36px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .next-step {
+            background-color: #f8fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .next-step h3 {
+            color: #2d3748;
+            margin: 0 0 15px 0;
+            font-size: 20px;
+        }
+        
+        .next-step .step-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .motivation-section {
+            background: linear-gradient(135deg, #fef7cd 0%, #fde68a 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .motivation-section h4 {
+            color: #92400e;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+        }
+        
+        .motivation-quotes {
+            font-style: italic;
+            color: #78350f;
+            line-height: 1.6;
+        }
+        
+        .time-estimate {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .time-estimate .clock {
+            color: #0369a1;
+            font-size: 20px;
+            margin-right: 8px;
+        }
+        
+        .time-estimate span {
+            color: #0c4a6e;
+            font-weight: 600;
+        }
+        
+        .tips-section {
+            background-color: #ecfccb;
+            border-left: 4px solid #65a30d;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .tips-section h4 {
+            color: #365314;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+        }
+        
+        .tips-section ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #4d7c0f;
+        }
+        
+        .tips-section li {
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .footer h3 {
+            margin: 0 0 10px 0;
+            color: #f093fb;
+        }
+        
+        .footer p {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .footer a {
+            color: #f093fb;
+            text-decoration: none;
+        }
+        
+        .support-section {
+            background-color: #4a5568;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .support-section h4 {
+            margin: 0 0 10px 0;
+            color: #f093fb;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                box-shadow: none;
+            }
+            
+            .header, .content, .footer {
+                padding: 20px;
+            }
+            
+            .progress-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .stat-item {
+                border-bottom: 1px solid rgba(67, 56, 202, 0.2);
+                padding-bottom: 10px;
+            }
+            
+            .stat-item:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>¡Sigue configurando!</h1>
+            <p style="margin: 10px 0; font-size: 16px; opacity: 0.9;">
+                Estás progresando muy bien, {{firstName}}
+            </p>
+            
+            <div class="progress-indicator">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-text">
+                    {{percentage progressPercentage}}% completado
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting-section">
+                <h2>¡Hola {{firstName}}! 👋</h2>
+                <p>Has hecho un excelente progreso configurando tu cuenta en <strong>{{companyName}}</strong>. ¡Continúemos donde lo dejamos!</p>
+            </div>
+            
+            <!-- Progress Summary -->
+            <div class="progress-summary">
+                <h3>📊 Tu progreso actual</h3>
+                <p>Estás en el paso <strong>{{currentStep}} de {{totalSteps}}</strong></p>
+                
+                <div class="progress-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">{{percentage progressPercentage}}%</span>
+                        <div class="stat-label">Completado</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{currentStep}}</span>
+                        <div class="stat-label">Paso Actual</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{totalSteps}}</span>
+                        <div class="stat-label">Total Pasos</div>
+                    </div>
+                </div>
+            </div>
+            
+            {{#if completedTasks}}
+            <!-- Completed Tasks -->
+            <div class="completed-tasks">
+                <h4>✅ Tareas completadas</h4>
+                <ul class="task-list">
+                    {{#each completedTasks}}
+                    <li class="task-item">
+                        <span class="check">✓</span>
+                        {{this}}
+                    </li>
+                    {{/each}}
+                </ul>
+            </div>
+            {{/if}}
+            
+            {{#if pendingTasks}}
+            <!-- Pending Tasks -->
+            <div class="pending-tasks">
+                <h4>⏳ Próximos pasos</h4>
+                <ul class="task-list">
+                    {{#each pendingTasks}}
+                    <li class="task-item">
+                        <span class="pending">○</span>
+                        {{this}}
+                    </li>
+                    {{/each}}
+                </ul>
+            </div>
+            {{/if}}
+            
+            <!-- Next Step Highlight -->
+            <div class="next-step">
+                <span class="step-icon">🎯</span>
+                <h3>Siguiente paso</h3>
+                <p>Continuemos con la configuración. ¡Solo te tomará unos minutos!</p>
+                
+                <div class="time-estimate">
+                    <span class="clock">⏱️</span>
+                    Tiempo estimado: <span>2-3 minutos</span>
+                </div>
+            </div>
+            
+            <!-- Call to Action -->
+            <div class="cta-section">
+                <a href="{{nextStepUrl}}" class="cta-button">
+                    🚀 Continuar Configuración
+                </a>
+                <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                    Haz clic para continuar donde lo dejaste
+                </p>
+            </div>
+            
+            <!-- Motivation Section -->
+            <div class="motivation-section">
+                <h4>💪 ¡Estás muy cerca!</h4>
+                <div class="motivation-quotes">
+                    {{#ifEquals currentStep 1}}
+                    "El primer paso es siempre el más importante. ¡Ya lo diste!"
+                    {{/ifEquals}}
+                    {{#ifEquals currentStep 2}}
+                    "Cada paso te acerca más a dominar la plataforma."
+                    {{/ifEquals}}
+                    {{#ifEquals currentStep 3}}
+                    "¡Excelente progreso! Ya tienes lo básico configurado."
+                    {{/ifEquals}}
+                    {{#ifEquals currentStep 4}}
+                    "¡Casi terminamos! Solo un poco más."
+                    {{/ifEquals}}
+                </div>
+            </div>
+            
+            <!-- Tips Section -->
+            <div class="tips-section">
+                <h4>💡 Consejos útiles</h4>
+                <ul>
+                    <li>Puedes guardar tu progreso en cualquier momento</li>
+                    <li>Si tienes dudas, nuestro equipo está aquí para ayudarte</li>
+                    <li>Completa todos los pasos para desbloquear todas las funciones</li>
+                    <li>Tu información está segura y protegida</li>
+                </ul>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Alternative Options -->
+            <div style="text-align: center; background-color: #f8fafc; padding: 20px; border-radius: 8px;">
+                <h4 style="color: #2d3748; margin: 0 0 15px 0;">¿Necesitas más tiempo?</h4>
+                <p style="color: #4a5568; margin: 0 0 10px 0; font-size: 14px;">
+                    No te preocupes, puedes continuar cuando gustes.
+                </p>
+                <p style="color: #4a5568; margin: 0; font-size: 14px;">
+                    Tu progreso se guarda automáticamente.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <h3>FlexxusFlow</h3>
+            <p>Te acompañamos en cada paso</p>
+            
+            <div class="support-section">
+                <h4>¿Necesitas ayuda?</h4>
+                <p>Nuestro equipo está disponible para asistirte</p>
+                <p>
+                    📧 <a href="mailto:{{supportEmail}}">{{supportEmail}}</a><br>
+                    💬 <a href="#">Chat en vivo</a>
+                </p>
+            </div>
+            
+            <div class="divider" style="background: linear-gradient(to right, transparent, #4a5568, transparent);"></div>
+            
+            <p>&copy; {{year}} FlexxusFlow. Todos los derechos reservados.</p>
+            <p>
+                <a href="#">¿No quieres recibir estos emails?</a> |
+                <a href="#">Configurar notificaciones</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

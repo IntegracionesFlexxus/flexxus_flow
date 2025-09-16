@@ -1,118 +1,451 @@
-// User Service Implementation - Sprint 1
-// Implementación completa con conexión a base de datos
+/**
+ * User Management Service
+ * Sprint 3 - Backend Team
+ * Implementación siguiendo lineamientos Nivel 2: SOLID, Clean Code, Inversión de Dependencias
+ */
 
 import { injectable, inject } from 'inversify';
-import bcrypt from 'bcryptjs';
-import { IUserService } from '../interfaces/IUserService';
-import { IUserRepository } from '../interfaces/IUserRepository';
-import { User } from '../types/auth.types';
-import { TYPES } from '../../../container/types';
-import { environment } from '../../../config/environment';
-import winston from 'winston';
+import { Logger } from 'winston';
+import { TYPES } from '@/container/types';
+import { IUserRepository } from '@/shared/interfaces/repositories/IUserRepository';
+import { ICompanyRepository } from '@/shared/interfaces/repositories/ICompanyRepository';
+import { PasswordService } from '@/modules/auth/services/PasswordService';
+import { AuditService } from '@/shared/services/audit/AuditService';
 
+// DTOs siguiendo principio de responsabilidad única
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+  timezone?: string;
+  language?: string;
+}
+
+export interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  timezone?: string;
+  language?: string;
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+  timezone: string;
+  language: string;
+  status: string;
+  emailVerified: boolean;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  companies?: UserCompany[];
+}
+
+export interface UserCompany {
+  id: string;
+  name: string;
+  role: string;
+  permissions?: string[];
+  isDefault: boolean;
+  status: string;
+}
+
+/**
+ * UserService implementa gestión completa de usuarios
+ * Principios SOLID aplicados:
+ * - S: Responsabilidad única para gestión de usuarios
+ * - O: Abierto para extensión (nuevos métodos) cerrado para modificación
+ * - L: Sustituible por cualquier implementación que respete la interfaz
+ * - I: Segregación de interfaces (usa interfaces específicas)
+ * - D: Inversión de dependencias (inyección de dependencias)
+ */
 @injectable()
-export class UserService implements IUserService {
+export class UserService {
   constructor(
     @inject(TYPES.UserRepository) private userRepository: IUserRepository,
-    @inject(TYPES.Logger) private logger: winston.Logger
+    @inject(TYPES.CompanyRepository) private companyRepository: ICompanyRepository,
+    @inject(TYPES.PasswordService) private passwordService: PasswordService,
+    @inject(TYPES.AuditService) private auditService: AuditService,
+    @inject(TYPES.Logger) private logger: Logger
   ) {}
 
-  async getUserById(id: string): Promise<User | null> {
+  /**
+   * Crear nuevo usuario con validaciones y auditoría
+   * Clean Code: función con responsabilidad única y nombre descriptivo
+   */
+  async createUser(userData: CreateUserRequest): Promise<UserResponse> {
     try {
-      return await this.userRepository.findById(id);
+      // Validar unicidad del email
+      await this.validateEmailUniqueness(userData.email);
+
+      // Hash de contraseña usando servicio especializado
+      const passwordHash = await this.passwordService.hashPassword(userData.password);
+
+      // Crear usuario con valores por defecto
+      const user = await this.userRepository.create({
+        ...userData,
+        passwordHash,
+        status: 'active',
+        emailVerified: false,
+        timezone: userData.timezone || 'America/Argentina/Buenos_Aires',
+        language: userData.language || 'es'
+      });
+
+      // Auditoría automática
+      await this.auditService.logActivity({
+        action: 'user_created',
+        entityType: 'user',
+        entityId: user.id,
+        description: `Usuario creado: ${user.email}`,
+        metadata: { email: user.email }
+      });
+
+      this.logger.info('Usuario creado exitosamente', { 
+        userId: user.id, 
+        email: user.email 
+      });
+
+      return this.mapToResponse(user);
     } catch (error) {
-      this.logger.error('Error getting user by id:', error);
+      this.logger.error('Error al crear usuario', { 
+        error: error.message, 
+        userData: { ...userData, password: '[REDACTED]' }
+      });
       throw error;
     }
   }
 
-  async getUserByEmail(email: string): Promise<User | null> {
-    try {
-      return await this.userRepository.findByEmail(email);
-    } catch (error) {
-      this.logger.error('Error getting user by email:', error);
-      throw error;
+  /**
+   * Obtener usuario por ID
+   */
+  async getUserById(userId: string): Promise<UserResponse | null> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      return null;
     }
+
+    return this.mapToResponse(user);
   }
 
-  async createUser(data: Partial<User>): Promise<User> {
+  /**
+   * Actualizar información de usuario
+   */
+  async updateUser(
+    userId: string, 
+    updates: UpdateUserRequest, 
+    updatedBy: string
+  ): Promise<UserResponse> {
     try {
-      // Check if user already exists
-      if (data.email) {
-        const exists = await this.userRepository.exists(data.email);
-        if (exists) {
-          throw new Error('User with this email already exists');
-        }
+      const user = await this.userRepository.update(userId, updates);
+      if (!user) {
+        throw new Error('Usuario no encontrado');
       }
 
-      // Hash password if provided
-      if ((data as any).password) {
-        data.password_hash = await this.hashPassword((data as any).password);
-        delete (data as any).password;
+      // Auditoría del cambio
+      await this.auditService.logActivity({
+        action: 'user_updated',
+        entityType: 'user',
+        entityId: userId,
+        userId: updatedBy,
+        description: 'Perfil de usuario actualizado',
+        metadata: { updates }
+      });
+
+      this.logger.info('Usuario actualizado', { 
+        userId, 
+        updates, 
+        updatedBy 
+      });
+
+      return this.mapToResponse(user);
+    } catch (error) {
+      this.logger.error('Error al actualizar usuario', { 
+        error: error.message, 
+        userId, 
+        updates 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener empresas del usuario
+   */
+  async getUserCompanies(userId: string): Promise<UserCompany[]> {
+    return await this.userRepository.getUserCompanies(userId);
+  }
+
+  /**
+   * Agregar usuario a empresa con rol específico
+   */
+  async addUserToCompany(
+    userId: string,
+    companyId: string,
+    roleId: string,
+    permissions?: string[],
+    addedBy?: string
+  ): Promise<void> {
+    try {
+      // Verificar que la empresa existe
+      const company = await this.companyRepository.findById(companyId);
+      if (!company) {
+        throw new Error('Empresa no encontrada');
       }
 
-      // Set default values
-      data.status = data.status || 'active';
-      data.language = data.language || 'es';
-      data.timezone = data.timezone || 'America/Argentina/Buenos_Aires';
+      // Agregar usuario a empresa
+      await this.userRepository.addToCompany(userId, companyId, roleId, permissions);
 
-      return await this.userRepository.create(data);
+      // Auditoría
+      await this.auditService.logActivity({
+        action: 'user_added_to_company',
+        entityType: 'user_company',
+        entityId: userId,
+        userId: addedBy,
+        companyId,
+        description: `Usuario agregado a empresa con rol: ${roleId}`,
+        metadata: { userId, companyId, roleId, permissions }
+      });
+
+      this.logger.info('Usuario agregado a empresa', { 
+        userId, 
+        companyId, 
+        roleId, 
+        addedBy 
+      });
     } catch (error) {
-      this.logger.error('Error creating user:', error);
+      this.logger.error('Error al agregar usuario a empresa', {
+        error: error.message,
+        userId,
+        companyId,
+        roleId
+      });
       throw error;
     }
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<User | null> {
+  /**
+   * Remover usuario de empresa
+   */
+  async removeUserFromCompany(
+    userId: string,
+    companyId: string,
+    removedBy?: string
+  ): Promise<void> {
     try {
-      // Remove fields that shouldn't be updated directly
-      delete data.id;
-      delete data.password_hash;
-      delete (data as any).password;
+      await this.userRepository.removeFromCompany(userId, companyId);
 
-      return await this.userRepository.update(id, data);
+      // Auditoría
+      await this.auditService.logActivity({
+        action: 'user_removed_from_company',
+        entityType: 'user_company',
+        entityId: userId,
+        userId: removedBy,
+        companyId,
+        description: 'Usuario removido de empresa',
+        metadata: { userId, companyId }
+      });
+
+      this.logger.info('Usuario removido de empresa', { 
+        userId, 
+        companyId, 
+        removedBy 
+      });
     } catch (error) {
-      this.logger.error('Error updating user:', error);
+      this.logger.error('Error al remover usuario de empresa', {
+        error: error.message,
+        userId,
+        companyId
+      });
       throw error;
     }
   }
 
-  async deleteUser(id: string): Promise<boolean> {
+  /**
+   * Cambiar rol de usuario en empresa
+   */
+  async changeUserRole(
+    userId: string,
+    companyId: string,
+    newRoleId: string,
+    changedBy?: string
+  ): Promise<void> {
     try {
-      return await this.userRepository.delete(id);
+      const oldRole = await this.userRepository.getUserRole(userId, companyId);
+
+      await this.userRepository.updateUserRole(userId, companyId, newRoleId);
+
+      // Auditoría del cambio de rol
+      await this.auditService.logActivity({
+        action: 'user_role_changed',
+        entityType: 'user_company',
+        entityId: userId,
+        userId: changedBy,
+        companyId,
+        description: `Rol de usuario cambiado de ${oldRole} a ${newRoleId}`,
+        metadata: { userId, companyId, oldRole, newRole: newRoleId }
+      });
+
+      this.logger.info('Rol de usuario cambiado', {
+        userId,
+        companyId,
+        oldRole,
+        newRole: newRoleId,
+        changedBy
+      });
     } catch (error) {
-      this.logger.error('Error deleting user:', error);
+      this.logger.error('Error al cambiar rol de usuario', {
+        error: error.message,
+        userId,
+        companyId,
+        newRole: newRoleId
+      });
       throw error;
     }
   }
 
-  async getAllUsers(limit?: number, offset?: number): Promise<User[]> {
+  /**
+   * Desactivar usuario (soft delete)
+   */
+  async deactivateUser(userId: string, deactivatedBy?: string): Promise<void> {
     try {
-      return await this.userRepository.findAll(limit, offset);
+      await this.userRepository.updateStatus(userId, 'inactive');
+
+      // Invalidar todas las sesiones del usuario
+      await this.sessionRepository.invalidateAllUserSessions(userId);
+
+      // Auditoría
+      await this.auditService.logActivity({
+        action: 'user_deactivated',
+        entityType: 'user',
+        entityId: userId,
+        userId: deactivatedBy,
+        description: 'Cuenta de usuario desactivada',
+        metadata: { userId }
+      });
+
+      this.logger.info('Usuario desactivado', { userId, deactivatedBy });
     } catch (error) {
-      this.logger.error('Error getting all users:', error);
+      this.logger.error('Error al desactivar usuario', {
+        error: error.message,
+        userId
+      });
       throw error;
     }
   }
 
-  async verifyUserEmail(id: string): Promise<void> {
+  // Métodos privados para mantener Clean Code
+
+  /**
+   * Validar que el email sea único
+   * Principio de responsabilidad única
+   */
+  private async validateEmailUniqueness(email: string): Promise<void> {
+    const existingUser = await this.userRepository.findByEmail(email);
+    if (existingUser) {
+      throw new Error('El email ya está en uso');
+    }
+  }
+
+  /**
+   * Obtener usuario por email
+   */
+  async getUserByEmail(email: string): Promise<UserResponse | null> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      return null;
+    }
+    return this.mapToResponse(user);
+  }
+
+  /**
+   * Eliminar usuario (soft delete)
+   */
+  async deleteUser(userId: string): Promise<boolean> {
     try {
-      await this.userRepository.verifyEmail(id);
+      const result = await this.userRepository.delete(userId);
+      
+      if (result) {
+        await this.auditService.logActivity({
+          action: 'user_deleted',
+          entityType: 'user',
+          entityId: userId,
+          description: 'Usuario eliminado'
+        });
+        
+        this.logger.info('Usuario eliminado', { userId });
+      }
+      
+      return result;
     } catch (error) {
-      this.logger.error('Error verifying user email:', error);
+      this.logger.error('Error al eliminar usuario', { 
+        error: error.message, 
+        userId 
+      });
       throw error;
     }
   }
 
-  async updateUserLastLogin(id: string): Promise<void> {
+  /**
+   * Obtener todos los usuarios con paginación
+   */
+  async getAllUsers(limit: number = 10, offset: number = 0): Promise<any[]> {
+    return await this.userRepository.findAll(limit, offset);
+  }
+
+  /**
+   * Verificar email del usuario
+   */
+  async verifyUserEmail(userId: string): Promise<void> {
     try {
-      await this.userRepository.updateLastLogin(id);
+      await this.userRepository.update(userId, {
+        emailVerifiedAt: new Date(),
+        status: 'active'
+      });
+      
+      await this.auditService.logActivity({
+        action: 'email_verified',
+        entityType: 'user',
+        entityId: userId,
+        description: 'Email verificado'
+      });
+      
+      this.logger.info('Email verificado', { userId });
     } catch (error) {
-      this.logger.error('Error updating last login:', error);
+      this.logger.error('Error al verificar email', { 
+        error: error.message, 
+        userId 
+      });
       throw error;
     }
   }
 
+  /**
+   * Actualizar último login del usuario
+   */
+  async updateUserLastLogin(userId: string): Promise<void> {
+    try {
+      await this.userRepository.update(userId, {
+        lastLoginAt: new Date()
+      });
+      
+      this.logger.info('Último login actualizado', { userId });
+    } catch (error) {
+      this.logger.error('Error al actualizar último login', { 
+        error: error.message, 
+        userId 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Cambiar contraseña del usuario
+   */
   async changePassword(
     userId: string, 
     currentPassword: string, 
@@ -121,46 +454,77 @@ export class UserService implements IUserService {
     try {
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new Error('User not found');
+        throw new Error('Usuario no encontrado');
       }
-
-      // Verify current password
-      const isValid = await this.validatePassword(currentPassword, user.password_hash);
+      
+      // Verificar contraseña actual
+      const isValid = await this.passwordService.validatePassword(
+        currentPassword, 
+        user.passwordHash
+      );
+      
       if (!isValid) {
-        throw new Error('Invalid current password');
+        throw new Error('Contraseña actual incorrecta');
       }
-
-      // Hash new password
-      const newPasswordHash = await this.hashPassword(newPassword);
-
-      // Update password
+      
+      // Hash de nueva contraseña
+      const newPasswordHash = await this.passwordService.hashPassword(newPassword);
+      
+      // Actualizar contraseña
       await this.userRepository.update(userId, {
-        password_hash: newPasswordHash,
-        password_changed_at: new Date()
+        passwordHash: newPasswordHash,
+        passwordChangedAt: new Date()
       });
-
-      this.logger.info(`Password changed for user ${userId}`);
+      
+      await this.auditService.logActivity({
+        action: 'password_changed',
+        entityType: 'user',
+        entityId: userId,
+        description: 'Contraseña cambiada'
+      });
+      
+      this.logger.info('Contraseña cambiada', { userId });
     } catch (error) {
-      this.logger.error('Error changing password:', error);
+      this.logger.error('Error al cambiar contraseña', { 
+        error: error.message, 
+        userId 
+      });
       throw error;
     }
   }
 
+  /**
+   * Validar contraseña
+   */
   async validatePassword(password: string, hash: string): Promise<boolean> {
-    try {
-      return await bcrypt.compare(password, hash);
-    } catch (error) {
-      this.logger.error('Error validating password:', error);
-      return false;
-    }
+    return await this.passwordService.validatePassword(password, hash);
   }
 
+  /**
+   * Hash de contraseña
+   */
   async hashPassword(password: string): Promise<string> {
-    try {
-      return await bcrypt.hash(password, environment.security.bcryptRounds);
-    } catch (error) {
-      this.logger.error('Error hashing password:', error);
-      throw error;
-    }
+    return await this.passwordService.hashPassword(password);
+  }
+
+  /**
+   * Mapear entidad de dominio a DTO de respuesta
+   * Patrón Adapter para transformación de datos
+   */
+  private mapToResponse(user: any): UserResponse {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatar: user.avatar,
+      timezone: user.timezone || 'America/Argentina/Buenos_Aires',
+      language: user.language || 'es',
+      status: user.status,
+      emailVerified: !!user.emailVerifiedAt,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      companies: user.companies
+    };
   }
 }

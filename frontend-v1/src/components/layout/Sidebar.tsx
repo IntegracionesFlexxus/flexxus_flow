@@ -28,7 +28,9 @@ import {
   ExpandMore,
   ChevronLeft as ChevronLeftIcon,
   Support as SupportIcon,
-  Help as HelpIcon
+  Help as HelpIcon,
+  Group as UsersIcon,
+  Security as RolesIcon
 } from '@mui/icons-material'
 
 // Store
@@ -74,6 +76,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       text: 'Dashboard',
       icon: <DashboardIcon />,
       path: '/dashboard',
+    },
+    {
+      text: 'Usuarios',
+      icon: <UsersIcon />,
+      path: '/users',
+    },
+    {
+      text: 'Roles',
+      icon: <RolesIcon />,
+      path: '/roles',
     },
     {
       text: 'Omnicanalidad', 
@@ -300,11 +312,11 @@ const Sidebar: React.FC<SidebarProps> = ({
               borderRadius: 1
             }}>
               <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName?.[0] || user.email?.[0] || 'U'}{user.lastName?.[0] || ''}
               </Avatar>
               <Box sx={{ overflow: 'hidden' }}>
                 <Typography variant="body2" noWrap fontWeight={500}>
-                  {user.firstName} {user.lastName}
+                  {user.firstName || ''} {user.lastName || ''}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
                   {user.email}

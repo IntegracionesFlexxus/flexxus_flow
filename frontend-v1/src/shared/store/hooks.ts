@@ -17,8 +17,8 @@ export const useAuth = () => {
     user,
     token,
     currentCompany,
-    login: storeLogin,
-    logout: storeLogout,
+    loginAsync: storeLogin,
+    logoutAsync: storeLogout,
     checkAuth
   } = useAuthStore()
   
@@ -72,8 +72,8 @@ export const useAuth = () => {
     }
   }
   
-  const logout = () => {
-    storeLogout()
+  const logout = async () => {
+    await storeLogout()
     notify.info('Sesión cerrada')
     navigate('/auth/login')
   }

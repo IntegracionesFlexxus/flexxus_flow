@@ -94,7 +94,7 @@ export function PerformanceMonitor() {
 
   // Solo mostrar en desarrollo
   useEffect(() => {
-    setIsVisible(process.env.NODE_ENV === 'development');
+    setIsVisible(import.meta.env.DEV);
   }, []);
 
   if (!isVisible) return null;
@@ -290,7 +290,7 @@ export function usePerformanceMonitor() {
       const duration = endTime - startTime;
       setRenderTime(duration);
       
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log(`Component lifecycle: ${duration.toFixed(2)}ms`);
       }
     };

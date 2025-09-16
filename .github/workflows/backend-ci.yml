@@ -10,72 +10,84 @@ on:
     branches: [main, develop]
     paths:
       - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
 
-defaults:
-  run:
-    working-directory: backend
+env:
+  NODE_VERSION: '18.x'
+  COVERAGE_THRESHOLD: 80
 
 jobs:
-  # Job 1: Build and compile TypeScript
+  # Job 1: Build and type checking
   build:
-    name: Build
+    name: Build & Type Check
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
+          
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-      
-      - name: Build TypeScript
+        working-directory: ./backend
+        run: npm ci
+        
+      - name: Run TypeScript compiler
+        working-directory: ./backend
+        run: npm run typecheck
+        
+      - name: Build project
+        working-directory: ./backend
         run: npm run build
-      
+        
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: build-artifacts
-          path: backend/dist
-          retention-days: 1
+          path: backend/dist/
+          retention-days: 7
 
   # Job 2: Code quality checks
   quality:
-    name: Code Quality
+    name: Lint & Format Check
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
+          
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-      
+        working-directory: ./backend
+        run: npm ci
+        
       - name: Run ESLint
+        working-directory: ./backend
         run: npm run lint
-        continue-on-error: false
-      
+        
       - name: Check Prettier formatting
+        working-directory: ./backend
         run: npm run format:check
-      
-      - name: TypeScript type checking
-        run: npx tsc --noEmit
+        
+      - name: Check for circular dependencies
+        working-directory: ./backend
+        run: npx madge --circular --extensions ts ./src
+        
+      - name: Check for security vulnerabilities
+        working-directory: ./backend
+        run: npm audit --audit-level=moderate
 
-  # Job 3: Tests and coverage
+  # Job 3: Unit and Integration tests
   test:
     name: Tests & Coverage
     runs-on: ubuntu-latest
@@ -84,85 +96,200 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
           POSTGRES_DB: flexxus_test
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
-    env:
-      NODE_ENV: test
-      DB_SHARED_HOST: localhost
-      DB_SHARED_PORT: 5432
-      DB_SHARED_NAME: flexxus_test
-      DB_SHARED_USER: postgres
-      DB_SHARED_PASSWORD: postgres
-      JWT_SECRET: test_jwt_secret_key_for_ci_testing
-      REFRESH_TOKEN_SECRET: test_refresh_secret_key_for_ci
+        ports:
+          - 5432:5432
+          
+      mongodb:
+        image: mongo:6
+        env:
+          MONGO_INITDB_ROOT_USERNAME: test
+          MONGO_INITDB_ROOT_PASSWORD: test
+        options: >-
+          --health-cmd "echo 'db.runCommand({ping: 1})' | mongosh --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+          
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
+          
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-      
-      - name: Run unit tests
-        run: npm test -- --ci --coverage --maxWorkers=2
-      
-      - name: Generate coverage report
-        run: npm run test:coverage
-      
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./backend/coverage/lcov.info
-          flags: backend
-          name: backend-coverage
-          fail_ci_if_error: false
-      
-      - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: backend/coverage
-          retention-days: 7
-      
-      - name: Check coverage thresholds
+        working-directory: ./backend
+        run: npm ci
+        
+      - name: Setup test environment
+        working-directory: ./backend
+        env:
+          TEST_PG_HOST: localhost
+          TEST_PG_PORT: 5432
+          TEST_PG_USER: test
+          TEST_PG_PASSWORD: test
+          TEST_PG_DATABASE: flexxus_test
+          TEST_MONGO_URI: mongodb://test:test@localhost:27017/flexxus_test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
         run: |
-          npx jest --coverage --coverageReporters=json-summary
-          node -e "
-          const coverage = require('./coverage/coverage-summary.json');
-          const total = coverage.total;
-          const threshold = 80;
+          cp .env.test .env
+          echo "TEST_DATABASE=true" >> .env
           
-          console.log('Coverage Summary:');
-          console.log('Lines:', total.lines.pct + '%');
-          console.log('Statements:', total.statements.pct + '%');
-          console.log('Functions:', total.functions.pct + '%');
-          console.log('Branches:', total.branches.pct + '%');
+      - name: Run unit tests
+        working-directory: ./backend
+        run: npm run test:unit -- --coverage
+        
+      - name: Run integration tests
+        working-directory: ./backend
+        run: npm run test:integration -- --coverage
+        
+      - name: Merge coverage reports
+        working-directory: ./backend
+        run: |
+          npx nyc merge coverage coverage/merged
+          npx nyc report --reporter=json --reporter=lcov --reporter=text
           
-          if (total.lines.pct < threshold) {
-            console.error('Coverage below threshold!');
-            process.exit(1);
-          }
-          "
-        continue-on-error: true
+      - name: Check coverage thresholds
+        working-directory: ./backend
+        run: |
+          COVERAGE=$(npx nyc report --reporter=json-summary | jq '.total.statements.pct')
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "Coverage is below threshold of ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./backend/coverage
+          files: ./lcov.info
+          fail_ci_if_error: true
+          verbose: true
+          
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: |
+            backend/coverage/
+            backend/coverage-reports/
+          retention-days: 30
 
-  # Job 4: Security scanning
+  # Job 4: E2E tests
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: flexxus_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: backend/dist/
+          
+      - name: Run E2E tests
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+          TEST_PG_HOST: localhost
+        run: npm run test:e2e
+
+  # Job 5: Performance tests
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: backend/dist/
+          
+      - name: Run performance tests
+        working-directory: ./backend
+        run: npm run test:performance
+        
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: backend/performance-results/
+          retention-days: 30
+
+  # Job 6: Security scanning
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -170,73 +297,65 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+        
+      - name: Run Trivy security scan
+        uses: aquasecurity/trivy-action@master
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
-      
-      - name: Run security scan with Snyk
+          scan-type: 'fs'
+          scan-ref: './backend'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+          
+      - name: Run Snyk security scan
         uses: snyk/actions/node@master
-        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high --file=backend/package.json
+          args: --severity-threshold=medium --file=backend/package.json
 
-  # Job 5: Documentation generation
+  # Job 7: Documentation generation
   docs:
     name: Generate Documentation
     runs-on: ubuntu-latest
-    needs: [build, quality, test]
-    if: github.ref == 'refs/heads/main'
+    needs: [build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
+          
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-      
-      - name: Install TypeDoc
-        run: npm install --save-dev typedoc
-      
-      - name: Generate API documentation
-        run: npx typedoc --out docs src/index.ts
-      
-      - name: Upload documentation
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-documentation
-          path: backend/docs
-          retention-days: 30
-      
+        working-directory: ./backend
+        run: npm ci
+        
+      - name: Generate TypeDoc documentation
+        working-directory: ./backend
+        run: npm run docs:generate
+        
       - name: Deploy documentation to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./backend/docs
-          destination_dir: backend-docs
+          destination_dir: backend
 
-  # Summary job
-  summary:
-    name: CI Summary
+  # Final job: Report status
+  report:
+    name: CI Report
     runs-on: ubuntu-latest
-    needs: [build, quality, test, security]
+    needs: [build, quality, test, e2e, security]
     if: always()
     
     steps:
@@ -245,13 +364,35 @@ jobs:
           echo "Build: ${{ needs.build.result }}"
           echo "Quality: ${{ needs.quality.result }}"
           echo "Test: ${{ needs.test.result }}"
+          echo "E2E: ${{ needs.e2e.result }}"
           echo "Security: ${{ needs.security.result }}"
           
-          if [[ "${{ needs.build.result }}" == "failure" ]] || \
-             [[ "${{ needs.quality.result }}" == "failure" ]] || \
-             [[ "${{ needs.test.result }}" == "failure" ]]; then
-            echo "Critical checks failed!"
-            exit 1
-          fi
-          
-          echo "All critical checks passed!"
+      - name: Send Slack notification
+        if: github.event_name == 'push'
+        uses: slackapi/slack-github-action@v1
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {
+              "text": "Backend CI Pipeline Results",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Backend CI Pipeline Results*\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Build:* ${{ needs.build.result }}"},
+                    {"type": "mrkdwn", "text": "*Quality:* ${{ needs.quality.result }}"},
+                    {"type": "mrkdwn", "text": "*Tests:* ${{ needs.test.result }}"},
+                    {"type": "mrkdwn", "text": "*E2E:* ${{ needs.e2e.result }}"},
+                    {"type": "mrkdwn", "text": "*Security:* ${{ needs.security.result }}"}
+                  ]
+                }
+              ]
+            }

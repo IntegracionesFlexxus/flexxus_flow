@@ -47,8 +47,8 @@ run_migration "../migrations/001_create_companies.sql" "flexxus_shared"
 run_migration "../migrations/002_create_users.sql" "flexxus_shared"
 run_migration "../migrations/003_create_user_companies.sql" "flexxus_shared"
 
-echo -e "${GREEN}👥 Migraciones de Base de Datos de Personas${NC}"
-run_migration "../migrations/004_create_contacts.sql" "flexxus_personas"
+echo -e "${GREEN}👥 Migraciones de Base de Datos CRM${NC}"
+run_migration "../migrations/004_create_contacts.sql" "flexxus_crm"
 
 # Preguntar si se quieren cargar datos de prueba
 echo ""

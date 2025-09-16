@@ -1,13 +1,64 @@
-import { Grid, Paper, Typography, Box, Card, CardContent } from '@mui/material'
+import { Grid, Paper, Typography, Box, Card, CardContent, Skeleton } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { userService } from '@modules/users/services/userService'
+import { useAuthStore } from '@/shared/store/authStore'
 
 // Dashboard principal - MVP Nivel 1
 // TODO: En Nivel 2 conectar con datos reales y widgets dinámicos
 function Dashboard() {
   const navigate = useNavigate()
-  
+  const { currentCompany } = useAuthStore()
+
+  // Query para obtener el conteo real de usuarios
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useQuery({
+    queryKey: ['users', currentCompany?.id],
+    queryFn: () => userService.getCompanyUsers(currentCompany!.id),
+    enabled: !!currentCompany?.id,
+    staleTime: 30000 // 30 segundos
+  })
+
+
+  // La respuesta del backend es { success: true, data: { users: [...], total: number } }
+  // Pero el servicio retorna response.data, que ya es { success: true, data: {...} }
+  // Por lo tanto accedemos a usersData.data.total
+  const userCount = usersData?.data?.total || 0
+
   // Cards de módulos con navegación
   const modules = [
+    {
+      title: 'Usuarios',
+      description: 'Gestión de usuarios del sistema',
+      value: isLoadingUsers ? null : userCount.toString(),
+      label: 'Usuarios activos',
+      path: '/users',
+      color: '#0288d1',
+      isLoading: isLoadingUsers
+    },
+    { 
+      title: 'Roles',
+      description: 'Administración de roles y permisos',
+      value: '3',
+      label: 'Roles configurados',
+      path: '/roles',
+      color: '#00796b'
+    },
+    { 
+      title: 'Empresas',
+      description: 'Gestión multi-empresa',
+      value: '1',
+      label: 'Empresas activas',
+      path: '/companies',
+      color: '#5e35b1'
+    },
+    { 
+      title: 'Feature Flags',
+      description: 'Control de funcionalidades',
+      value: '5',
+      label: 'Flags activos',
+      path: '/feature-flags',
+      color: '#d32f2f'
+    },
     { 
       title: 'Omnicanalidad',
       description: 'Gestiona todos tus canales de comunicación',
@@ -65,7 +116,9 @@ function Dashboard() {
                   boxShadow: 3
                 }
               }}
-              onClick={() => navigate(module.path)}
+              onClick={() => {
+                navigate(module.path)
+              }}
             >
               <CardContent>
                 <Typography 
@@ -75,9 +128,13 @@ function Dashboard() {
                 >
                   {module.title}
                 </Typography>
-                <Typography variant="h3" gutterBottom>
-                  {module.value}
-                </Typography>
+                {module.isLoading ? (
+                  <Skeleton variant="text" width={60} height={48} sx={{ fontSize: '3rem' }} />
+                ) : (
+                  <Typography variant="h3" gutterBottom>
+                    {module.value}
+                  </Typography>
+                )}
                 <Typography variant="caption" color="text.secondary">
                   {module.label}
                 </Typography>

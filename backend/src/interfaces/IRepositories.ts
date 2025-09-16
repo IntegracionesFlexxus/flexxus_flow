@@ -1,7 +1,5 @@
 // Repository interfaces following Dependency Inversion Principle (DIP)
-
 import { Pool, PoolClient } from 'pg';
-
 // Base repository interface
 export interface IRepository<T> {
   findById(id: string): Promise<T | null>;
@@ -14,7 +12,6 @@ export interface IRepository<T> {
   exists(id: string): Promise<boolean>;
   transaction<R>(callback: (client: PoolClient) => Promise<R>): Promise<R>;
 }
-
 // User Repository
 export interface IUserRepository extends IRepository<IUserEntity> {
   findByEmail(email: string): Promise<IUserEntity | null>;
@@ -23,7 +20,6 @@ export interface IUserRepository extends IRepository<IUserEntity> {
   updateLastLogin(userId: string): Promise<void>;
   softDelete(id: string): Promise<boolean>;
 }
-
 // Company Repository
 export interface ICompanyRepository extends IRepository<ICompanyEntity> {
   findByName(name: string): Promise<ICompanyEntity | null>;
@@ -33,7 +29,6 @@ export interface ICompanyRepository extends IRepository<ICompanyEntity> {
   getCompanyUsers(companyId: string, options?: IQueryOptions): Promise<IUserEntity[]>;
   softDelete(id: string): Promise<boolean>;
 }
-
 // Product Repository
 export interface IProductRepository extends IRepository<IProductEntity> {
   findByCategory(category: string, options?: IQueryOptions): Promise<IProductEntity[]>;
@@ -41,7 +36,6 @@ export interface IProductRepository extends IRepository<IProductEntity> {
   updateStock(productId: string, quantity: number): Promise<void>;
   getOutOfStock(options?: IQueryOptions): Promise<IProductEntity[]>;
 }
-
 // Order Repository
 export interface IOrderRepository extends IRepository<IOrderEntity> {
   findByUserId(userId: string, options?: IQueryOptions): Promise<IOrderEntity[]>;
@@ -51,7 +45,6 @@ export interface IOrderRepository extends IRepository<IOrderEntity> {
   getOrderItems(orderId: string): Promise<IOrderItemEntity[]>;
   addOrderItem(orderId: string, item: IOrderItemEntity): Promise<void>;
 }
-
 // Database Manager interface
 export interface IDatabaseManager {
   getPool(database: DatabaseName): Pool;
@@ -62,7 +55,6 @@ export interface IDatabaseManager {
   executeQuery<T>(database: DatabaseName, query: string, params?: any[]): Promise<T[]>;
   executeTransaction<T>(database: DatabaseName, callback: (client: PoolClient) => Promise<T>): Promise<T>;
 }
-
 // Entity interfaces
 export interface IUserEntity {
   id: string;
@@ -76,7 +68,6 @@ export interface IUserEntity {
   updated_at: Date;
   deleted_at?: Date;
 }
-
 export interface ICompanyEntity {
   id: string;
   name: string;
@@ -87,7 +78,6 @@ export interface ICompanyEntity {
   updated_at: Date;
   deleted_at?: Date;
 }
-
 export interface IProductEntity {
   id: string;
   name: string;
@@ -100,7 +90,6 @@ export interface IProductEntity {
   created_at: Date;
   updated_at: Date;
 }
-
 export interface IOrderEntity {
   id: string;
   user_id: string;
@@ -112,7 +101,6 @@ export interface IOrderEntity {
   created_at: Date;
   updated_at: Date;
 }
-
 export interface IOrderItemEntity {
   id: string;
   order_id: string;
@@ -122,7 +110,6 @@ export interface IOrderItemEntity {
   total_price: number;
   created_at: Date;
 }
-
 // Query options
 export interface IQueryOptions {
   limit?: number;
@@ -132,6 +119,5 @@ export interface IQueryOptions {
   include?: string[];
   select?: string[];
 }
-
 // Database names
 export type DatabaseName = 'shared' | 'omni' | 'personas' | 'notificaciones' | 'organizaciones';

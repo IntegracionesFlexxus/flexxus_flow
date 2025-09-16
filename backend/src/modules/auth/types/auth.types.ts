@@ -1,6 +1,5 @@
 // Auth Module Types - Sprint 1
 // Tipos básicos para autenticación y autorización
-
 export interface User {
   id: string;
   email: string;
@@ -18,7 +17,6 @@ export interface User {
   updated_at: Date;
   deleted_at?: Date | null;
 }
-
 export interface Company {
   id: string;
   name: string;
@@ -33,7 +31,6 @@ export interface Company {
   updated_at: Date;
   deleted_at?: Date | null;
 }
-
 export interface UserCompany {
   id: string;
   user_id: string;
@@ -48,13 +45,11 @@ export interface UserCompany {
   updated_at: Date;
   deleted_at?: Date | null;
 }
-
 export interface LoginDto {
   email: string;
   password: string;
   company_id?: string; // Opcional, para login directo a una empresa
 }
-
 export interface RegisterDto {
   email: string;
   password: string;
@@ -64,16 +59,17 @@ export interface RegisterDto {
   company_id?: string; // Para unirse a empresa existente
   invitation_code?: string; // Código de invitación
 }
-
 export interface AuthResponse {
   success: boolean;
   user: Partial<User>;
   company?: Partial<Company>;
-  token: string;
+  accessToken: string;
   refreshToken: string;
   expiresIn: string;
+  availableCompanies?: any[];
+  permissions?: string[];
+  sessionId?: string;
 }
-
 export interface JwtPayload {
   userId: string;
   email: string;
@@ -82,21 +78,17 @@ export interface JwtPayload {
   iat?: number;
   exp?: number;
 }
-
 export interface ChangePasswordDto {
   currentPassword: string;
   newPassword: string;
 }
-
 export interface ForgotPasswordDto {
   email: string;
 }
-
 export interface ResetPasswordDto {
   token: string;
   newPassword: string;
 }
-
 export interface SwitchCompanyDto {
   companyId: string;
 }

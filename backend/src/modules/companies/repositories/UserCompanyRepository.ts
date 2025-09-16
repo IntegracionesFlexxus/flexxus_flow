@@ -4,7 +4,7 @@ import { injectable, inject } from 'inversify';
 import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
 import { TYPES } from '@/container/types';
 import { Logger } from 'winston';
-export interface UserCompanyRelation {
+export interface IUserCompanyRelation {
   userId: string;
   companyId: string;
   roleId: string;
@@ -15,7 +15,7 @@ export interface UserCompanyRelation {
   createdAt: Date;
   updatedAt: Date;
 }
-export interface CompanyWithRole {
+export interface ICompanyWithRole {
   companyId: string;
   name: string;
   role: string;
@@ -24,7 +24,7 @@ export interface CompanyWithRole {
   status: string;
   joinedAt: Date;
 }
-export interface UserInCompany {
+export interface IUserInCompany {
   userId: string;
   email: string;
   firstName: string;
@@ -38,8 +38,8 @@ export interface UserInCompany {
 }
 export interface IUserCompanyRepository {
   // User's companies management
-  getUserCompanies(userId: string): Promise<CompanyWithRole[]>;
-  getDefaultCompany(userId: string): Promise<CompanyWithRole | null>;
+  getUserCompanies(userId: string): Promise<ICompanyWithRole[]>;
+  getDefaultCompany(userId: string): Promise<ICompanyWithRole | null>;
   setDefaultCompany(userId: string, companyId: string): Promise<void>;
   // Company's users management
   getUsersInCompany(companyId: string, options?: {
@@ -48,7 +48,7 @@ export interface IUserCompanyRepository {
     search?: string;
     roleId?: string;
     status?: string;
-  }): Promise<UserInCompany[]>;
+  }): Promise<IUserInCompany[]>;
   countUsersInCompany(companyId: string, options?: {
     search?: string;
     roleId?: string;
@@ -63,7 +63,7 @@ export interface IUserCompanyRepository {
   updateUserCompanyStatus(userId: string, companyId: string, status: 'active' | 'inactive' | 'pending'): Promise<void>;
   // Validation
   isUserInCompany(userId: string, companyId: string): Promise<boolean>;
-  getUserCompanyRelation(userId: string, companyId: string): Promise<UserCompanyRelation | null>;
+  getUserCompanyRelation(userId: string, companyId: string): Promise<IUserCompanyRelation | null>;
   // Role management in company context
   getUserRoleInCompany(userId: string, companyId: string): Promise<{ roleId: string; role: string } | null>;
   updateUserRoleInCompany(userId: string, companyId: string, newRoleId: string): Promise<void>;
@@ -86,7 +86,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
   /**
    * Get all companies a user belongs to
    */
-  async getUserCompanies(userId: string): Promise<CompanyWithRole[]> {
+  async getUserCompanies(userId: string): Promise<ICompanyWithRole[]> {
     try {
       const query = `
         SELECT 
@@ -122,7 +122,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
   /**
    * Get user's default company
    */
-  async getDefaultCompany(userId: string): Promise<CompanyWithRole | null> {
+  async getDefaultCompany(userId: string): Promise<ICompanyWithRole | null> {
     const query = `
       SELECT 
         c.id as company_id,
@@ -185,13 +185,29 @@ export class UserCompanyRepository implements IUserCompanyRepository {
     search?: string;
     roleId?: string;
     status?: string;
-  }): Promise<UserInCompany[]> {
+  }): Promise<IUserInCompany[]> {
+    interface IUserQueryResult {
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone?: string;
+      avatar?: string;
+      status: string;
+      email_verified_at?: Date;
+      role: string;
+      role_id: string;
+      joined_at: Date;
+      last_active_at?: Date;
+    }
     let query = `
       SELECT
         u.id as user_id,
         u.email,
         u.first_name,
         u.last_name,
+        u.phone,
+        u.avatar,
         u.status,
         u.email_verified_at,
         uc.role,
@@ -241,12 +257,14 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       query += ` OFFSET $${paramCount}`;
       params.push(options.offset);
     }
-    const result = await this.db.query<any>(query, params);
+    const result = await this.db.query<IUserQueryResult>(query, params);
     return result.map(row => ({
       userId: row.user_id,
       email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,
+      phone: row.phone,
+      avatar: row.avatar,
       status: row.status,
       emailVerified: !!row.email_verified_at,
       role: row.role,
@@ -413,14 +431,14 @@ export class UserCompanyRepository implements IUserCompanyRepository {
    * Remove a user from a company (soft delete)
    */
   async removeUserFromCompany(userId: string, companyId: string): Promise<void> {
-    console.log('[UserCompanyRepository.removeUserFromCompany] START:', {
+    this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] START', {
       userId,
       companyId,
       timestamp: new Date().toISOString()
     });
 
     await this.db.transaction(async (trx) => {
-      console.log('[UserCompanyRepository.removeUserFromCompany] Transaction started');
+      this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] Transaction started');
 
       // Soft delete from user_companies
       const ucQuery = `
@@ -431,14 +449,14 @@ export class UserCompanyRepository implements IUserCompanyRepository {
           AND company_id = $2
                `;
 
-      console.log('[UserCompanyRepository.removeUserFromCompany] Executing user_companies update:', {
+      this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] Executing user_companies update', {
         query: 'UPDATE user_companies SET status=inactive...',
         params: [userId, companyId]
       });
 
       const ucResult = await trx.query(ucQuery, [userId, companyId]);
 
-      console.log('[UserCompanyRepository.removeUserFromCompany] user_companies update result:', {
+      this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] user_companies update result', {
         rowCount: ucResult.rowCount || (ucResult as any).affectedRows || 'unknown'
       });
 
@@ -448,19 +466,19 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         WHERE user_id = $1 AND company_id = $2
       `;
 
-      console.log('[UserCompanyRepository.removeUserFromCompany] Executing user_roles delete:', {
+      this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] Executing user_roles delete', {
         query: 'DELETE FROM user_roles...',
         params: [userId, companyId]
       });
 
       const urResult = await trx.query(urQuery, [userId, companyId]);
 
-      console.log('[UserCompanyRepository.removeUserFromCompany] user_roles delete result:', {
+      this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] user_roles delete result', {
         rowCount: urResult.rowCount || (urResult as any).affectedRows || 'unknown'
       });
     });
 
-    console.log('[UserCompanyRepository.removeUserFromCompany] COMPLETED SUCCESSFULLY');
+    this.logger?.debug('[UserCompanyRepository.removeUserFromCompany] COMPLETED SUCCESSFULLY');
   }
   /**
    * Update user's status in a company
@@ -496,7 +514,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
   /**
    * Get the full relationship details between a user and company
    */
-  async getUserCompanyRelation(userId: string, companyId: string): Promise<UserCompanyRelation | null> {
+  async getUserCompanyRelation(userId: string, companyId: string): Promise<IUserCompanyRelation | null> {
     const query = `
       SELECT 
         uc.user_id,

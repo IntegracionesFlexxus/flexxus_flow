@@ -318,9 +318,15 @@ export const UserManagement: React.FC = () => {
   }, []);
 
   const handleOpenEditDialog = useCallback(() => {
+    console.log('🖊️ [UserManagement.handleOpenEditDialog] Abriendo diálogo de edición');
+    console.log('👤 [UserManagement.handleOpenEditDialog] Usuario seleccionado para editar:', selectedUser);
+    console.log('🆔 [UserManagement.handleOpenEditDialog] ID del usuario:', selectedUser?.id);
+    console.log('🔑 [UserManagement.handleOpenEditDialog] Propiedades del usuario:', selectedUser ? Object.keys(selectedUser) : 'No user');
+    console.log('📧 [UserManagement.handleOpenEditDialog] Email del usuario:', selectedUser?.email);
+
     handleOpenDialog('edit');
     handleMenuClose();
-  }, [handleOpenDialog, handleMenuClose]);
+  }, [handleOpenDialog, handleMenuClose, selectedUser]);
 
   const handleManagePermissions = useCallback(() => {
     handleOpenDialog('permissions');
@@ -753,11 +759,22 @@ export const UserManagement: React.FC = () => {
         <UserEditDialog
           open={dialogs.edit}
           onClose={() => closeDialog('edit')}
-          user={selectedUser}
+          user={(() => {
+            console.log('🎭 [UserEditDialog] Pasando usuario al diálogo:', selectedUser);
+            console.log('🆔 [UserEditDialog] ID del usuario:', selectedUser.id);
+            console.log('🔑 [UserEditDialog] Todas las propiedades:', Object.keys(selectedUser));
+            console.log('🆔 [UserEditDialog] Role ID:', selectedUser.roleId);
+            return selectedUser;
+          })()}
           mode="edit"
+          companyId={currentCompany?.id}
           onSave={handleEditUser}
           roles={rolesData || []}
-          companies={companiesData || []}
+          companies={(() => {
+            console.log('🏢 [UserManagement] Companies data:', companiesData);
+            console.log('🏭 [UserManagement] Current company:', currentCompany);
+            return companiesData || [];
+          })()}
         />
       )}
 

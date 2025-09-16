@@ -49,15 +49,7 @@ interface FormData {
   password?: string;
   confirmPassword?: string;
   phone: string;
-  timezone: string;
-  language: string;
-  twoFactorEnabled: boolean;
   emailVerified: boolean;
-  notifications: {
-    email: boolean;
-    sms: boolean;
-    push: boolean;
-  };
 }
 
 const getValidationSchema = (mode: 'create' | 'edit') => Yup.object({
@@ -126,8 +118,24 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   onSave,
   roles = [],
   companies = [],
-  mode = 'create'
+  mode = 'create',
+  companyId
 }) => {
+  // Debug logs para edición
+  // console.log('📝 [UserEditDialog] Dialog abierto:', { open, mode });
+  // console.log('👤 [UserEditDialog] Usuario recibido:', user);
+  // console.log('🔑 [UserEditDialog] Propiedades del usuario:', user ? Object.keys(user) : 'No user');
+  // console.log('📧 [UserEditDialog] Datos del usuario:', {
+    id: user?.id,
+    email: user?.email,
+    firstName: user?.firstName,
+    lastName: user?.lastName,
+    role: user?.role,
+    roleId: user?.roleId,
+    status: user?.status
+  });
+  // console.log('🏭 [UserEditDialog] Company ID:', companyId);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -145,43 +153,98 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
       email: user?.email || '',
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      role: user?.role || '',
+      role: user?.roleId || user?.role || '',  // Usar roleId si está disponible
       status: user?.status || 'active',
       password: '',
       confirmPassword: '',
       phone: user?.phone || '',
-      timezone: user?.timezone || 'America/Mexico_City',
-      language: user?.language || 'es',
-      twoFactorEnabled: user?.twoFactorEnabled || false,
-      emailVerified: user?.emailVerified || false,
-      notifications: {
-        email: user?.notifications?.email ?? true,
-        sms: user?.notifications?.sms ?? false,
-        push: user?.notifications?.push ?? true
-      }
+      emailVerified: user?.emailVerified || false
     }
   });
+
+  // Effect para resetear el formulario cuando se abre el dialog o cambia el usuario
+  useEffect(() => {
+    // console.log('🔄 [UserEditDialog.useEffect] Estado cambió:', { open, mode, hasUser: !!user });
+
+    if (open) {
+      if (user && mode === 'edit') {
+        // console.log('📋 [UserEditDialog.useEffect] Modo edición - Reseteando con datos del usuario:', {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          status: user.status
+        });
+
+        // Resetear el formulario con los datos del usuario
+        reset({
+          email: user.email || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: user.roleId || user.role || '',  // Usar roleId si está disponible
+          status: user.status || 'active',
+          password: '',
+          confirmPassword: '',
+          phone: user.phone || '',
+          emailVerified: user.emailVerified || false
+        });
+
+        // Establecer las empresas seleccionadas
+        // Si no hay empresas en el usuario, usar la empresa actual
+        // console.log('🏭 [UserEditDialog.useEffect] User companies:', user.companies);
+        // console.log('🆔 [UserEditDialog.useEffect] CompanyId prop:', companyId);
+
+        if (user.companies?.length > 0) {
+          // console.log('✅ [UserEditDialog.useEffect] Setting user companies:', user.companies.map((c: any) => c.id));
+          setSelectedCompanies(user.companies.map((c: any) => c.id));
+        } else if (companyId) {
+          // console.log('✅ [UserEditDialog.useEffect] Setting current company:', [companyId]);
+          setSelectedCompanies([companyId]);
+        } else {
+          // console.log('⚠️ [UserEditDialog.useEffect] No companies to set');
+          setSelectedCompanies([]);
+        }
+      } else if (mode === 'create') {
+        // console.log('📋 [UserEditDialog.useEffect] Modo creación - Reseteando formulario vacío');
+
+        // Resetear con valores por defecto para crear nuevo usuario
+        reset({
+          email: '',
+          firstName: '',
+          lastName: '',
+          role: '',
+          status: 'active',
+          password: '',
+          confirmPassword: '',
+          phone: '',
+          emailVerified: false
+        });
+
+        setSelectedCompanies([]);
+      }
+    }
+  }, [user, open, mode, reset]);
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('🎯 [UserEditDialog] Original form values:', values);
-      console.log('🎯 [UserEditDialog] Original role value:', values.role);
-      console.log('🎯 [UserEditDialog] Available roles:', roles);
+      // console.log('🎯 [UserEditDialog] Original form values:', values);
+      // console.log('🎯 [UserEditDialog] Original role value:', values.role);
+      // console.log('🎯 [UserEditDialog] Available roles:', roles);
       
       // Map role UUID to role name
       let roleValue = values.role;
       if (roleValue) {
         // Find the role object by UUID
         const selectedRole = roles.find(r => r.id === roleValue);
-        console.log('🎯 [UserEditDialog] Found role object:', selectedRole);
+        // console.log('🎯 [UserEditDialog] Found role object:', selectedRole);
         if (selectedRole) {
           // Use the role name instead of UUID
           roleValue = selectedRole.name.toLowerCase(); // Ensure lowercase (admin, manager, user, viewer)
-          console.log('🎯 [UserEditDialog] Mapped role to name:', roleValue);
+          // console.log('🎯 [UserEditDialog] Mapped role to name:', roleValue);
         } else {
-          console.log('⚠️ [UserEditDialog] Role not found in roles array, keeping original:', roleValue);
+          // console.log('⚠️ [UserEditDialog] Role not found in roles array, keeping original:', roleValue);
         }
       }
       
@@ -192,7 +255,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
         mode
       };
       
-      console.log('🎯 [UserEditDialog] Final userData before removing passwords:', userData);
+      // console.log('🎯 [UserEditDialog] Final userData before removing passwords:', userData);
       
       // Remove password fields if not set
       if (!userData.password) {
@@ -200,13 +263,13 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
         delete userData.confirmPassword;
       }
       
-      console.log('🎯 [UserEditDialog] Final userData to send:', userData);
+      // console.log('🎯 [UserEditDialog] Final userData to send:', userData);
       
       if (onSave) {
         await onSave(userData);
         handleClose();
       } else {
-        console.error('onSave callback not provided');
+        // console.error('onSave callback not provided');
         setError('Error: Función de guardado no configurada');
       }
     } catch (err: any) {
@@ -216,28 +279,6 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      setValue('email', user.email || '');
-      setValue('firstName', user.firstName || '');
-      setValue('lastName', user.lastName || '');
-      setValue('role', user.role || '');
-      setValue('status', user.status || 'active');
-      setValue('password', '');
-      setValue('confirmPassword', '');
-      setValue('phone', user.phone || '');
-      setValue('timezone', user.timezone || 'America/Mexico_City');
-      setValue('language', user.language || 'es');
-      setValue('twoFactorEnabled', user.twoFactorEnabled || false);
-      setValue('emailVerified', user.emailVerified || false);
-      setValue('notifications', {
-        email: user.notifications?.email ?? true,
-        sms: user.notifications?.sms ?? false,
-        push: user.notifications?.push ?? true
-      });
-      setSelectedCompanies(user.companies?.map((c: any) => c.id) || []);
-    }
-  }, [user, setValue]);
 
   const handleClose = () => {
     reset();
@@ -283,7 +324,6 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
             <Tab label="Información Básica" />
             <Tab label="Seguridad" />
-            <Tab label="Preferencias" />
             <Tab label="Empresas y Roles" />
           </Tabs>
 
@@ -448,136 +488,11 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
                   </Grid>
                 </>
               )}
-              <Grid item xs={12}>
-                <Controller
-                  name="twoFactorEnabled"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          {...field}
-                          checked={field.value}
-                          disabled={loading}
-                        />
-                      }
-                      label="Autenticación de dos factores"
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-          </TabPanel>
-
-          {/* Preferencias */}
-          <TabPanel value={tabValue} index={2}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="language"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Idioma</InputLabel>
-                      <Select
-                        {...field}
-                        label="Idioma"
-                        disabled={loading}
-                      >
-                        <MenuItem value="es">Español</MenuItem>
-                        <MenuItem value="en">English</MenuItem>
-                        <MenuItem value="pt">Português</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Controller
-                  name="timezone"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Zona Horaria</InputLabel>
-                      <Select
-                        {...field}
-                        label="Zona Horaria"
-                        disabled={loading}
-                      >
-                        <MenuItem value="America/Mexico_City">Ciudad de México</MenuItem>
-                        <MenuItem value="America/New_York">Nueva York</MenuItem>
-                        <MenuItem value="America/Los_Angeles">Los Angeles</MenuItem>
-                        <MenuItem value="Europe/Madrid">Madrid</MenuItem>
-                        <MenuItem value="America/Buenos_Aires">Buenos Aires</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Notificaciones
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name="notifications.email"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          {...field}
-                          checked={field.value}
-                          disabled={loading}
-                        />
-                      }
-                      label="Email"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name="notifications.sms"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          {...field}
-                          checked={field.value}
-                          disabled={loading}
-                        />
-                      }
-                      label="SMS"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name="notifications.push"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          {...field}
-                          checked={field.value}
-                          disabled={loading}
-                        />
-                      }
-                      label="Push"
-                    />
-                  )}
-                />
-              </Grid>
             </Grid>
           </TabPanel>
 
           {/* Empresas y Roles */}
-          <TabPanel value={tabValue} index={3}>
+          <TabPanel value={tabValue} index={2}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Controller
@@ -610,6 +525,12 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
               </Grid>
               
               <Grid item xs={12}>
+                {(() => {
+                  // console.log('🏢 [Autocomplete] Available companies:', companies);
+                  // console.log('📋 [Autocomplete] Selected company IDs:', selectedCompanies);
+                  // console.log('✅ [Autocomplete] Filtered companies:', companies.filter(c => selectedCompanies.includes(c.id)));
+                  return null;
+                })()}
                 <Autocomplete
                   multiple
                   id="companies"
@@ -617,6 +538,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
                   getOptionLabel={(option) => option.name}
                   value={companies.filter(c => selectedCompanies.includes(c.id))}
                   onChange={(event, newValue) => {
+                    // console.log('🔄 [Autocomplete] onChange - New value:', newValue);
                     setSelectedCompanies(newValue.map(v => v.id));
                   }}
                   renderInput={(params) => (

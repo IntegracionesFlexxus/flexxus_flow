@@ -11,6 +11,16 @@ import { IUserCompanyRepository } from '@/modules/companies/interfaces/IUserComp
 import { ISessionRepository } from '@/modules/auth/interfaces/ISessionRepository';
 import { PasswordService } from '@/modules/auth/services/PasswordService';
 import { v4 as uuidv4 } from 'uuid';
+import { IUserInCompany } from '@/modules/companies/repositories/UserCompanyRepository';
+import {
+  IUser,
+  ICreateUserData,
+  IUpdateUserData,
+  IUserActivity,
+  IUserCompany,
+  IDatabaseUser,
+  ISessionInfo
+} from '@/modules/users/types';
 @injectable()
 export class UserService implements IUserService {
   constructor(
@@ -27,7 +37,7 @@ export class UserService implements IUserService {
     role?: string;
     isActive?: boolean;
   }): Promise<{
-    users: any[];
+    users: IUser[];
     total: number;
   }> {
     try {
@@ -45,22 +55,43 @@ export class UserService implements IUserService {
         roleId: options?.role,
         isActive: options?.isActive
       });
-      return {
-        users: users.map(user => ({
+      // Log para debug
+      this.logger.debug('[UserService.getUsersByCompany] Raw users from repository', {
+        usersCount: users.length,
+        firstUser: users[0]
+      });
+
+      const mappedUsers = users.map(user => {
+        const mappedUser = {
           id: user.userId,  // Corregido: usar userId que viene del repository
           email: user.email,
           firstName: user.firstName || '',
           lastName: user.lastName || '',
           role: user.role || 'company_user',
+          roleId: user.roleId || null,  // Agregado: roleId para el frontend
           status: user.status || 'active',
-          avatar: null,
-          phone: null,
+          avatar: user.avatar || null,
+          phone: user.phone || null,
           isActive: user.status === 'active',
           emailVerified: user.emailVerified || false,
           createdAt: user.joinedAt,
           updatedAt: user.joinedAt,  // No tenemos updatedAt, usamos joinedAt
           lastLoginAt: user.lastActiveAt || null
-        })),
+        };
+
+        // Log del primer usuario mapeado
+        if (users.indexOf(user) === 0) {
+          this.logger.debug('[UserService.getUsersByCompany] First mapped user', {
+            mappedUser,
+            hasId: !!mappedUser.id
+          });
+        }
+
+        return mappedUser;
+      });
+
+      return {
+        users: mappedUsers,
         total
       };
     } catch (error) {
@@ -72,7 +103,7 @@ export class UserService implements IUserService {
       throw error;
     }
   }
-  async getUserById(userId: string, companyId: string): Promise<any | null> {
+  async getUserById(userId: string, companyId: string): Promise<IUser | null> {
     try {
       const user = await this.userRepository.findById(userId);
       if (!user) {
@@ -116,7 +147,7 @@ export class UserService implements IUserService {
     companyId: string;
     createdBy: string;
     password?: string;
-  }): Promise<any> {
+  }): Promise<IUser> {
     try {
       // Generate a temporary password if not provided
       const password = data.password || this.generateTemporaryPassword();
@@ -125,7 +156,7 @@ export class UserService implements IUserService {
       const userId = uuidv4();
       
       // Build user data object - only include defined values
-      const userData: any = {
+      const userData: ICreateUserData = {
         id: userId,
         email: data.email,
         password_hash: passwordHash,
@@ -178,7 +209,7 @@ export class UserService implements IUserService {
     avatar?: string;
     phone?: string;
     isActive?: boolean;
-  }): Promise<any | null> {
+  }): Promise<IUser | null> {
     try {
       // Verify user belongs to company
       const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
@@ -186,7 +217,7 @@ export class UserService implements IUserService {
         return null;
       }
       // Update user data
-      const updates: any = {
+      const updates: IUpdateUserData = {
         updated_at: new Date()
       };
       if (data.firstName !== undefined) updates.first_name = data.firstName;
@@ -224,9 +255,9 @@ export class UserService implements IUserService {
     lastName?: string;
     avatar?: string;
     phone?: string;
-  }): Promise<any> {
+  }): Promise<IUser> {
     try {
-      const updates: any = {
+      const updates: IUpdateUserData = {
         updated_at: new Date()
       };
       if (data.firstName !== undefined) updates.first_name = data.firstName;
@@ -264,11 +295,6 @@ export class UserService implements IUserService {
       operation: 'DELETE_USER'
     });
 
-    console.log('[UserService.deleteUser] START:', {
-      userId,
-      companyId,
-      timestamp: new Date().toISOString()
-    });
 
     try {
       // Verify user belongs to company
@@ -276,7 +302,6 @@ export class UserService implements IUserService {
         userId,
         companyId
       });
-      console.log('[UserService.deleteUser] Checking if user belongs to company...');
       const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
 
       this.logger.debug('[UserService.deleteUser] User company check result', {
@@ -287,10 +312,6 @@ export class UserService implements IUserService {
         roleId: userCompany?.roleId,
         role: userCompany?.role
       });
-      console.log('[UserService.deleteUser] User company check result:', {
-        userCompany,
-        exists: !!userCompany
-      });
 
       if (!userCompany) {
         this.logger.warn('[UserService.deleteUser] User does not belong to company', {
@@ -298,7 +319,6 @@ export class UserService implements IUserService {
           companyId,
           message: 'User not found in company or already removed'
         });
-        console.log('[UserService.deleteUser] User does not belong to company, returning false');
         return false;
       }
 
@@ -308,7 +328,6 @@ export class UserService implements IUserService {
         companyId,
         action: 'SOFT_DELETE'
       });
-      console.log('[UserService.deleteUser] Soft deleting user...');
 
       await this.userRepository.update(userId, {
         status: 'inactive',
@@ -322,21 +341,18 @@ export class UserService implements IUserService {
         status: 'inactive',
         deletedAt: new Date().toISOString()
       });
-      console.log('[UserService.deleteUser] User soft deleted successfully');
 
       // Invalidate all user sessions
       this.logger.debug('[UserService.deleteUser] Invalidating user sessions', {
         userId,
         action: 'INVALIDATE_SESSIONS'
       });
-      console.log('[UserService.deleteUser] Invalidating user sessions...');
 
       let invalidatedCount = 0;
       try {
         // Check if sessionRepository exists
         if (!this.sessionRepository) {
           this.logger.warn('[UserService.deleteUser] SessionRepository not available, skipping session invalidation');
-          console.log('[UserService.deleteUser] SessionRepository not available');
         } else {
           invalidatedCount = await this.sessionRepository.invalidateUserSessions(userId);
           this.logger.info('[UserService.deleteUser] Sessions invalidated', {
@@ -344,7 +360,7 @@ export class UserService implements IUserService {
             companyId,
             invalidatedSessionsCount: invalidatedCount
           });
-          console.log('[UserService.deleteUser] Sessions invalidated:', invalidatedCount);
+          this.logger.debug('[UserService.deleteUser] Sessions invalidated', { invalidatedCount });
         }
       } catch (sessionError) {
         // Log the error but don't fail the deletion
@@ -353,7 +369,9 @@ export class UserService implements IUserService {
           error: sessionError instanceof Error ? sessionError.message : String(sessionError),
           stack: sessionError instanceof Error ? sessionError.stack : undefined
         });
-        console.error('[UserService.deleteUser] Non-fatal error invalidating sessions:', sessionError);
+        this.logger.warn('[UserService.deleteUser] Non-fatal error invalidating sessions', {
+          error: sessionError instanceof Error ? sessionError.message : String(sessionError)
+        });
         // Continue with the deletion process
       }
 
@@ -365,7 +383,6 @@ export class UserService implements IUserService {
         operations: ['VERIFY_USER_COMPANY', 'SOFT_DELETE', 'INVALIDATE_SESSIONS']
       });
 
-      console.log('[UserService.deleteUser] COMPLETED SUCCESSFULLY');
       return true;
     } catch (error) {
       const errorDetails = {
@@ -379,7 +396,6 @@ export class UserService implements IUserService {
         operation: 'DELETE_USER_FAILED'
       };
 
-      console.error('[UserService.deleteUser] ERROR:', errorDetails);
 
       this.logger.error('[UserService.deleteUser] Error deleting user', errorDetails);
 
@@ -403,7 +419,7 @@ export class UserService implements IUserService {
       throw error;
     }
   }
-  async getUserActivity(userId: string, companyId: string): Promise<any | null> {
+  async getUserActivity(userId: string, companyId: string): Promise<IUserActivity | null> {
     try {
       // Verify user belongs to company
       const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
@@ -479,7 +495,7 @@ export class UserService implements IUserService {
       throw error;
     }
   }
-  async getUserCompanies(userId: string): Promise<any[]> {
+  async getUserCompanies(userId: string): Promise<IUserCompany[]> {
     try {
       const companies = await this.userRepository.getUserCompanies(userId);
       return companies.map(c => ({

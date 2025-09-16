@@ -1,20 +1,39 @@
-import { Grid, Paper, Typography, Box, Card, CardContent } from '@mui/material'
+import { Grid, Paper, Typography, Box, Card, CardContent, Skeleton } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { userService } from '@modules/users/services/userService'
+import { useAuthStore } from '@/shared/store/authStore'
 
 // Dashboard principal - MVP Nivel 1
 // TODO: En Nivel 2 conectar con datos reales y widgets dinámicos
 function Dashboard() {
   const navigate = useNavigate()
-  
+  const { currentCompany } = useAuthStore()
+
+  // Query para obtener el conteo real de usuarios
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useQuery({
+    queryKey: ['users', currentCompany?.id],
+    queryFn: () => userService.getCompanyUsers(currentCompany!.id),
+    enabled: !!currentCompany?.id,
+    staleTime: 30000 // 30 segundos
+  })
+
+
+  // La respuesta del backend es { success: true, data: { users: [...], total: number } }
+  // Pero el servicio retorna response.data, que ya es { success: true, data: {...} }
+  // Por lo tanto accedemos a usersData.data.total
+  const userCount = usersData?.data?.total || 0
+
   // Cards de módulos con navegación
   const modules = [
-    { 
+    {
       title: 'Usuarios',
       description: 'Gestión de usuarios del sistema',
-      value: '2',
+      value: isLoadingUsers ? null : userCount.toString(),
       label: 'Usuarios activos',
       path: '/users',
-      color: '#0288d1'
+      color: '#0288d1',
+      isLoading: isLoadingUsers
     },
     { 
       title: 'Roles',
@@ -98,7 +117,6 @@ function Dashboard() {
                 }
               }}
               onClick={() => {
-                console.log('📍 Dashboard: Navigating to:', module.path)
                 navigate(module.path)
               }}
             >
@@ -110,9 +128,13 @@ function Dashboard() {
                 >
                   {module.title}
                 </Typography>
-                <Typography variant="h3" gutterBottom>
-                  {module.value}
-                </Typography>
+                {module.isLoading ? (
+                  <Skeleton variant="text" width={60} height={48} sx={{ fontSize: '3rem' }} />
+                ) : (
+                  <Typography variant="h3" gutterBottom>
+                    {module.value}
+                  </Typography>
+                )}
                 <Typography variant="caption" color="text.secondary">
                   {module.label}
                 </Typography>

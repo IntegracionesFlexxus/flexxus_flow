@@ -69,13 +69,6 @@ class UserService {
       `${this.baseUrl}/company/${companyId}?${params.toString()}`
     );
 
-    // Debug log para verificar la estructura de los usuarios
-    console.log('📊 [UserService.getCompanyUsers] Response data:', response.data);
-    if (response.data?.data?.users && Array.isArray(response.data.data.users)) {
-      console.log('👥 [UserService.getCompanyUsers] Primer usuario:', response.data.data.users[0]);
-      console.log('🔑 [UserService.getCompanyUsers] Propiedades del primer usuario:',
-        response.data.data.users[0] ? Object.keys(response.data.data.users[0]) : 'No hay usuarios');
-    }
 
     return response.data;
   }
@@ -84,10 +77,17 @@ class UserService {
    * Obtener usuario por ID
    */
   async getUserById(userId: string): Promise<User> {
-    const response = await api.get<{ user: User }>(
-      `${this.baseUrl}/${userId}`
-    );
-    return response.data.user;
+
+    try {
+      const response = await api.get<{ user: User }>(
+        `${this.baseUrl}/${userId}`
+      );
+
+
+      return response.data.user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -98,25 +98,15 @@ class UserService {
     companyId: string,
     userData: CreateUserRequest
   ): Promise<User> {
-    console.log('🚀 [Frontend UserService] Creating user:', { companyId, userData });
-    console.log('🔐 [Frontend UserService] Current token:', localStorage.getItem('auth_access_token')?.substring(0, 50) + '...');
-    console.log('📡 [Frontend UserService] API Base URL:', api.defaults.baseURL);
-    console.log('📝 [Frontend UserService] Request URL:', `${this.baseUrl}`);
-    console.log('📦 [Frontend UserService] Request body:', userData);
     
     try {
       // Backend expects POST /api/v1/users and infers companyId from the authenticated user
-      console.log('🌐 [Frontend UserService] Making POST request to:', `${this.baseUrl}`);
       const response = await api.post<{ user: User }>(
         `${this.baseUrl}`,
         userData
       );
-      console.log('✅ [Frontend UserService] Response received:', response);
-      
-      console.log('✅ [Frontend] User created successfully:', response.data);
       return response.data.user;
     } catch (error) {
-      console.error('❌ [Frontend] Error creating user:', error);
       throw error;
     }
   }
@@ -128,40 +118,27 @@ class UserService {
     userId: string,
     updates: UpdateUserRequest
   ): Promise<User> {
-    const response = await api.put<{ user: User }>(
-      `${this.baseUrl}/${userId}`,
-      updates
-    );
-    return response.data.user;
+
+    try {
+      const response = await api.put<{ user: User }>(
+        `${this.baseUrl}/${userId}`,
+        updates
+      );
+
+      return response.data.user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
    * Eliminar usuario
    */
   async deleteUser(userId: string): Promise<void> {
-    // Debug logs para identificar el problema
-    console.log('🗑️ [UserService.deleteUser] Usuario a eliminar - ID:', userId);
-    console.log('📍 [UserService.deleteUser] Base URL:', this.baseUrl);
-    console.log('🔗 [UserService.deleteUser] URL completa construida:', `${this.baseUrl}/${userId}`);
-    console.log('🔍 [UserService.deleteUser] Tipo de userId:', typeof userId);
-    console.log('📡 [UserService.deleteUser] API defaults baseURL:', api.defaults.baseURL);
-
-    // Validación del userId
     if (!userId || userId === 'undefined') {
-      console.error('❌ [UserService.deleteUser] ERROR: userId es inválido:', userId);
       throw new Error('User ID is required for deletion');
     }
-
-    const deleteUrl = `${this.baseUrl}/${userId}`;
-    console.log('🚀 [UserService.deleteUser] Ejecutando DELETE a:', deleteUrl);
-
-    try {
-      await api.delete(deleteUrl);
-      console.log('✅ [UserService.deleteUser] Usuario eliminado exitosamente');
-    } catch (error) {
-      console.error('❌ [UserService.deleteUser] Error al eliminar usuario:', error);
-      throw error;
-    }
+    await api.delete(`${this.baseUrl}/${userId}`);
   }
 
   /**

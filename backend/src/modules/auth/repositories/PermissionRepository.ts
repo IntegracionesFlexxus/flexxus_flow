@@ -63,24 +63,51 @@ export class PermissionRepository implements IPermissionRepository {
     return result.rows;
   }
   async findAll(filters?: { status?: string; resource?: string }): Promise<any[]> {
-    const conditions = ['deleted_at IS NULL'];
-    const values = [];
-    let paramCount = 1;
-    if (filters?.status) {
-      conditions.push(`status = $${paramCount++}`);
-      values.push(filters.status);
+    try {
+      const conditions = ['deleted_at IS NULL'];
+      const values = [];
+      let paramCount = 1;
+      if (filters?.status) {
+        conditions.push(`status = $${paramCount++}`);
+        values.push(filters.status);
+      }
+      if (filters?.resource) {
+        conditions.push(`resource = $${paramCount++}`);
+        values.push(filters.resource);
+      }
+      const query = `
+        SELECT * FROM permissions
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY resource, action
+      `;
+
+      console.log('🔍 [PermissionRepository] findAll query:', query);
+      console.log('🔍 [PermissionRepository] query values:', values);
+
+      // Diagnóstico: Contar todos los permisos primero
+      try {
+        const countQuery = `SELECT COUNT(*) as total FROM permissions WHERE deleted_at IS NULL`;
+        const countResult = await this.db.query(countQuery, []);
+        console.log('📊 [PermissionRepository] Total permissions count:', countResult?.rows?.[0]);
+      } catch (diagError) {
+        console.error('❌ [PermissionRepository] Diagnostic query failed:', diagError);
+      }
+
+      const result = await this.db.query(query, values);
+
+      console.log('📊 [PermissionRepository] findAll result:', {
+        rowsExists: !!result?.rows,
+        isArray: Array.isArray(result?.rows),
+        length: result?.rows?.length,
+        firstItem: result?.rows?.[0]
+      });
+
+      return result?.rows || [];
+    } catch (error) {
+      console.error('❌ [PermissionRepository] Error in findAll:', error);
+      console.log('Database connection status:', this.db ? 'exists' : 'missing');
+      throw error;
     }
-    if (filters?.resource) {
-      conditions.push(`resource = $${paramCount++}`);
-      values.push(filters.resource);
-    }
-    const query = `
-      SELECT * FROM permissions 
-      WHERE ${conditions.join(' AND ')}
-      ORDER BY resource, action
-    `;
-    const result = await this.db.query(query, values);
-    return result.rows;
   }
   async update(permissionId: string, updates: {
     name?: string;

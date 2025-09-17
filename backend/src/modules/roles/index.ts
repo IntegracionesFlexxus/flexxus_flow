@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { container } from '@/container/container';
 import { TYPES } from '@/container/types';
-import { RoleController } from '@/modules/auth/controllers/RoleController';
+import { RoleController } from '@/modules/roles/controllers/RoleController';
 import { authenticateToken, requirePermission } from '@/shared/middleware/auth';
 const router = Router();
 // Obtener controller del container (si está registrado)
@@ -33,4 +33,22 @@ router.post('/:id/permissions', requirePermission('roles:manage'), roleControlle
 router.get('/:id/users', roleController.getRoleUsers.bind(roleController));
 router.post('/:id/users/:userId', requirePermission('roles:manage'), roleController.assignRoleToUser.bind(roleController));
 router.delete('/:id/users/:userId', requirePermission('roles:manage'), roleController.removeRoleFromUser.bind(roleController));
+
+// Endpoint temporal para inicializar permisos (solo desarrollo)
+if (process.env.NODE_ENV === 'development') {
+  router.post('/init-permissions', async (req, res, next) => {
+    try {
+      const permissionService = container.get(TYPES.PermissionService);
+      await permissionService.initializeDefaultPermissions();
+
+      res.json({
+        success: true,
+        message: 'Default permissions initialized successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+}
+
 export default router;

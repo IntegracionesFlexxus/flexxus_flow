@@ -97,30 +97,67 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
   // delete method inherited from BaseRepository (soft delete)
   // ==================== OPERACIONES ESPECÍFICAS DE EMPRESA ====================
   async findByCompany(companyId: string): Promise<any[]> {
-    const query = `
-      SELECT r.*, 
-             COUNT(DISTINCT ur.user_id) as user_count
-      FROM ${this.tableName} r
-      LEFT JOIN user_roles ur ON r.id = ur.role_id AND ur.company_id = $1
-      WHERE (r.company_id = $1 OR r.is_system_role = true)
-      AND r.deleted_at IS NULL
-      GROUP BY r.id
-      ORDER BY r.is_system_role DESC, r.name ASC
-    `;
-    return this.executeQuery(query, [companyId]);
+    try {
+      // Simplificado: mostrar todos los roles disponibles con conteo de usuarios por empresa
+      const query = `
+        SELECT r.*,
+               COUNT(DISTINCT CASE WHEN ur.company_id = $1 THEN ur.user_id END) as user_count
+        FROM ${this.tableName} r
+        LEFT JOIN user_roles ur ON r.id = ur.role_id
+        WHERE r.deleted_at IS NULL
+        GROUP BY r.id
+        ORDER BY r.is_system_role DESC, r.name ASC
+      `;
+      const result = await this.executeQuery(query, [companyId]);
+      return result || [];
+    } catch (error) {
+      console.error('Error in RoleRepository.findByCompany:', error);
+      return [];
+    }
   }
   async findSystemRoles(): Promise<any[]> {
-    const query = `
-      SELECT r.*, 
-             COUNT(DISTINCT ur.user_id) as user_count
-      FROM ${this.tableName} r
-      LEFT JOIN user_roles ur ON r.id = ur.role_id
-      WHERE r.is_system_role = true
-      AND r.deleted_at IS NULL
-      GROUP BY r.id
-      ORDER BY r.name ASC
-    `;
-    return this.executeQuery(query);
+    try {
+      const query = `
+        SELECT r.*,
+               COUNT(DISTINCT ur.user_id) as user_count
+        FROM ${this.tableName} r
+        LEFT JOIN user_roles ur ON r.id = ur.role_id
+        WHERE r.is_system_role = true
+        AND r.deleted_at IS NULL
+        GROUP BY r.id
+        ORDER BY r.name ASC
+      `;
+
+      console.log('🔍 [RoleRepository] findSystemRoles query:', query);
+      console.log('🔍 [RoleRepository] tableName:', this.tableName);
+
+      // Diagnóstico: Contar todos los roles primero
+      try {
+        const countQuery = `SELECT COUNT(*) as total FROM ${this.tableName} WHERE deleted_at IS NULL`;
+        const countResult = await this.executeQuery(countQuery, []);
+        console.log('📊 [RoleRepository] Total roles count:', countResult);
+
+        const systemCountQuery = `SELECT COUNT(*) as total FROM ${this.tableName} WHERE is_system_role = true AND deleted_at IS NULL`;
+        const systemCountResult = await this.executeQuery(systemCountQuery, []);
+        console.log('📊 [RoleRepository] System roles count:', systemCountResult);
+      } catch (diagError) {
+        console.error('❌ [RoleRepository] Diagnostic query failed:', diagError);
+      }
+
+      const result = await this.executeQuery(query, []);
+
+      console.log('📊 [RoleRepository] findSystemRoles result:', {
+        isArray: Array.isArray(result),
+        length: result?.length,
+        firstItem: result?.[0],
+        type: typeof result
+      });
+
+      return result || [];
+    } catch (error) {
+      console.error('❌ [RoleRepository] Error in findSystemRoles:', error);
+      return [];
+    }
   }
   // ==================== GESTIÓN DE PERMISOS DE ROLES ====================
   async assignPermissions(roleId: string, permissionIds: string[]): Promise<void> {

@@ -28,6 +28,7 @@ import { Close as CloseIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
+import { useAuthGuard } from '@/shared/hooks/useAuth';
 
 interface UserEditDialogProps {
   open: boolean;
@@ -141,12 +142,15 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   const [tabValue, setTabValue] = useState(0);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
 
+  // Hook para verificar permisos
+  const { hasPermission } = useAuthGuard();
+  const canManageUserCompanies = hasPermission('admin.users.companies.manage') || hasPermission('admin.companies.view');
+
   const {
     control,
     handleSubmit,
     reset,
     formState: { errors },
-    setValue
   } = useForm<FormData>({
     resolver: yupResolver(getValidationSchema(mode)),
     defaultValues: {
@@ -324,7 +328,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
             <Tab label="Información Básica" />
             <Tab label="Seguridad" />
-            <Tab label="Empresas y Roles" />
+            {canManageUserCompanies && <Tab label="Empresas y Roles" />}
           </Tabs>
 
           {/* Información Básica */}
@@ -492,7 +496,8 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           </TabPanel>
 
           {/* Empresas y Roles */}
-          <TabPanel value={tabValue} index={2}>
+          {canManageUserCompanies && (
+            <TabPanel value={tabValue} index={2}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Controller
@@ -562,7 +567,8 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
                 />
               </Grid>
             </Grid>
-          </TabPanel>
+            </TabPanel>
+          )}
         </DialogContent>
 
         <DialogActions>

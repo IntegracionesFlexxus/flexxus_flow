@@ -582,22 +582,37 @@ export class PermissionService {
    */
   async initializeDefaultPermissions(): Promise<void> {
     try {
-      const modules = ['auth', 'users', 'companies', 'crm', 'omni', 'workflow', 'analytics'];
+      const modules = ['dashboard', 'auth', 'users', 'companies', 'crm', 'omni', 'workflow', 'analytics', 'admin'];
       const resources = {
+        dashboard: ['dashboard'],
         auth: ['session', 'profile', 'password'],
-        users: ['user', 'role', 'permission'],
+        users: ['user', 'role', 'permission', 'companies'],
         companies: ['company', 'settings', 'billing'],
-        crm: ['contact', 'lead', 'opportunity', 'account'],
+        crm: ['contact', 'lead', 'opportunity', 'account', 'companies'],
         omni: ['conversation', 'channel', 'queue', 'agent'],
         workflow: ['workflow', 'task', 'automation'],
-        analytics: ['report', 'dashboard', 'metric']
+        analytics: ['report', 'dashboard', 'metric'],
+        admin: ['users', 'roles', 'companies', 'features', 'access']
       };
 
       for (const module of modules) {
         const moduleResources = resources[module] || [];
 
         for (const resource of moduleResources) {
-          const actions = this.PERMISSION_TEMPLATES.management;
+          // Determinar acciones según el módulo y recurso
+          let actions: string[];
+
+          if (module === 'dashboard') {
+            actions = ['view'];
+          } else if (module === 'admin') {
+            actions = ['access', 'view', 'create', 'update', 'delete'];
+          } else if (module === 'auth') {
+            actions = ['read', 'update'];
+          } else if (resource === 'companies' && module === 'users') {
+            actions = ['manage']; // Permiso especial para gestionar empresas de usuarios
+          } else {
+            actions = this.PERMISSION_TEMPLATES.management;
+          }
 
           for (const action of actions) {
             const name = `${module}.${resource}.${action}`;
@@ -613,9 +628,9 @@ export class PermissionService {
                 category: resource,
                 resource,
                 action,
-                scope: 'company',
-                isDangerous: action === 'delete',
-                requiresMfa: false,
+                scope: module === 'admin' || (module === 'users' && resource === 'companies') ? 'global' : 'company',
+                isDangerous: action === 'delete' || (module === 'admin' && resource === 'companies'),
+                requiresMfa: action === 'delete' && (module === 'admin' || resource === 'companies'),
                 active: true
               });
             }

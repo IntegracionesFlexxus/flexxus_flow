@@ -7,12 +7,12 @@
 import { injectable, inject } from 'inversify';
 import { Logger } from 'winston';
 import { TYPES } from '@/container/types';
-import { 
-  IRoleService, 
-  CreateRoleDto, 
-  UpdateRoleDto, 
-  RoleDto, 
-  PermissionDto, 
+import {
+  IRoleService,
+  CreateRoleDto,
+  UpdateRoleDto,
+  RoleDto,
+  PermissionDto,
   RolePaginationDto,
   RoleFiltersDto,
   AssignPermissionsDto
@@ -281,25 +281,58 @@ export class RoleService implements IRoleService {
   }
 
   async getCompanyRoles(companyId: string): Promise<RoleDto[]> {
-    const roles = await this.roleRepository.findByCompany(companyId);
+    try {
+      this.logger.info('Getting company roles...', { companyId });
+      const roles = await this.roleRepository.findByCompany(companyId);
 
-    return Promise.all(
-      roles.map(async (role) => {
-        const permissions = await this.roleRepository.getRolePermissions(role.id);
-        return this.formatRole(role, permissions);
-      })
-    );
+      if (!roles || !Array.isArray(roles)) {
+        this.logger.warn('Company roles repository returned undefined/non-array:', typeof roles);
+        return [];
+      }
+
+      this.logger.info(`Found ${roles.length} company roles`);
+
+      return Promise.all(
+        roles.map(async (role) => {
+          const permissions = await this.roleRepository.getRolePermissions(role.id);
+          return this.formatRole(role, permissions);
+        })
+      );
+    } catch (error) {
+      this.logger.error('Error getting company roles:', {
+        error: error.message,
+        stack: error.stack,
+        companyId
+      });
+      throw error;
+    }
   }
 
   async getSystemRoles(): Promise<RoleDto[]> {
-    const roles = await this.roleRepository.findSystemRoles();
+    try {
+      this.logger.info('Getting system roles...');
+      const roles = await this.roleRepository.findSystemRoles();
 
-    return Promise.all(
-      roles.map(async (role) => {
-        const permissions = await this.roleRepository.getRolePermissions(role.id);
-        return this.formatRole(role, permissions);
-      })
-    );
+      if (!roles || !Array.isArray(roles)) {
+        this.logger.warn('System roles repository returned undefined/non-array:', typeof roles);
+        return [];
+      }
+
+      this.logger.info(`Found ${roles.length} system roles`);
+
+      return Promise.all(
+        roles.map(async (role) => {
+          const permissions = await this.roleRepository.getRolePermissions(role.id);
+          return this.formatRole(role, permissions);
+        })
+      );
+    } catch (error) {
+      this.logger.error('Error getting system roles:', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
+    }
   }
 
   async getRoleByName(name: string, companyId?: string): Promise<RoleDto | null> {
@@ -373,7 +406,7 @@ export class RoleService implements IRoleService {
 
   async getRolePermissions(roleId: string): Promise<PermissionDto[]> {
     const permissions = await this.roleRepository.getRolePermissions(roleId);
-    return permissions.map(this.formatPermission);
+    return permissions.map(p => this.formatPermission(p));
   }
 
   async hasPermission(roleId: string, permission: string): Promise<boolean> {
@@ -389,8 +422,37 @@ export class RoleService implements IRoleService {
   }
 
   async getAllPermissions(): Promise<PermissionDto[]> {
-    const permissions = await this.permissionRepository.findAll();
-    return permissions.map(this.formatPermission);
+    try {
+      this.logger.info('Getting all permissions...');
+      const permissions = await this.permissionRepository.findAll();
+
+      // Protección contra undefined/null
+      if (!permissions) {
+        this.logger.warn('Permission repository returned undefined/null');
+        return [];
+      }
+
+      if (!Array.isArray(permissions)) {
+        this.logger.error('Permission repository returned non-array:', typeof permissions);
+        return [];
+      }
+
+      this.logger.info(`Found ${permissions.length} permissions`);
+      return permissions.map(p => {
+        try {
+          return this.formatPermission(p);
+        } catch (err) {
+          this.logger.error('Error formatting permission:', { permission: p, error: err.message });
+          return null;
+        }
+      }).filter(Boolean);
+    } catch (error) {
+      this.logger.error('Error getting all permissions:', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
+    }
   }
 
   // ==================== GESTIÓN DE USUARIOS ====================
@@ -666,7 +728,7 @@ export class RoleService implements IRoleService {
       companyId: role.company_id,
       isSystemRole: role.is_system_role,
       status: role.status,
-      permissions: permissions?.map(this.formatPermission),
+      permissions: permissions?.map(p => this.formatPermission(p)),
       userCount: role.user_count || 0,
       createdAt: role.created_at,
       updatedAt: role.updated_at
@@ -674,12 +736,16 @@ export class RoleService implements IRoleService {
   }
 
   private formatPermission(permission: any): PermissionDto {
+    if (!permission) {
+      throw new Error('Permission object is null/undefined');
+    }
+
     return {
-      id: permission.id,
-      name: permission.name,
-      resource: permission.resource,
-      action: permission.action,
-      description: permission.description
+      id: permission.id || '',
+      name: permission.name || '',
+      resource: permission.resource || '',
+      action: permission.action || '',
+      description: permission.description || ''
     };
   }
 

@@ -16,7 +16,7 @@ const logger = LoggerFactory.create({ file: __filename });
 const application = new App();
 const app = application.app;
 // Iniciar servidor
-const PORT = environment.app.port || 3001;
+const PORT = environment.app.port || 3002;
 const HOST = environment.app.host || 'localhost';
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on http://${HOST}:${PORT}`);

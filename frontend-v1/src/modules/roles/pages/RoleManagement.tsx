@@ -4,7 +4,6 @@
  * Implementación con principios SOLID y Clean Code
  */
 
-console.log('🎭 RoleManagement: File loading started');
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -25,8 +24,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  Tooltip,
-  Badge,
   Stack,
   Divider,
   FormControl,
@@ -35,15 +32,12 @@ import {
   Switch,
   FormControlLabel,
   Avatar,
-  AvatarGroup,
   CircularProgress
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
 import {
   Shield,
   Plus,
   Search,
-  Filter,
   MoreVertical,
   Edit,
   Trash2,
@@ -52,23 +46,16 @@ import {
   Upload,
   Users,
   Lock,
-  Unlock,
-  AlertCircle,
-  CheckCircle,
   Info,
   Settings,
   ShieldCheck,
-  UserCheck,
   Key,
-  FileText,
-  BarChart3,
   Eye
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 // Components
-import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { RoleDialog } from '@modules/roles/components/RoleDialog';
 import { RolePermissionsDialog } from '@modules/roles/components/RolePermissionsDialog';
@@ -81,7 +68,7 @@ import { useAuthStore } from '@/shared/store/authStore';
 import { useUIStore } from '@/shared/store/uiStore';
 
 // Types
-import type { Role, Permission } from '@/modules/users/types';
+import type { Role } from '@/modules/users/types';
 
 interface RoleWithStats extends Role {
   userCount: number;
@@ -96,10 +83,8 @@ interface RoleWithStats extends Role {
  * - O: Abierto para extensión con nuevos tipos de roles
  * - D: Depende de abstracciones (services)
  */
-console.log('🎭 RoleManagement: All imports completed');
 
 export const RoleManagement: React.FC = () => {
-  console.log('🎭 RoleManagement: Component initializing');
   
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,48 +102,79 @@ export const RoleManagement: React.FC = () => {
   });
 
   // Hooks
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, currentCompany } = useAuthStore();
   const { addNotification } = useUIStore();
+
+  // Debug logging
 
   // ==================== Data Fetching ====================
 
   /**
    * Fetch roles with stats
    */
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useQuery({
     queryKey: ['roles-with-stats', currentCompany?.id, filterType, showInactive],
     queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      
+
       // Get roles based on filter
       let rolesList: Role[] = [];
       if (filterType === 'system') {
-        rolesList = await roleService.getSystemRoles();
+        // System roles don't require company context
+        const systemRoles = await roleService.getSystemRoles();
+        rolesList = Array.isArray(systemRoles) ? systemRoles : [];
       } else if (filterType === 'custom') {
-        rolesList = await roleService.getCompanyRoles(currentCompany.id);
+        // Custom roles require company context
+        if (!currentCompany?.id) {
+          return [];
+        }
+        const customRoles = await roleService.getCompanyRoles(currentCompany.id);
+        rolesList = Array.isArray(customRoles) ? customRoles : [];
       } else {
-        const [system, custom] = await Promise.all([
-          roleService.getSystemRoles(),
-          roleService.getCompanyRoles(currentCompany.id)
-        ]);
-        rolesList = [...system, ...custom];
+        // All roles: get system first, then custom if company exists
+        const systemRoles = await roleService.getSystemRoles();
+
+        const customRoles = currentCompany?.id
+          ? await roleService.getCompanyRoles(currentCompany.id)
+          : [];
+
+        const safeSystemRoles = Array.isArray(systemRoles) ? systemRoles : [];
+        const safeCustomRoles = Array.isArray(customRoles) ? customRoles : [];
+
+        // Deduplicar roles por ID (algunos roles pueden aparecer en ambas listas)
+        const allRoles = [...safeSystemRoles, ...safeCustomRoles];
+        const uniqueRoles = allRoles.reduce((acc, role) => {
+          const existingRole = acc.find(r => r.id === role.id);
+          if (!existingRole) {
+            acc.push(role);
+          }
+          return acc;
+        }, [] as any[]);
+
+        rolesList = uniqueRoles;
       }
 
-      // Get stats for each role
-      const stats = await roleService.getRoleStats(currentCompany.id);
-      
-      // Combine roles with stats
-      return rolesList.map(role => ({
-        ...role,
-        userCount: stats.usersPerRole[role.id] || 0,
-        lastModified: new Date(role.updatedAt || role.createdAt),
-        createdBy: role.createdBy || 'Sistema'
-      })) as RoleWithStats[];
+      // Map roles to include stats (using data already provided by backend)
+      const mappedRoles = rolesList.map(role => {
+        const backendRole = role as any; // Backend provides additional fields
+        return {
+          ...role,
+          userCount: parseInt(backendRole.user_count || '0', 10), // Backend provides user_count
+          lastModified: new Date(backendRole.updated_at || backendRole.created_at || new Date()),
+          createdBy: 'Sistema' // Default value since this data is not available
+        };
+      }) as RoleWithStats[];
+
+      return mappedRoles;
     },
-    enabled: !!currentCompany?.id
+    enabled: true, // Always enabled - we can at least fetch system roles
+    retry: 3,
+    retryDelay: 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000 // 10 minutes
   });
+
+  // Debug query states
 
   /**
    * Fetch all permissions for reference
@@ -167,6 +183,7 @@ export const RoleManagement: React.FC = () => {
     queryKey: ['all-permissions'],
     queryFn: () => roleService.getAllPermissions()
   });
+
 
   // ==================== Mutations ====================
 
@@ -198,7 +215,7 @@ export const RoleManagement: React.FC = () => {
   /**
    * Clone role mutation
    */
-  const cloneRoleMutation = useMutation({
+  useMutation({
     mutationFn: ({ roleId, name }: { roleId: string; name: string }) =>
       roleService.cloneRole(roleId, name, currentCompany?.id),
     onSuccess: () => {
@@ -284,7 +301,7 @@ export const RoleManagement: React.FC = () => {
    */
   const roleStats = useMemo(() => {
     const totalRoles = roles.length;
-    const systemRoles = roles.filter(r => r.isSystem).length;
+    const systemRoles = roles.filter(r => r.isSystemRole || (r as any).is_system_role).length;
     const customRoles = totalRoles - systemRoles;
     const totalUsers = roles.reduce((sum, role) => sum + role.userCount, 0);
     const averagePermissions = Math.round(
@@ -388,7 +405,7 @@ export const RoleManagement: React.FC = () => {
    * Clean Code: Extracted complex rendering logic
    */
   const renderRoleCard = (role: RoleWithStats) => {
-    const isSystem = role.isSystem;
+    const isSystem = role.isSystemRole || (role as any).is_system_role;
     const isInactive = role.isActive === false;
     
     return (
@@ -686,8 +703,16 @@ export const RoleManagement: React.FC = () => {
 
       {/* Roles Grid */}
       {rolesLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
           <CircularProgress />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Cargando roles...
+          </Typography>
+          {rolesError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              Error al cargar roles: {rolesError.message}
+            </Alert>
+          )}
         </Box>
       ) : filteredRoles.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -734,7 +759,7 @@ export const RoleManagement: React.FC = () => {
           <ListItemText>Ver permisos</ListItemText>
         </MenuItem>
         
-        {!selectedRole?.isSystem && (
+        {!(selectedRole?.isSystemRole || (selectedRole as any)?.is_system_role) && (
           <>
             <MenuItem onClick={handleEditRole}>
               <ListItemIcon>

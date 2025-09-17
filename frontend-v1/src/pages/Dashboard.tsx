@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { userService } from '@modules/users/services/userService'
 import { useAuthStore } from '@/shared/store/authStore'
+import { useAuthGuard } from '@/shared/hooks/useAuth'
 
 // Dashboard principal - MVP Nivel 1
 // TODO: En Nivel 2 conectar con datos reales y widgets dinámicos
 function Dashboard() {
   const navigate = useNavigate()
   const { currentCompany } = useAuthStore()
+  const { hasPermission } = useAuthGuard()
 
   // Query para obtener el conteo real de usuarios
-  const { data: usersData, isLoading: isLoadingUsers, error: usersError } = useQuery({
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['users', currentCompany?.id],
-    queryFn: () => userService.getCompanyUsers(currentCompany!.id),
+    queryFn: () => userService.getCompanyUsers(currentCompany?.id || ''),
     enabled: !!currentCompany?.id,
     staleTime: 30000 // 30 segundos
   })
@@ -24,8 +26,8 @@ function Dashboard() {
   // Por lo tanto accedemos a usersData.data.total
   const userCount = usersData?.data?.total || 0
 
-  // Cards de módulos con navegación
-  const modules = [
+  // Cards de módulos con navegación - Filtrados por permisos
+  const allModules = [
     {
       title: 'Usuarios',
       description: 'Gestión de usuarios del sistema',
@@ -33,65 +35,78 @@ function Dashboard() {
       label: 'Usuarios activos',
       path: '/users',
       color: '#0288d1',
-      isLoading: isLoadingUsers
+      isLoading: isLoadingUsers,
+      permission: 'admin.users.view'
     },
-    { 
+    {
       title: 'Roles',
       description: 'Administración de roles y permisos',
       value: '3',
       label: 'Roles configurados',
       path: '/roles',
-      color: '#00796b'
+      color: '#00796b',
+      permission: 'admin.roles.view'
     },
-    { 
+    {
       title: 'Empresas',
       description: 'Gestión multi-empresa',
       value: '1',
       label: 'Empresas activas',
       path: '/companies',
-      color: '#5e35b1'
+      color: '#5e35b1',
+      permission: 'admin.companies.view'
     },
-    { 
+    {
       title: 'Feature Flags',
       description: 'Control de funcionalidades',
       value: '5',
       label: 'Flags activos',
       path: '/feature-flags',
-      color: '#d32f2f'
+      color: '#d32f2f',
+      permission: 'admin.features.view'
     },
-    { 
+    {
       title: 'Omnicanalidad',
       description: 'Gestiona todos tus canales de comunicación',
       value: '0',
       label: 'Mensajes pendientes',
       path: '/omni',
-      color: '#1976d2'
+      color: '#1976d2',
+      permission: 'omni.access'
     },
-    { 
+    {
       title: 'CRM',
       description: 'Administra tus contactos y ventas',
       value: '0',
       label: 'Contactos activos',
       path: '/crm',
-      color: '#388e3c'
+      color: '#388e3c',
+      permission: 'crm.access'
     },
-    { 
+    {
       title: 'Workflows',
       description: 'Automatiza tus procesos',
       value: '0',
       label: 'Workflows activos',
       path: '/workflow',
-      color: '#f57c00'
+      color: '#f57c00',
+      permission: 'workflow.access'
     },
-    { 
+    {
       title: 'Analytics',
       description: 'Analiza el rendimiento',
       value: '0%',
       label: 'Tasa de conversión',
       path: '/analytics',
-      color: '#7b1fa2'
+      color: '#7b1fa2',
+      permission: 'analytics.view'
     }
   ]
+
+  // Filtrar módulos por permisos del usuario
+  const modules = allModules.filter(module =>
+    !module.permission || hasPermission(module.permission)
+  )
 
   return (
     <Box>

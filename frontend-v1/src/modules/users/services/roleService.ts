@@ -13,10 +13,6 @@ interface RoleRequest {
   permissions: string[];
 }
 
-interface PermissionUpdate {
-  userId: string;
-  permissions: string[];
-}
 
 /**
  * RoleService
@@ -41,31 +37,31 @@ class RoleService {
   /**
    * Obtener roles de la empresa
    */
-  async getCompanyRoles(companyId: string): Promise<Role[]> {
-    const response = await api.get<{ roles: Role[] }>(
+  async getCompanyRoles(_companyId: string): Promise<Role[]> {
+    const response = await api.get<{ success: boolean; data: Role[] }>(
       `${this.baseUrl}/company`
     );
-    return response.data.roles;
+    return response.data.data;
   }
 
   /**
    * Obtener roles del sistema
    */
   async getSystemRoles(): Promise<Role[]> {
-    const response = await api.get<{ roles: Role[] }>(
+    const response = await api.get<{ success: boolean; data: Role[] }>(
       `${this.baseUrl}/system`
     );
-    return response.data.roles;
+    return response.data.data;
   }
 
   /**
    * Obtener rol por ID
    */
   async getRoleById(roleId: string): Promise<Role> {
-    const response = await api.get<{ role: Role }>(
+    const response = await api.get<Role>(
       `${this.baseUrl}/${roleId}`
     );
-    return response.data.role;
+    return response.data;
   }
 
   /**
@@ -75,11 +71,11 @@ class RoleService {
     companyId: string,
     role: RoleRequest
   ): Promise<Role> {
-    const response = await api.post<{ role: Role }>(
+    const response = await api.post<Role>(
       `${this.baseUrl}/company/${companyId}`,
       role
     );
-    return response.data.role;
+    return response.data;
   }
 
   /**
@@ -89,11 +85,11 @@ class RoleService {
     roleId: string,
     updates: Partial<RoleRequest>
   ): Promise<Role> {
-    const response = await api.put<{ role: Role }>(
+    const response = await api.put<Role>(
       `${this.baseUrl}/${roleId}`,
       updates
     );
-    return response.data.role;
+    return response.data;
   }
 
   /**
@@ -135,11 +131,11 @@ class RoleService {
     newName: string,
     companyId?: string
   ): Promise<Role> {
-    const response = await api.post<{ role: Role }>(
+    const response = await api.post<Role>(
       `${this.baseUrl}/${roleId}/clone`,
       { name: newName, companyId }
     );
-    return response.data.role;
+    return response.data;
   }
 
   // ==================== PERMISOS ====================
@@ -148,10 +144,10 @@ class RoleService {
    * Obtener todos los permisos disponibles
    */
   async getAllPermissions(): Promise<Permission[]> {
-    const response = await api.get<{ permissions: Permission[] }>(
+    const response = await api.get<{ success: boolean; data: Permission[] }>(
       this.permissionsUrl
     );
-    return response.data.permissions;
+    return response.data.data;
   }
 
   /**
@@ -160,10 +156,10 @@ class RoleService {
   async getPermissionsByCategory(
     category: PermissionCategory
   ): Promise<Permission[]> {
-    const response = await api.get<{ permissions: Permission[] }>(
+    const response = await api.get<Permission[]>(
       `${this.permissionsUrl}/category/${category}`
     );
-    return response.data.permissions;
+    return response.data;
   }
 
   /**
@@ -174,10 +170,10 @@ class RoleService {
     companyId?: string
   ): Promise<Permission[]> {
     const params = companyId ? `?companyId=${companyId}` : '';
-    const response = await api.get<{ permissions: Permission[] }>(
+    const response = await api.get<Permission[]>(
       `${this.permissionsUrl}/user/${userId}${params}`
     );
-    return response.data.permissions;
+    return response.data;
   }
 
   /**
@@ -204,11 +200,11 @@ class RoleService {
     const params = new URLSearchParams();
     params.append('permission', permission);
     if (resource) params.append('resource', resource);
-    
-    const response = await api.get<{ hasPermission: boolean }>(
+
+    const response = await api.get<boolean>(
       `${this.permissionsUrl}/user/${userId}/check?${params.toString()}`
     );
-    return response.data.hasPermission;
+    return response.data;
   }
 
   /**
@@ -238,10 +234,10 @@ class RoleService {
     companyId?: string
   ): Promise<Role[]> {
     const params = companyId ? `&companyId=${companyId}` : '';
-    const response = await api.get<{ roles: Role[] }>(
+    const response = await api.get<Role[]>(
       `${this.baseUrl}/search?q=${encodeURIComponent(query)}${params}`
     );
-    return response.data.roles;
+    return response.data;
   }
 
   /**
@@ -271,10 +267,10 @@ class RoleService {
     companyId?: string
   ): Promise<boolean> {
     const params = companyId ? `?companyId=${companyId}` : '';
-    const response = await api.get<{ available: boolean }>(
+    const response = await api.get<boolean>(
       `${this.baseUrl}/validate-name/${encodeURIComponent(name)}${params}`
     );
-    return response.data.available;
+    return response.data;
   }
 
   /**

@@ -23,7 +23,7 @@ import { ICompanyRepository } from '@/shared/interfaces/repositories/ICompanyRep
 import { ICompanyService } from '@/modules/auth/interfaces/ICompanyService';
 import { IAuthService } from '@/modules/auth/interfaces/IAuthService';
 import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
-import { IRoleService } from '@/modules/auth/interfaces/IRoleService';
+import { IRoleService } from '@/modules/roles/interfaces/IRoleService';
 import { IPermissionRepository } from '@/modules/auth/interfaces/IPermissionRepository';
 import { IAuditRepository } from '@/shared/interfaces/repositories/IAuditRepository';
 import { ISessionRepository } from '@/modules/auth/interfaces/ISessionRepository';
@@ -40,7 +40,7 @@ import { AuthService } from '@/modules/auth/services/AuthService';
 import { AuthController } from '@/modules/auth/controllers/AuthController';
 import { RoleRepository } from '@/modules/auth/repositories/RoleRepository';
 import { RoleService } from '@/modules/roles/services/RoleService';
-import { RoleController } from '@/modules/auth/controllers/RoleController';
+import { RoleController } from '@/modules/roles/controllers/RoleController';
 import { UserController } from '@/modules/users/controllers/UserController';
 import { CompanyController } from '@/modules/companies/controllers/CompanyController';
 import { PermissionRepository } from '@/modules/auth/repositories/PermissionRepository';

@@ -18,7 +18,6 @@ import {
   Step,
   StepLabel,
   StepContent,
-  FormControl,
   FormControlLabel,
   Checkbox,
   Chip,
@@ -37,7 +36,6 @@ import {
   Grid,
   Switch,
   Tooltip,
-  Badge
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import {
@@ -45,18 +43,13 @@ import {
   ChevronRight,
   ChevronDown,
   Search,
-  Info,
   AlertCircle,
-  CheckCircle,
   Save,
-  X,
   Key,
   Eye,
   Edit,
   Trash2,
   Plus,
-  Lock,
-  Unlock,
   Users,
   Building,
   Settings,
@@ -145,7 +138,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
   const {
     control,
     handleSubmit,
-    formState: { errors, isValid, isDirty },
+    formState: { errors },
     watch,
     setValue,
     reset
@@ -168,10 +161,11 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
   /**
    * Fetch all available permissions
    */
-  const { data: allPermissions = [], isLoading: permissionsLoading } = useQuery({
+  const { data: allPermissions = [] } = useQuery({
     queryKey: ['all-permissions'],
     queryFn: () => roleService.getAllPermissions(),
-    enabled: open
+    enabled: open,
+    select: (data) => Array.isArray(data) ? data : []
   });
 
   /**
@@ -286,6 +280,10 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
    * Group permissions by module
    */
   const permissionGroups = useMemo<PermissionGroup[]>(() => {
+    if (!Array.isArray(allPermissions)) {
+      console.warn('allPermissions is not an array:', allPermissions);
+      return [];
+    }
     const groups = allPermissions.reduce((acc, permission) => {
       const module = permission.module || 'General';
       if (!acc[module]) {
@@ -321,7 +319,8 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
    * Calculate permission statistics
    */
   const permissionStats = useMemo(() => {
-    const total = allPermissions.length;
+    const safePermissions = Array.isArray(allPermissions) ? allPermissions : [];
+    const total = safePermissions.length;
     const selected = selectedPermissions.length;
     const percentage = total > 0 ? Math.round((selected / total) * 100) : 0;
     
@@ -785,7 +784,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                     <Divider sx={{ my: 1 }} />
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                       {selectedPermissions.map(permId => {
-                        const permission = allPermissions.find(p => p.id === permId);
+                        const permission = Array.isArray(allPermissions) ? allPermissions.find(p => p.id === permId) : null;
                         return permission ? (
                           <Chip
                             key={permission.id}

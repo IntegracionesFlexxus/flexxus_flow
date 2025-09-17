@@ -66,6 +66,7 @@ import { roleService } from '@/modules/users/services/roleService';
 // Hooks
 import { useAuthStore } from '@/shared/store/authStore';
 import { useUIStore } from '@/shared/store/uiStore';
+import { useRoleValidation } from '@/shared/hooks/useRoleValidation';
 
 // Types
 import type { Role } from '@/modules/users/types';
@@ -105,6 +106,7 @@ export const RoleManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const { user, currentCompany } = useAuthStore();
   const { addNotification } = useUIStore();
+  const { canEditRole, canDeleteRole, canCreateRole } = useRoleValidation();
 
   // Debug logging
 
@@ -348,6 +350,18 @@ export const RoleManagement: React.FC = () => {
    * Handle role actions
    */
   const handleEditRole = () => {
+    if (selectedRole && !canEditRole(selectedRole)) {
+      addNotification({
+        type: 'warning',
+        title: 'Acceso denegado',
+        message: selectedRole.isSystemRole ?
+          'Solo los SuperAdministradores pueden editar roles del sistema.' :
+          'Solo puedes editar roles de tu empresa.',
+        autoClose: true
+      });
+      handleMenuClose();
+      return;
+    }
     setDialogState(prev => ({ ...prev, edit: true }));
     handleMenuClose();
   };

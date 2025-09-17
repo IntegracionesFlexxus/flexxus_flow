@@ -30,6 +30,8 @@ import {
   People as PeopleIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useRoleValidation } from '@/shared/hooks/useRoleValidation';
+import { Alert, AlertTitle } from '@mui/material';
 
 interface Company {
   id: string;
@@ -45,6 +47,9 @@ const CompanyList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+
+  // Validaciones de rol
+  const { canViewAllCompanies, getAccessDeniedMessage } = useRoleValidation();
 
   // Mock data - en producción vendría del backend
   const companies: Company[] = [
@@ -114,6 +119,18 @@ const CompanyList: React.FC = () => {
     company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     company.plan.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Verificar permisos de acceso
+  if (!canViewAllCompanies()) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          <AlertTitle>Acceso Denegado</AlertTitle>
+          {getAccessDeniedMessage('view_companies')}
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>

@@ -219,10 +219,13 @@ export const useFeatureFlag = (
     }
 
     // Verificar cache primero
+    const isSuperAdmin = currentCompany?.role === 'Super Admin';
+    const cacheCompanyId = isSuperAdmin ? 'superadmin-context' : currentCompany?.id;
+
     const cachedResult = cache.current.get(
       featureName,
       user?.id,
-      currentCompany?.id,
+      cacheCompanyId,
       currentCompany?.role
     );
 
@@ -256,9 +259,12 @@ export const useFeatureFlag = (
     }
 
     try {
+      // Manejar contexto especial para SuperAdmin
+      const cacheCompanyId = isSuperAdmin ? 'superadmin-context' : currentCompany?.id;
+
       const evaluationContext = {
         userId: user?.id,
-        companyId: currentCompany?.id,
+        companyId: cacheCompanyId,
         userRole: currentCompany?.role,
         companyPlan: currentCompany?.plan,
         userAttributes: {
@@ -288,7 +294,7 @@ export const useFeatureFlag = (
           finalValue,
           flagConfig,
           user?.id,
-          currentCompany?.id,
+          cacheCompanyId,
           currentCompany?.role
         );
 

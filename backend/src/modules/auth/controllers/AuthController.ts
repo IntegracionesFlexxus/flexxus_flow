@@ -233,12 +233,27 @@ export class AuthController {
       if (!req.user) {
         throw new AppError('Unauthorized', 401);
       }
+
+      console.log('🏢 [AuthController] getUserCompanies called for user:', {
+        userId: req.user.id,
+        email: req.user.email,
+        role: req.user.role
+      });
+
       const companies = await this.authService.getUserCompanies(req.user.id);
+
+      console.log('🏢 [AuthController] Companies retrieved:', {
+        userId: req.user.id,
+        companiesCount: companies.length,
+        companies: companies
+      });
+
       res.json({
         success: true,
         data: companies
       });
     } catch (error) {
+      console.error('❌ [AuthController] Error in getUserCompanies:', error);
       this.handleAuthError(res, error);
     }
   }

@@ -92,17 +92,30 @@ export const useAuthStore = create<AuthState>()(
 
           try {
             const response = await authService.login(credentials)
-            
+
+            console.log('🔍 [AuthStore] Login response:', {
+              user: response.data.user,
+              companiesCount: response.data.companies?.length || 0,
+              companies: response.data.companies,
+              availableCompanies: response.data.availableCompanies,
+              availableCompaniesCount: response.data.availableCompanies?.length || 0
+            });
+
+            // Usar availableCompanies que tiene la empresa virtual para SuperAdmin
+            const userCompanies = response.data.availableCompanies || response.data.companies || [];
+
             set((state) => {
               state.user = response.data.user
               state.token = response.data.accessToken
-              state.companies = response.data.companies
-              state.currentCompany = response.data.companies[0] || null
+              state.companies = userCompanies
+              state.currentCompany = userCompanies[0] || null
               state.isAuthenticated = true
               state.isLoading = false
             })
 
             console.log('Usuario autenticado:', response.data.user.email)
+            console.log('🏢 [AuthStore] Current company set to:', userCompanies[0] || null)
+            console.log('🏢 [AuthStore] Using companies from:', response.data.availableCompanies ? 'availableCompanies' : 'companies')
             
             // Devolver la respuesta para que LoginPage pueda usarla
             return {
@@ -314,10 +327,20 @@ export const useAuthStore = create<AuthState>()(
 
         hasRole: (role: string): boolean => {
           const state = get()
-          if (!state.user || !state.currentCompany) return false
-          
-          const userCompany = state.user.companies?.find(c => c.id === state.currentCompany?.id)
-          return userCompany?.role === role
+          if (!state.user) return false
+
+          // Verificar rol en currentCompany (incluye empresa virtual para SuperAdmin)
+          if (state.currentCompany?.role === role) {
+            return true
+          }
+
+          // Verificar rol en user.companies (para compatibilidad)
+          if (state.currentCompany) {
+            const userCompany = state.user.companies?.find(c => c.id === state.currentCompany?.id)
+            return userCompany?.role === role
+          }
+
+          return false
         },
 
         hasPermission: (permission: string): boolean => {

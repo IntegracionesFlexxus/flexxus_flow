@@ -194,7 +194,7 @@ class MenuService {
             label: 'Roles',
             path: '/roles',
             icon: "icon",
-            permission: 'admin.roles.view'
+            permission: '*'
           },
           {
             id: 'admin-companies',

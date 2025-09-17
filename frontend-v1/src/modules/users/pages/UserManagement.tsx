@@ -125,7 +125,9 @@ export const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Validación de permisos basada en el rol del usuario - Sincronizado con backend
-  const canManageUsers = ['admin', 'manager', 'Admin', 'Manager'].includes(currentCompany?.role || currentUser?.role || '');
+  // SuperAdmin se detecta por el rol del usuario, no por la empresa
+  const isSuperAdmin = currentCompany?.role === 'Super Admin' || currentUser?.role === 'Super Admin';
+  const canManageUsers = isSuperAdmin || ['admin', 'manager', 'Admin', 'Manager'].includes(currentCompany?.role || currentUser?.role || '');
   const canInviteUsers = canManageUsers; // Sincronizado con canManageUsers para consistencia
   const { isEnabled: canManagePermissions } = useFeatureFlag('permission_management', { defaultValue: true });
 
@@ -140,8 +142,15 @@ export const UserManagement: React.FC = () => {
   // Debug logs
   console.log('🏢 Current Company:', currentCompany);
   console.log('👤 Current User:', currentUser);
+  console.log('👑 Is SuperAdmin:', isSuperAdmin);
   console.log('🚦 Can Manage Users:', canManageUsers);
   console.log('📝 Dialogs state:', dialogs);
+  console.log('🔍 Query enabled condition:', {
+    isSuperAdmin,
+    hasCompanyId: !!currentCompany?.id,
+    canManageUsers,
+    finalEnabled: (isSuperAdmin || !!currentCompany?.id) && canManageUsers
+  });
 
   // Query: Fetch users
   const {
@@ -150,18 +159,29 @@ export const UserManagement: React.FC = () => {
     error: usersError,
     refetch: refetchUsers
   } = useQuery({
-    queryKey: ['users', currentCompany?.id, filters],
+    queryKey: ['users', currentCompany?.id, filters, isSuperAdmin],
     queryFn: () => {
-      console.log('📡 Fetching users for company:', currentCompany?.id);
+      console.log('🚀 [UserManagement] queryFn executing', {
+        isSuperAdmin,
+        currentCompanyId: currentCompany?.id,
+        filters
+      });
+
+      if (isSuperAdmin) {
+        console.log('👑 [UserManagement] SuperAdmin query - using company ID:', currentCompany?.id || 'superadmin-all-users');
+        // SuperAdmin usa el companyId virtual o uno especial para que el backend sepa que debe devolver todos los usuarios
+        const superAdminCompanyId = currentCompany?.id === 'superadmin-company' ? currentCompany.id : 'superadmin-all-users';
+        return userService.getCompanyUsers(superAdminCompanyId, filters);
+      }
+
+      console.log('👤 [UserManagement] Normal user query - using company ID:', currentCompany!.id);
       return userService.getCompanyUsers(currentCompany!.id, filters);
     },
-    enabled: !!currentCompany?.id && canManageUsers,
+    enabled: (isSuperAdmin || !!currentCompany?.id) && canManageUsers,
     staleTime: 30000, // 30 seconds
     gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
-  // Log query results
-  console.log('📊 Users Data:', usersData);
   console.log('⏳ Loading Users:', isLoadingUsers);
   console.log('❌ Users Error:', usersError);
 
@@ -197,6 +217,18 @@ export const UserManagement: React.FC = () => {
     queryFn: () => companyService.getUserCompanies(),
     staleTime: 5 * 60 * 1000 // 5 minutos
   });
+
+  // Auto-update authStore with companies if currentCompany is null (SuperAdmin case)
+  React.useEffect(() => {
+    if (companiesData && companiesData.length > 0 && !currentCompany && !isLoadingCompanies) {
+      console.log('🔄 [UserManagement] Auto-updating authStore with companies:', companiesData);
+
+      const { switchCompany } = useAuthStore.getState();
+
+      // Use switchCompany to update the current company
+      switchCompany(companiesData[0]);
+    }
+  }, [companiesData, currentCompany, isLoadingCompanies]);
 
   // Mutations
   const deleteUserMutation = useMutation({

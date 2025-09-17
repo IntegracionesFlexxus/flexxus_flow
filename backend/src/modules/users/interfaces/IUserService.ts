@@ -4,6 +4,32 @@
  */
 export interface IUserService {
   /**
+   * Get all users (SuperAdmin only) with pagination and filters
+   */
+  getAllUsers(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    status?: string;
+  }): Promise<{
+    users: Array<{
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+      avatar?: string;
+      phone?: string;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+      lastLoginAt?: Date;
+    }>;
+    total: number;
+  }>;
+
+  /**
    * Get users by company with pagination and filters
    */
   getUsersByCompany(companyId: string, options?: {

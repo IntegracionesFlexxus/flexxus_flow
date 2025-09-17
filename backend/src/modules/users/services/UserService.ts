@@ -30,6 +30,78 @@ export class UserService implements IUserService {
     @inject(TYPES.PasswordService) private passwordService: PasswordService,
     @inject(TYPES.Logger) private logger: Logger
   ) {}
+
+  async getAllUsers(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    status?: string;
+  }): Promise<{
+    users: IUser[];
+    total: number;
+  }> {
+    try {
+      const page = options?.page || 1;
+      const limit = options?.limit || 20;
+      const offset = (page - 1) * limit;
+
+      this.logger.info('[UserService.getAllUsers] SuperAdmin fetching all users', {
+        page,
+        limit,
+        offset,
+        search: options?.search,
+        role: options?.role,
+        status: options?.status
+      });
+
+      // Obtener todos los usuarios del sistema con paginación
+      const users = await this.userRepository.findAll({
+        offset,
+        limit,
+        orderBy: 'created_at',
+        orderDirection: 'DESC'
+      });
+
+      // Obtener el total sin paginación para los filtros aplicados
+      const total = await this.userRepository.count({
+        status: options?.status || undefined
+      });
+
+      // Mapear a la estructura esperada por el frontend
+      const mappedUsers = users.map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        role: 'system_user', // Para usuarios globales, usar un rol genérico
+        avatar: user.avatar_url || null,
+        phone: null, // No existe en la tabla users básica
+        isActive: user.status === 'active',
+        emailVerified: user.email_verified_at !== null,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+        lastLoginAt: user.last_login_at || null
+      }));
+
+      this.logger.info('[UserService.getAllUsers] Successfully fetched all users', {
+        totalUsers: mappedUsers.length,
+        totalCount: total
+      });
+
+      return {
+        users: mappedUsers,
+        total
+      };
+    } catch (error) {
+      this.logger.error('Error getting all users (SuperAdmin)', {
+        error: error.message,
+        stack: error.stack,
+        options
+      });
+      throw error;
+    }
+  }
   async getUsersByCompany(companyId: string, options?: {
     page?: number;
     limit?: number;

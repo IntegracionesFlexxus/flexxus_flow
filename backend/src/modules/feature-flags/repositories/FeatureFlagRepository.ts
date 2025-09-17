@@ -106,17 +106,54 @@ export class FeatureFlagRepository implements IFeatureFlagRepository {
   }
 
   async findByName(companyId: string, featureName: string, environment = 'production'): Promise<FeatureFlag | null> {
-    const query = `
-      SELECT * FROM feature_flags 
-      WHERE company_id = $1 
-      AND feature_name = $2 
-      AND environment = $3 
-      AND deleted_at IS NULL
-      LIMIT 1
-    `;
+    // Validar que featureName no esté vacío
+    if (!featureName || featureName.trim().length === 0) {
+      this.logger.error('findByName called with empty featureName', {
+        companyId,
+        featureName,
+        environment
+      });
+      return null;
+    }
+
+    // Para SuperAdmin o valores no-UUID, buscar un flag global o de la primera empresa disponible
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId || '');
+
+    let query: string;
+    let params: any[];
+
+    if (!isValidUUID || !companyId) {
+      // Para SuperAdmin: buscar flag global o el primer flag disponible para este feature
+      query = `
+        SELECT * FROM feature_flags
+        WHERE feature_name = $1
+        AND environment = $2
+        AND deleted_at IS NULL
+        ORDER BY created_at ASC
+        LIMIT 1
+      `;
+      params = [featureName, environment];
+
+      this.logger.debug('SuperAdmin feature flag lookup', {
+        featureName,
+        environment,
+        invalidCompanyId: companyId
+      });
+    } else {
+      // Para usuarios normales: buscar por empresa específica
+      query = `
+        SELECT * FROM feature_flags
+        WHERE company_id = $1
+        AND feature_name = $2
+        AND environment = $3
+        AND deleted_at IS NULL
+        LIMIT 1
+      `;
+      params = [companyId, featureName, environment];
+    }
 
     try {
-      const result = await this.db.query(query, [companyId, featureName, environment]);
+      const result = await this.db.query(query, params);
 
       if (result.rows.length === 0) {
         return null;

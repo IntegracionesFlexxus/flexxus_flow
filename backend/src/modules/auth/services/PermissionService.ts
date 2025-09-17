@@ -207,6 +207,21 @@ export class PermissionService {
       // Get user's roles - ensure it returns an array
       const userRoles = (await this.roleRepository.getUserRoles(userId, companyId)) || [];
 
+      // Check for SuperAdmin role - SuperAdmin should have all permissions
+      const isSuperAdmin = userRoles.some(role => role.name === 'Super Admin');
+
+      if (isSuperAdmin) {
+        this.logger.info('SuperAdmin detected, granting all permissions', { userId });
+
+        // Get all available permissions in the system
+        const allPermissions = await this.getAllPermissions();
+
+        // Cache result
+        await this.cacheService.set(cacheKey, allPermissions, this.CACHE_TTL);
+
+        return allPermissions;
+      }
+
       // Get permissions from roles
       const rolePermissions = new Set<string>();
       for (const role of userRoles) {
@@ -218,9 +233,9 @@ export class PermissionService {
             }
           });
         } catch (roleError) {
-          this.logger.warn('Error getting role permissions', { 
-            roleId: role.id, 
-            error: roleError.message 
+          this.logger.warn('Error getting role permissions', {
+            roleId: role.id,
+            error: roleError.message
           });
         }
       }

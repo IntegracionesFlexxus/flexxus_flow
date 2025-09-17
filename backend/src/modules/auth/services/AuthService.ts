@@ -19,15 +19,16 @@ import { IJwtService } from '@/modules/auth/interfaces/IJwtService';
 import { PasswordService } from '@/modules/auth/services/PasswordService';
 import { AuditService } from '@/shared/services/audit/AuditService';
 import { PermissionService } from '@/modules/auth/services/PermissionService';
-import { 
-  LoginDto, 
-  RegisterDto, 
+import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
+import {
+  LoginDto,
+  RegisterDto,
   AuthResponse,
   ChangePasswordDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   JwtPayload,
-  SwitchCompanyDto
+  SwitchCompanyDto,
 } from '@/modules/auth/types/auth.types';
 import { TYPES } from '@/container/types';
 import { environment } from '@/config/environment';
@@ -52,12 +53,14 @@ export class AuthService implements IAuthService {
     @inject(TYPES.SessionRepository) private sessionRepository: ISessionRepository,
     @inject(TYPES.UserCompanyRepository) private userCompanyRepository: IUserCompanyRepository,
     @inject(TYPES.UserAuthRepository) private userAuthRepository: IUserAuthRepository,
-    @inject(TYPES.PasswordResetRepository) private passwordResetRepository: IPasswordResetRepository,
+    @inject(TYPES.PasswordResetRepository)
+    private passwordResetRepository: IPasswordResetRepository,
     @inject(TYPES.SessionService) private sessionService: ISessionService,
     @inject(TYPES.JwtService) private jwtService: IJwtService,
     @inject(TYPES.PasswordService) private passwordService: PasswordService,
     @inject(TYPES.AuditService) private auditService: AuditService,
     @inject(TYPES.PermissionService) private permissionService: PermissionService,
+    @inject(TYPES.RoleRepository) private roleRepository: IRoleRepository,
     @inject(TYPES.Logger) private logger: Logger
   ) {
     this.tokenExpiry = environment.jwt?.expiresIn || '1h';
@@ -69,10 +72,13 @@ export class AuthService implements IAuthService {
    * Clean Code: Función con flujo claro y manejo de errores consistente
    * Sprint 3: Integrado con AuditService, PasswordService y gestión de sesiones
    */
-  async login(dto: LoginDto, metadata?: { 
-    ipAddress?: string; 
-    userAgent?: string 
-  }): Promise<AuthResponse> {
+  async login(
+    dto: LoginDto,
+    metadata?: {
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ): Promise<AuthResponse> {
     try {
       this.logger.info('Login attempt started', { email: dto?.email });
       this.validateLoginDto(dto);
@@ -88,14 +94,14 @@ export class AuthService implements IAuthService {
           description: `Intento de login con email inexistente: ${dto.email}`,
           ipAddress: metadata?.ipAddress,
           userAgent: metadata?.userAgent,
-          metadata: { reason: 'user_not_found', email: dto.email }
+          metadata: { reason: 'user_not_found', email: dto.email },
         });
         throw this.createAuthError('Invalid credentials');
       }
 
       // Verificar contraseña usando PasswordService
       const isValidPassword = await this.passwordService.verifyPassword(
-        dto.password, 
+        dto.password,
         user.password_hash
       );
       if (!isValidPassword) {
@@ -107,7 +113,7 @@ export class AuthService implements IAuthService {
           description: 'Intento de login con contraseña incorrecta',
           ipAddress: metadata?.ipAddress,
           userAgent: metadata?.userAgent,
-          metadata: { reason: 'invalid_password' }
+          metadata: { reason: 'invalid_password' },
         });
         throw this.createAuthError('Invalid credentials');
       }
@@ -123,7 +129,7 @@ export class AuthService implements IAuthService {
         throw this.createAuthError('Company not found');
       }
 
-// [Removed 6 lines of commented code]
+      // [Removed 6 lines of commented code]
 
       // Crear sesión usando SessionService
       const { session, tokens } = await this.sessionService.createSession({
@@ -134,13 +140,13 @@ export class AuthService implements IAuthService {
         deviceInfo: {
           ip: metadata?.ipAddress || '',
           userAgent: metadata?.userAgent || '',
-          deviceFingerprint: metadata?.deviceFingerprint || ''
+          deviceFingerprint: '',
         },
         location: {
           country: 'Unknown',
           city: 'Unknown',
-          timezone: 'UTC'
-        }
+          timezone: 'UTC',
+        },
       });
 
       // Actualizar último login
@@ -159,10 +165,10 @@ export class AuthService implements IAuthService {
         ipAddress: metadata?.ipAddress,
         userAgent: metadata?.userAgent,
         sessionId: session.id,
-        metadata: { 
+        metadata: {
           companyId: company.id,
-          role: userCompany.role
-        }
+          role: userCompany.role,
+        },
       });
 
       this.logger.info('Login exitoso', {
@@ -170,25 +176,19 @@ export class AuthService implements IAuthService {
         email: user.email,
         companyId: company.id,
         role: userCompany.role,
-        sessionId: session.id
+        sessionId: session.id,
       });
 
       // Retornar response con los tokens generados por SessionService
-      const { password_hash, password_reset_token, password_reset_expires_at, ...userWithoutPassword } = user as any;
+      const {
+        password_hash,
+        password_reset_token,
+        password_reset_expires_at,
+        ...userWithoutPassword
+      } = user as any;
 
-      const userCompanies = await this.userCompanyRepository.getUserCompanies(user.id);
-      const availableCompanies = await Promise.all(
-        userCompanies.map(async (uc: any) => {
-          const companyData = await this.companyRepository.findById(uc.companyId);
-          return companyData ? {
-            id: companyData.id,
-            name: companyData.name,
-            plan: companyData.plan || 'basic',
-            role: uc.role,
-            isDefault: uc.isDefault || false
-          } : null;
-        })
-      );
+      // Usar el método getUserCompanies que maneja SuperAdmin correctamente
+      const availableCompanies = await this.getUserCompanies(user.id);
 
       return {
         success: true,
@@ -197,20 +197,20 @@ export class AuthService implements IAuthService {
           id: company.id,
           name: company.name,
           plan: company.plan || 'basic',
-          role: userCompany.role
+          role: userCompany.role,
         },
         availableCompanies: availableCompanies.filter(Boolean),
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         expiresIn: this.tokenExpiry,
         permissions: userPermissions?.map((p: any) => p.name) || [],
-        sessionId: session.id
+        sessionId: session.id,
       };
     } catch (error) {
       this.logger.error('Error en login', {
         error: error.message,
         email: dto.email,
-        ipAddress: metadata?.ipAddress
+        ipAddress: metadata?.ipAddress,
       });
       throw error;
     }
@@ -231,10 +231,7 @@ export class AuthService implements IAuthService {
       const user = await this.createUserFromDto(dto);
 
       // Manejar empresa (crear nueva o unirse a existente)
-      const { company, role } = await this.handleCompanyRegistration(
-        user.id, 
-        dto
-      );
+      const { company, role } = await this.handleCompanyRegistration(user.id, dto);
 
       // Generar response
       return await this.createAuthResponse(user, company, role);
@@ -353,10 +350,13 @@ export class AuthService implements IAuthService {
    * Solicitar recuperación de contraseña
    * Sprint 3: Implementación completa con PasswordService y EmailService
    */
-  async forgotPassword(dto: ForgotPasswordDto, metadata?: {
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<void> {
+  async forgotPassword(
+    dto: ForgotPasswordDto,
+    metadata?: {
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ): Promise<void> {
     try {
       this.validateEmail(dto.email);
 
@@ -370,7 +370,7 @@ export class AuthService implements IAuthService {
           description: `Reset solicitado para email inexistente: ${dto.email}`,
           ipAddress: metadata?.ipAddress,
           userAgent: metadata?.userAgent,
-          metadata: { email: dto.email, found: false }
+          metadata: { email: dto.email, found: false },
         });
 
         this.logger.info('Reset solicitado para email inexistente', { email: dto.email });
@@ -380,7 +380,7 @@ export class AuthService implements IAuthService {
       // Generar token de reset usando PasswordService
       const tokenData = this.passwordService.generatePasswordResetToken({
         email: dto.email,
-        expirationMinutes: 60 // 1 hora
+        expirationMinutes: 60, // 1 hora
       });
 
       // Guardar token en base de datos usando el nuevo repositorio
@@ -397,18 +397,18 @@ export class AuthService implements IAuthService {
         description: 'Token de reset de contraseña generado',
         ipAddress: metadata?.ipAddress,
         userAgent: metadata?.userAgent,
-        metadata: { expiresAt: tokenData.expiresAt.toISOString() }
+        metadata: { expiresAt: tokenData.expiresAt.toISOString() },
       });
 
       this.logger.info('Token de reset generado', {
         userId: user.id,
         email: dto.email,
-        expiresAt: tokenData.expiresAt
+        expiresAt: tokenData.expiresAt,
       });
     } catch (error) {
       this.logger.error('Error en forgot password', {
         error: error.message,
-        email: dto.email
+        email: dto.email,
       });
       throw error;
     }
@@ -418,10 +418,13 @@ export class AuthService implements IAuthService {
    * Resetear contraseña con token
    * Sprint 3: Implementación completa con validación de token
    */
-  async resetPassword(dto: ResetPasswordDto, metadata?: {
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<void> {
+  async resetPassword(
+    dto: ResetPasswordDto,
+    metadata?: {
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ): Promise<void> {
     try {
       if (!dto.token || !dto.newPassword) {
         throw this.createAuthError('Token and new password are required');
@@ -437,7 +440,7 @@ export class AuthService implements IAuthService {
           description: 'Token de reset inválido',
           ipAddress: metadata?.ipAddress,
           userAgent: metadata?.userAgent,
-          metadata: { reason: 'invalid_token' }
+          metadata: { reason: 'invalid_token' },
         });
         throw this.createAuthError('Invalid or expired reset token');
       }
@@ -456,7 +459,7 @@ export class AuthService implements IAuthService {
 
       // Actualizar contraseña y limpiar token
       await this.userRepository.update(user.id, {
-        password_hash: hashedPassword
+        password_hash: hashedPassword,
       });
 
       // Marcar token como usado
@@ -472,17 +475,17 @@ export class AuthService implements IAuthService {
         entityId: user.id,
         description: 'Contraseña restablecida exitosamente',
         ipAddress: metadata?.ipAddress,
-        userAgent: metadata?.userAgent
+        userAgent: metadata?.userAgent,
       });
 
       this.logger.info('Contraseña restablecida', {
         userId: user.id,
-        email: user.email
+        email: user.email,
       });
     } catch (error) {
       this.logger.error('Error en reset password', {
         error: error.message,
-        token: dto.token ? 'presente' : 'ausente'
+        token: dto.token ? 'presente' : 'ausente',
       });
       throw error;
     }
@@ -505,7 +508,7 @@ export class AuthService implements IAuthService {
 
       // Verificar que el usuario pertenece a la empresa
       const userCompanies = await this.userCompanyRepository.getUserCompanies(userId);
-      const userCompany = userCompanies.find(uc => uc.id === dto.companyId);
+      const userCompany = userCompanies.find((uc) => uc.id === dto.companyId);
       if (!userCompany) {
         throw this.createAuthError('User does not have access to this company');
       }
@@ -535,7 +538,7 @@ export class AuthService implements IAuthService {
     return jwt.sign(payload, environment.jwt.secret, {
       expiresIn: environment.jwt.expiresIn,
       issuer: 'flexxus-auth',
-      audience: 'flexxus-api'
+      audience: 'flexxus-api',
     });
   }
 
@@ -546,14 +549,17 @@ export class AuthService implements IAuthService {
     return jwt.sign(payload, environment.jwt.secret, {
       expiresIn: environment.jwt.refreshExpiresIn,
       issuer: 'flexxus-auth',
-      audience: 'flexxus-refresh'
+      audience: 'flexxus-refresh',
     });
   }
 
   /**
    * Authenticate user (simplificado para controladores)
    */
-  async authenticate(email: string, password: string): Promise<{
+  async authenticate(
+    email: string,
+    password: string
+  ): Promise<{
     success: boolean;
     message?: string;
     user?: any;
@@ -564,12 +570,12 @@ export class AuthService implements IAuthService {
       return {
         success: result.success,
         user: result.user,
-        companies: await this.userCompanyRepository.getUserCompanies(result.user.id)
+        companies: await this.userCompanyRepository.getUserCompanies(result.user.id),
       };
     } catch (error: any) {
       return {
         success: false,
-        message: error.message || 'Authentication failed'
+        message: error.message || 'Authentication failed',
       };
     }
   }
@@ -579,8 +585,39 @@ export class AuthService implements IAuthService {
    */
   async getUserCompanies(userId: string): Promise<any[]> {
     try {
-      return await this.userCompanyRepository.getUserCompanies(userId);
+      console.log('🔍 [AuthService] getUserCompanies called for userId:', userId);
+
+      // Verificar si el usuario tiene rol SuperAdmin
+      const userRoles = await this.roleRepository.getUserRoles(userId);
+      console.log('🔍 [AuthService] User roles retrieved:', userRoles);
+
+      const isSuperAdmin = userRoles.some((role) => role.name === 'Super Admin');
+      console.log('🔍 [AuthService] Is SuperAdmin:', isSuperAdmin);
+
+      if (isSuperAdmin) {
+        // SuperAdmin tiene una empresa virtual con todos los permisos
+        this.logger.info('SuperAdmin detected, returning virtual company', { userId });
+        console.log('👑 [AuthService] SuperAdmin detected, returning virtual company');
+
+        const virtualCompany = [{
+          id: 'superadmin-company',
+          name: 'SuperAdmin Access',
+          plan: 'enterprise',
+          role: 'Super Admin',
+          isDefault: true
+        }];
+
+        console.log('👑 [AuthService] Virtual company created:', virtualCompany);
+        return virtualCompany;
+      }
+
+      console.log('👤 [AuthService] Normal user, getting companies from repository');
+      const companies = await this.userCompanyRepository.getUserCompanies(userId);
+      console.log('👤 [AuthService] Companies from repository:', companies);
+
+      return companies;
     } catch (error) {
+      console.error('❌ [AuthService] Error getting user companies:', error);
       this.logger.error('Error getting user companies:', error);
       return [];
     }
@@ -606,8 +643,8 @@ export class AuthService implements IAuthService {
    * Sprint 3: Incluye permisos y datos de sesión
    */
   private async createAuthResponse(
-    user: any, 
-    company: any, 
+    user: any,
+    company: any,
     role: string,
     sessionData?: any,
     permissions?: any[]
@@ -618,7 +655,7 @@ export class AuthService implements IAuthService {
       email: user.email,
       companyId: company.id,
       role,
-      sessionId: sessionData?.sessionId
+      sessionId: sessionData?.sessionId,
     };
 
     // Generar tokens
@@ -626,20 +663,27 @@ export class AuthService implements IAuthService {
     const refreshToken = this.generateRefreshToken(payload);
 
     // Remover información sensible
-    const { password_hash, password_reset_token, password_reset_expires_at, ...userWithoutPassword } = user as any;
+    const {
+      password_hash,
+      password_reset_token,
+      password_reset_expires_at,
+      ...userWithoutPassword
+    } = user as any;
 
     // Obtener todas las empresas del usuario
     const userCompanies = await this.userCompanyRepository.getUserCompanies(user.id);
     const availableCompanies = await Promise.all(
       userCompanies.map(async (uc: any) => {
         const companyData = await this.companyRepository.findById(uc.company_id || uc.id);
-        return companyData ? {
-          id: companyData.id,
-          name: companyData.name,
-          plan: companyData.plan || 'basic',
-          role: uc.role,
-          isDefault: uc.is_default || false
-        } : null;
+        return companyData
+          ? {
+              id: companyData.id,
+              name: companyData.name,
+              plan: companyData.plan || 'basic',
+              role: uc.role,
+              isDefault: uc.is_default || false,
+            }
+          : null;
       })
     );
 
@@ -650,14 +694,14 @@ export class AuthService implements IAuthService {
         id: company.id,
         name: company.name,
         plan: company.plan || 'basic',
-        role
+        role,
       },
       availableCompanies: availableCompanies.filter(Boolean),
       accessToken: token,
       refreshToken,
       expiresIn: this.tokenExpiry,
-      permissions: permissions?.map(p => p.name) || [],
-      sessionId: sessionData?.sessionId
+      permissions: permissions?.map((p) => p.name) || [],
+      sessionId: sessionData?.sessionId,
     };
   }
 
@@ -674,9 +718,30 @@ export class AuthService implements IAuthService {
    * Sprint 3: Actualizado para usar UserRepository
    */
   private async getUserCompanyForLogin(
-    userId: string, 
+    userId: string,
     requestedCompanyId?: string
   ): Promise<{ companyId: string; role: string; isDefault: boolean }> {
+    // Verificar si el usuario tiene rol SuperAdmin (sin empresa específica)
+    const userRoles = await this.roleRepository.getUserRoles(userId);
+    const isSuperAdmin = userRoles.some((role) => role.name === 'Super Admin');
+
+    if (isSuperAdmin) {
+      // SuperAdmin no necesita empresa específica, usar la primera empresa disponible
+      // o crear una empresa virtual para el contexto del token
+      const companies = await this.companyRepository.findAll();
+      const firstCompany = companies.length > 0 ? companies[0] : null;
+
+      if (!firstCompany) {
+        throw this.createAuthError('No companies available in the system');
+      }
+
+      return {
+        companyId: firstCompany.id,
+        role: 'Super Admin',
+        isDefault: true,
+      };
+    }
+
     const userCompanies = await this.userCompanyRepository.getUserCompanies(userId);
 
     if (userCompanies.length === 0) {
@@ -684,23 +749,23 @@ export class AuthService implements IAuthService {
     }
 
     if (requestedCompanyId) {
-      const company = userCompanies.find(uc => uc.companyId === requestedCompanyId);
+      const company = userCompanies.find((uc) => uc.companyId === requestedCompanyId);
       if (!company) {
         throw this.createAuthError('User does not have access to this company');
       }
       return {
         companyId: company.companyId,
         role: company.role,
-        isDefault: company.isDefault
+        isDefault: company.isDefault,
       };
     }
 
     // Retornar empresa por defecto o la primera
-    const defaultCompany = userCompanies.find(uc => uc.isDefault) || userCompanies[0];
+    const defaultCompany = userCompanies.find((uc) => uc.isDefault) || userCompanies[0];
     return {
       companyId: defaultCompany.companyId,
       role: defaultCompany.role,
-      isDefault: defaultCompany.isDefault
+      isDefault: defaultCompany.isDefault,
     };
   }
 
@@ -708,7 +773,7 @@ export class AuthService implements IAuthService {
    * Manejar registro de empresa
    */
   private async handleCompanyRegistration(
-    userId: string, 
+    userId: string,
     dto: RegisterDto
   ): Promise<{ company: any; role: string }> {
     let company;
@@ -719,7 +784,7 @@ export class AuthService implements IAuthService {
       company = await this.companyRepository.create({
         name: dto.company_name,
         status: 'active',
-        plan: 'basic'
+        plan: 'basic',
       });
 
       // Agregar usuario como admin
@@ -759,7 +824,7 @@ export class AuthService implements IAuthService {
       password_hash: passwordHash,
       first_name: dto.first_name,
       last_name: dto.last_name,
-      status: 'active'
+      status: 'active',
     } as any);
   }
 
@@ -806,7 +871,7 @@ export class AuthService implements IAuthService {
       if (!user) {
         return false;
       }
-      return await this.passwordService.validatePassword(password, user.passwordHash);
+      return await this.passwordService.validatePassword(password, user.password_hash);
     } catch (error) {
       this.logger.error('Error validating password', { error: error.message });
       return false;

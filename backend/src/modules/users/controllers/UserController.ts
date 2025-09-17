@@ -135,23 +135,49 @@ export class UserController {
       const { companyId } = req.params;
       const { page = 1, limit = 10, search = '', role = '', status = '' } = req.query;
 
-      const users = await this.userService.getUsersByCompany(companyId, {
-        page: Number(page),
-        limit: Number(limit),
-        search: String(search),
-        role: String(role),
-        status: String(status)
+      // Verificar si el usuario es SuperAdmin o si se está usando el companyId especial
+      const userRole = req.user?.role;
+      const isSuperAdmin = userRole === 'Super Admin' || companyId === 'superadmin-all-users' || companyId === 'superadmin-company';
+
+      this.logger.debug('getUsersByCompany request', {
+        companyId,
+        userRole,
+        isSuperAdmin,
+        userId: req.user?.id
       });
+
+      let users;
+
+      if (isSuperAdmin) {
+        // SuperAdmin puede ver todos los usuarios del sistema
+        users = await this.userService.getAllUsers({
+          page: Number(page),
+          limit: Number(limit),
+          search: String(search),
+          role: String(role),
+          status: String(status)
+        });
+      } else {
+        // Usuario normal ve solo usuarios de su empresa
+        users = await this.userService.getUsersByCompany(companyId, {
+          page: Number(page),
+          limit: Number(limit),
+          search: String(search),
+          role: String(role),
+          status: String(status)
+        });
+      }
 
       res.json({
         success: true,
         data: users
       });
     } catch (error: any) {
-      this.logger.error('Get users by company error', { 
-        companyId: req.params.companyId, 
-        error: error.message, 
-        stack: error.stack 
+      this.logger.error('Get users by company error', {
+        companyId: req.params.companyId,
+        userRole: req.user?.role,
+        error: error.message,
+        stack: error.stack
       });
       res.status(500).json({
         success: false,

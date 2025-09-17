@@ -69,6 +69,7 @@ import { roleService } from '@/modules/users/services/roleService';
 // Hooks
 import { useUIStore } from '@/shared/store/uiStore';
 import { useAuthStore } from '@/shared/store/authStore';
+import { useRoleValidation } from '@/shared/hooks/useRoleValidation';
 
 // Types
 import type { Role, Permission } from '@/modules/users/types';
@@ -133,6 +134,13 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
   // Hooks
   const { addNotification } = useUIStore();
   const { currentCompany } = useAuthStore();
+  const {
+    canEditRole,
+    canAssignPermission,
+    isSuperAdmin,
+    isCompanyAdmin,
+    getPermissionRequiredMessage
+  } = useRoleValidation();
 
   // Form
   const {
@@ -357,36 +365,66 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
   };
 
   /**
-   * Handle permission selection
+   * Handle permission selection with real-time validation
    */
   const handlePermissionToggle = useCallback((permissionId: string) => {
-    setValue('permissions', 
-      selectedPermissions.includes(permissionId)
+    const permission = allPermissions.find(p => p.id === permissionId);
+    if (!permission) return;
+
+    const isCurrentlySelected = selectedPermissions.includes(permissionId);
+
+    // Si el permiso no está seleccionado, validar si puede asignarlo
+    if (!isCurrentlySelected && !canAssignPermission(permission)) {
+      addNotification({
+        type: 'warning',
+        title: 'Permiso restringido',
+        message: getPermissionRequiredMessage(permission.name),
+        autoClose: true
+      });
+      return;
+    }
+
+    // Actualizar selección
+    setValue('permissions',
+      isCurrentlySelected
         ? selectedPermissions.filter(id => id !== permissionId)
         : [...selectedPermissions, permissionId],
       { shouldValidate: true }
     );
-  }, [selectedPermissions, setValue]);
+  }, [selectedPermissions, setValue, allPermissions, canAssignPermission, getPermissionRequiredMessage, addNotification]);
 
   /**
-   * Handle select all in module
+   * Handle select all in module with real-time validation
    */
   const handleSelectAllInModule = useCallback((module: string, permissions: Permission[]) => {
     const modulePermissionIds = permissions.map(p => p.id);
     const allSelected = modulePermissionIds.every(id => selectedPermissions.includes(id));
 
     if (allSelected) {
-      // Deselect all
+      // Deselect all - siempre permitido
       setValue('permissions',
         selectedPermissions.filter(id => !modulePermissionIds.includes(id)),
         { shouldValidate: true }
       );
     } else {
-      // Select all
-      const newSelection = new Set([...selectedPermissions, ...modulePermissionIds]);
+      // Select all - validar cada permiso
+      const allowedPermissions = permissions.filter(p => canAssignPermission(p));
+      const restrictedCount = permissions.length - allowedPermissions.length;
+
+      if (restrictedCount > 0) {
+        addNotification({
+          type: 'warning',
+          title: 'Algunos permisos restringidos',
+          message: `No tienes autorización para asignar ${restrictedCount} permiso(s) en el módulo ${module}.`,
+          autoClose: true
+        });
+      }
+
+      const allowedIds = allowedPermissions.map(p => p.id);
+      const newSelection = new Set([...selectedPermissions, ...allowedIds]);
       setValue('permissions', Array.from(newSelection), { shouldValidate: true });
     }
-  }, [selectedPermissions, setValue]);
+  }, [selectedPermissions, setValue, canAssignPermission, addNotification]);
 
   /**
    * Handle module expand/collapse
@@ -458,35 +496,68 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
   // ==================== Render Functions ====================
 
   /**
-   * Render permission item
+   * Render permission item with real-time status
    */
   const renderPermissionItem = (permission: Permission) => {
     const isSelected = selectedPermissions.includes(permission.id);
+    const canAssign = canAssignPermission(permission);
+    const isDisabled = !canAssign && !isSelected; // Permitir deseleccionar pero no seleccionar si no tiene permisos
+    const isRestricted = !canAssign;
 
-    return (
+    const tooltipTitle = isDisabled
+      ? getPermissionRequiredMessage(permission.name)
+      : isRestricted && isSelected
+      ? 'Permiso asignado previamente - puedes quitarlo pero no reasignarlo'
+      : '';
+
+    const listItem = (
       <ListItem
         key={permission.id}
         dense
         button
         onClick={() => handlePermissionToggle(permission.id)}
-        sx={{ pl: 4 }}
+        disabled={isDisabled}
+        sx={{
+          pl: 4,
+          opacity: isDisabled ? 0.6 : 1,
+          backgroundColor: isRestricted && !isSelected ? 'action.hover' : 'transparent',
+          borderLeft: isRestricted ? '3px solid' : 'none',
+          borderLeftColor: isRestricted ? 'warning.main' : 'transparent'
+        }}
       >
         <ListItemIcon sx={{ minWidth: 36 }}>
           <Checkbox
             edge="start"
             checked={isSelected}
+            disabled={isDisabled}
             tabIndex={-1}
             size="small"
+            color={isRestricted ? 'warning' : 'primary'}
           />
         </ListItemIcon>
-        
+
         <ListItemText
           primary={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {getActionIcon(permission.name)}
-              <Typography variant="body2">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: isRestricted && !isSelected ? 'text.secondary' : 'text.primary',
+                  fontStyle: isRestricted && !isSelected ? 'italic' : 'normal'
+                }}
+              >
                 {permission.displayName}
               </Typography>
+              {isRestricted && (
+                <Chip
+                  label="Restringido"
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  sx={{ fontSize: '0.65rem', height: 18 }}
+                />
+              )}
             </Box>
           }
           secondary={
@@ -495,26 +566,44 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
             </Typography>
           }
         />
-        
-        {permission.critical && (
-          <ListItemSecondaryAction>
-            <Tooltip title="Permiso crítico">
-              <AlertCircle size={16} color="#ff9800" />
-            </Tooltip>
-          </ListItemSecondaryAction>
-        )}
+
+        <ListItemSecondaryAction>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {permission.critical && (
+              <Tooltip title="Permiso crítico">
+                <AlertCircle size={16} color="#ff9800" />
+              </Tooltip>
+            )}
+            {isRestricted && !isSelected && (
+              <Tooltip title="Permiso restringido para tu rol">
+                <Shield size={14} color="#f57c00" />
+              </Tooltip>
+            )}
+          </Box>
+        </ListItemSecondaryAction>
       </ListItem>
     );
+
+    return tooltipTitle ? (
+      <Tooltip title={tooltipTitle} placement="left">
+        <span>{listItem}</span>
+      </Tooltip>
+    ) : listItem;
   };
 
   /**
-   * Render module section
+   * Render module section with real-time validation
    */
   const renderModuleSection = (group: PermissionGroup) => {
     const isExpanded = expandedModules.includes(group.module);
     const stats = permissionStats.byModule[group.module];
     const allSelected = stats?.selected === stats?.total;
     const someSelected = stats?.selected > 0 && stats?.selected < stats?.total;
+
+    // Calcular permisos restringidos en este módulo
+    const restrictedInModule = group.permissions.filter(p => !canAssignPermission(p)).length;
+    const availableInModule = group.permissions.length - restrictedInModule;
+    const hasRestrictions = restrictedInModule > 0;
 
     return (
       <Paper key={group.module} elevation={0} sx={{ mb: 2, border: 1, borderColor: 'divider' }}>
@@ -525,7 +614,9 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             backgroundColor: 'background.default',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            borderLeft: hasRestrictions ? '4px solid' : 'none',
+            borderLeftColor: hasRestrictions ? 'warning.light' : 'transparent'
           }}
           onClick={() => handleToggleModule(group.module)}
         >
@@ -533,33 +624,64 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
             <IconButton size="small" sx={{ p: 0 }}>
               {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
             </IconButton>
-            
+
             {getModuleIcon(group.module)}
-            
+
             <Box>
-              <Typography variant="subtitle2" fontWeight={600}>
-                {group.module}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle2" fontWeight={600}>
+                  {group.module}
+                </Typography>
+                {hasRestrictions && (
+                  <Chip
+                    label={`${restrictedInModule} restringidos`}
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    sx={{ fontSize: '0.65rem', height: 16 }}
+                  />
+                )}
+              </Box>
               <Typography variant="caption" color="text.secondary">
                 {stats?.selected || 0} de {stats?.total || 0} seleccionados
+                {hasRestrictions && ` (${availableInModule} disponibles)`}
               </Typography>
             </Box>
           </Box>
 
-          <Checkbox
-            checked={allSelected}
-            indeterminate={someSelected}
-            onChange={(e) => {
-              e.stopPropagation();
-              handleSelectAllInModule(group.module, group.permissions);
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+          <Tooltip
+            title={hasRestrictions ?
+              `Solo puedes seleccionar ${availableInModule} de ${group.permissions.length} permisos en este módulo` :
+              'Seleccionar/deseleccionar todos los permisos del módulo'
+            }
+          >
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              color={hasRestrictions ? 'warning' : 'primary'}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleSelectAllInModule(group.module, group.permissions);
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Tooltip>
         </Box>
 
         <Collapse in={isExpanded}>
           <List disablePadding>
             {group.permissions.map(renderPermissionItem)}
+
+            {/* Mostrar mensaje si hay permisos restringidos en este módulo */}
+            {group.permissions.some(p => !canAssignPermission(p) && !selectedPermissions.includes(p.id)) && (
+              <ListItem>
+                <Alert severity="info" sx={{ width: '100%', ml: 4, mr: 2 }}>
+                  <Typography variant="caption">
+                    Algunos permisos están restringidos según tu nivel de acceso.
+                  </Typography>
+                </Alert>
+              </ListItem>
+            )}
           </List>
         </Collapse>
       </Paper>
@@ -588,7 +710,20 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
       </DialogTitle>
 
       <DialogContent dividers>
-        {!previewMode ? (
+        {/* Validación de permisos para edición */}
+        {role && !canEditRole(role) ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Acceso Denegado
+            </Typography>
+            <Typography>
+              No tienes permisos para editar este rol. {role.isSystemRole ?
+                'Solo los SuperAdministradores pueden editar roles del sistema.' :
+                'Solo puedes editar roles de tu empresa.'
+              }
+            </Typography>
+          </Alert>
+        ) : !previewMode ? (
           <Stepper activeStep={activeStep} orientation="vertical">
             {/* Step 1: Basic Information */}
             <Step>
@@ -699,13 +834,37 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                     }}
                   />
 
-                  {/* Permission stats */}
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      {permissionStats.selected} de {permissionStats.total} permisos seleccionados
-                      ({permissionStats.percentage}%)
-                    </Typography>
-                  </Alert>
+                  {/* Permission stats with real-time validation */}
+                  <Box sx={{ mb: 2 }}>
+                    <Alert severity="info" sx={{ mb: 1 }}>
+                      <Typography variant="body2">
+                        {permissionStats.selected} de {permissionStats.total} permisos seleccionados
+                        ({permissionStats.percentage}%)
+                      </Typography>
+                    </Alert>
+
+                    {/* Mostrar resumen de restricciones */}
+                    {(() => {
+                      const restrictedTotal = allPermissions.filter(p => !canAssignPermission(p)).length;
+                      const selectedRestricted = selectedPermissions.filter(pId => {
+                        const perm = allPermissions.find(p => p.id === pId);
+                        return perm && !canAssignPermission(perm);
+                      }).length;
+
+                      if (restrictedTotal > 0) {
+                        return (
+                          <Alert severity="warning" sx={{ fontSize: '0.875rem' }}>
+                            <Typography variant="caption">
+                              {restrictedTotal} permisos restringidos para tu rol
+                              {selectedRestricted > 0 && ` (${selectedRestricted} ya asignados)`}
+                            </Typography>
+                          </Alert>
+                        );
+                      }
+                      return null;
+                    })()
+                    }
+                  </Box>
 
                   {/* Permissions list */}
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
@@ -902,6 +1061,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
               loading={isLoading}
               loadingPosition="start"
               startIcon={<Save size={18} />}
+              disabled={role && !canEditRole(role)}
             >
               {role ? 'Actualizar Rol' : 'Crear Rol'}
             </LoadingButton>

@@ -446,7 +446,7 @@ export const LoginPage: React.FC = () => {
       </Box>
 
       {/* Loading Overlay */}
-      {(isSubmitting || isLoading) && <LoadingOverlay />}
+      <LoadingOverlay open={isSubmitting || isLoading} />
     </Container>
   );
 };

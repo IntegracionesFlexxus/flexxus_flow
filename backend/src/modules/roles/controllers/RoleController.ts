@@ -153,13 +153,23 @@ export class RoleController {
    */
   async getCompanyRoles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Obtener company_id del usuario autenticado
+      const userRole = req.user?.role;
       const companyId = req.user?.companyId;
 
+      // SuperAdmin: ve todos los roles del sistema (sin filtro de empresa)
+      if (userRole === 'Super Admin' || userRole === 'super_admin') {
+        const roles = await this.roleService.getSystemRoles();
+        return res.json({
+          success: true,
+          data: roles
+        });
+      }
+
+      // Admin/User: solo ve roles de su empresa
       if (!companyId) {
         return res.status(400).json({
           success: false,
-          error: 'Company ID is required'
+          error: 'Company ID is required for non-super admin users'
         });
       }
 
@@ -176,10 +186,28 @@ export class RoleController {
 
   /**
    * GET /api/v1/roles/system
-   * Obtener roles del sistema
+   * Obtener roles del sistema (solo SuperAdmin)
    */
-  async getSystemRoles(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getSystemRoles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const userRole = req.user?.role;
+
+      console.log('🎭 [RoleController] getSystemRoles called', {
+        userId: req.user?.id,
+        userRole,
+        email: req.user?.email
+      });
+
+      // Solo SuperAdmin puede ver roles del sistema
+      if (userRole !== 'Super Admin' && userRole !== 'super_admin') {
+        console.log('❌ [RoleController] Access denied - not SuperAdmin', { userRole });
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. Only super administrators can view system roles.'
+        });
+      }
+
+      console.log('✅ [RoleController] SuperAdmin detected, fetching system roles');
       const roles = await this.roleService.getSystemRoles();
 
       res.json({

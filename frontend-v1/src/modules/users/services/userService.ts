@@ -42,10 +42,16 @@ class UserService {
    * Clean Code: función pura sin efectos secundarios
    */
   async getCompanyUsers(
-    companyId: string, 
+    companyId: string,
     filters?: UserFilters,
     pagination?: PaginationParams
   ): Promise<PaginatedResponse<User>> {
+    console.log('🌐 [UserService] getCompanyUsers called', {
+      companyId,
+      filters,
+      pagination
+    });
+
     const params = new URLSearchParams();
     
     // Agregar filtros
@@ -64,10 +70,11 @@ class UserService {
       if (pagination.sortBy) params.append('sortBy', pagination.sortBy);
       if (pagination.sortOrder) params.append('sortOrder', pagination.sortOrder);
     }
-    
-    const response = await api.get<PaginatedResponse<User>>(
-      `${this.baseUrl}/company/${companyId}?${params.toString()}`
-    );
+
+    const url = `${this.baseUrl}/company/${companyId}?${params.toString()}`;
+    console.log('📡 [UserService] Making API call to:', url);
+
+    const response = await api.get<PaginatedResponse<User>>(url);
 
 
     return response.data;

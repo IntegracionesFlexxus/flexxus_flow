@@ -20,7 +20,7 @@ async function executeReset() {
 
   try {
     // Leer el archivo SQL
-    const sqlPath = join(__dirname, 'updatePassword.sql');
+    const sqlPath = join(__dirname, 'testExactQuery.sql');
     const sqlContent = readFileSync(sqlPath, 'utf8');
 
     console.log('📄 Ejecutando script SQL...');

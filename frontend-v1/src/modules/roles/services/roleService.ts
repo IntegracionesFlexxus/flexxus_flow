@@ -293,7 +293,7 @@ export class RoleService extends BaseService {
    * Update role
    */
   async updateRole(roleId: string, updates: UpdateRoleData): Promise<Role> {
-    const role = await this.patch<Role>(`/${roleId}`, updates);
+    const role = await this.put<Role>(`/${roleId}`, updates);
     this.roleCache.set(roleId, role);
     this.clearCache();
     return role;
@@ -380,7 +380,8 @@ export class RoleService extends BaseService {
     roleId: string,
     permissionIds: string[]
   ): Promise<Role> {
-    const role = await this.patch<Role>(`/${roleId}/permissions`, {
+    const role = await this.post<Role>(`/${roleId}/permissions`, {
+      mode: 'replace',
       permissionIds
     });
     this.roleCache.set(roleId, role);

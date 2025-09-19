@@ -67,7 +67,9 @@ export class AuthController {
             email: result.user.email,
             firstName: result.user.first_name || '',
             lastName: result.user.last_name || '',
-            avatar: result.user.avatar || null
+            avatar: result.user.avatar || null,
+            role: result.user.role,
+            companyId: result.user.companyId
           },
           companies: result.availableCompanies || (result.company ? [{
             id: result.company.id,

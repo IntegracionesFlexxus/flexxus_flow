@@ -19,6 +19,7 @@ import {
 } from '@/modules/roles/interfaces/IRoleService';
 import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
 import { IPermissionRepository } from '@/modules/auth/interfaces/IPermissionRepository';
+import { IUserRepository } from '@/shared/interfaces/repositories/IUserRepository';
 import { AuditService } from '@/shared/services/audit/AuditService';
 import { CacheService } from '@/shared/services/cache/CacheService';
 import { AppError } from '@/shared/errors/AppError';
@@ -31,6 +32,7 @@ export class RoleService implements IRoleService {
   constructor(
     @inject(TYPES.RoleRepository) private roleRepository: IRoleRepository,
     @inject(TYPES.PermissionRepository) private permissionRepository: IPermissionRepository,
+    @inject(TYPES.UserRepository) private userRepository: IUserRepository,
     @inject(TYPES.AuditService) private auditService: AuditService,
     @inject(TYPES.CacheService) private cacheService: CacheService,
     @inject(TYPES.Logger) private logger: Logger
@@ -140,9 +142,15 @@ export class RoleService implements IRoleService {
         throw new AppError('Role not found', 404);
       }
 
-      // Verificar que no es un rol del sistema
+      // Verificar permisos para modificar rol del sistema
       if (existingRole.is_system_role) {
-        throw new AppError('System roles cannot be modified', 403);
+        // Solo SuperAdmin puede modificar roles del sistema
+        const isSuperAdmin = await this.isUserSuperAdmin(updatedBy);
+        if (!isSuperAdmin) {
+          throw new AppError('Only Super Administrators can modify system roles', 403);
+        }
+
+        console.log('🎯 [RoleService] SuperAdmin detected, allowing system role modification');
       }
 
       // Validar nombre único si se está cambiando
@@ -153,11 +161,25 @@ export class RoleService implements IRoleService {
         }
       }
 
-      // Actualizar el rol
-      const updatedRole = await this.roleRepository.update(roleId, {
-        name: data.name,
-        description: data.description
-      });
+      // Actualizar el rol - solo incluir campos que no sean undefined
+      console.log('🔍 [RoleService] UPDATE DEBUG - Incoming data:', JSON.stringify(data, null, 2));
+
+      const updateData: any = {};
+      if (data.name !== undefined && data.name !== null && data.name !== '') {
+        updateData.name = data.name;
+        console.log('✅ [RoleService] Adding name to update:', data.name);
+      } else {
+        console.log('❌ [RoleService] Skipping name - invalid value:', data.name);
+      }
+
+      if (data.description !== undefined && data.description !== null) {
+        updateData.description = data.description;
+        console.log('✅ [RoleService] Adding description to update:', data.description);
+      }
+
+      console.log('🔍 [RoleService] Final updateData:', JSON.stringify(updateData, null, 2));
+
+      const updatedRole = await this.roleRepository.update(roleId, updateData);
 
       // Actualizar permisos si se especifican
       if (data.permissions !== undefined) {
@@ -187,7 +209,14 @@ export class RoleService implements IRoleService {
         changes
       });
 
-      return this.getRoleById(roleId);
+      // Get fresh role data directly from database to avoid cache issues
+      const freshRole = await this.roleRepository.findById(roleId);
+      if (!freshRole) {
+        throw new AppError('Role not found after update', 404);
+      }
+
+      const permissions = await this.roleRepository.getRolePermissions(roleId);
+      return this.formatRole(freshRole, permissions);
     } catch (error) {
       this.logger.error('Error updating role', {
         error: error.message,
@@ -424,21 +453,38 @@ export class RoleService implements IRoleService {
   async getAllPermissions(): Promise<PermissionDto[]> {
     try {
       this.logger.info('Getting all permissions...');
-      const permissions = await this.permissionRepository.findAll();
 
-      // Protección contra undefined/null
-      if (!permissions) {
-        this.logger.warn('Permission repository returned undefined/null');
-        return [];
+      // TEMPORAL: Usar query directa para obtener todos los permisos únicos
+      // que están asociados a algún rol, ya que el findAll() directo falla
+      console.log('🔄 [RoleService] Using alternative approach to get permissions');
+
+      // Obtener todos los roles del sistema
+      const systemRoles = await this.roleRepository.findSystemRoles();
+      console.log(`📊 [RoleService] Found ${systemRoles.length} system roles`);
+
+      // Obtener todos los permisos únicos de todos los roles
+      const allPermissions = new Map<string, any>();
+
+      for (const role of systemRoles) {
+        try {
+          const rolePermissions = await this.roleRepository.getRolePermissions(role.id);
+          console.log(`🔍 [RoleService] Role ${role.name} has ${rolePermissions.length} permissions`);
+
+          rolePermissions.forEach(permission => {
+            if (!allPermissions.has(permission.id)) {
+              allPermissions.set(permission.id, permission);
+            }
+          });
+        } catch (error) {
+          console.error(`❌ [RoleService] Error getting permissions for role ${role.name}:`, error);
+        }
       }
 
-      if (!Array.isArray(permissions)) {
-        this.logger.error('Permission repository returned non-array:', typeof permissions);
-        return [];
-      }
+      const uniquePermissions = Array.from(allPermissions.values());
+      console.log(`✅ [RoleService] Found ${uniquePermissions.length} unique permissions across all roles`);
 
-      this.logger.info(`Found ${permissions.length} permissions`);
-      return permissions.map(p => {
+      this.logger.info(`Found ${uniquePermissions.length} permissions via role aggregation`);
+      return uniquePermissions.map(p => {
         try {
           return this.formatPermission(p);
         } catch (err) {
@@ -721,6 +767,14 @@ export class RoleService implements IRoleService {
   // ==================== MÉTODOS AUXILIARES ====================
 
   private formatRole(role: any, permissions?: any[]): RoleDto {
+    console.log('🔍 [formatRole] DEBUG - Input role object:', {
+      id: role.id,
+      name: role.name,
+      name_type: typeof role.name,
+      name_length: role.name?.length,
+      description: role.description
+    });
+
     return {
       id: role.id,
       name: role.name,
@@ -770,5 +824,42 @@ export class RoleService implements IRoleService {
   private async invalidateRoleCache(roleId: string): Promise<void> {
     const cacheKey = `${this.CACHE_PREFIX}${roleId}`;
     await this.cacheService.delete(cacheKey);
+  }
+
+  /**
+   * Verificar si un usuario es SuperAdmin
+   */
+  private async isUserSuperAdmin(userId: string): Promise<boolean> {
+    try {
+      // FIRST: Check direct role field (priority for SuperAdmin)
+      const user = await this.userRepository.findById(userId);
+
+      if (user?.role === 'super_admin') {
+        console.log('👑 [RoleService] SuperAdmin detected by DIRECT ROLE');
+        return true;
+      }
+
+      // SECOND: Check user_roles table (for backward compatibility)
+      const userRoles = await this.roleRepository.getUserRoles(userId);
+
+      // Verificar si tiene rol de SuperAdmin
+      const isSuperAdmin = userRoles.some(role =>
+        role.name === 'Super Admin' ||
+        role.name === 'super_admin' ||
+        role.name.toLowerCase().includes('super')
+      );
+
+      console.log('🔍 [RoleService] Checking if user is SuperAdmin:', {
+        userId,
+        directRole: user?.role,
+        userRoles: userRoles.map(r => r.name),
+        isSuperAdmin
+      });
+
+      return isSuperAdmin;
+    } catch (error) {
+      console.error('❌ [RoleService] Error checking SuperAdmin status:', error);
+      return false;
+    }
   }
 }

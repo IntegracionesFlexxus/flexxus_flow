@@ -135,15 +135,35 @@ export class UserController {
       const { companyId } = req.params;
       const { page = 1, limit = 10, search = '', role = '', status = '' } = req.query;
 
-      // Verificar si el usuario es SuperAdmin o si se está usando el companyId especial
+      // Verificar si el usuario es SuperAdmin - Múltiples variantes para compatibilidad
       const userRole = req.user?.role;
-      const isSuperAdmin = userRole === 'Super Admin' || companyId === 'superadmin-all-users' || companyId === 'superadmin-company';
+      const currentCompanyId = req.user?.companyId;
+
+      // SuperAdmin detectado por:
+      // 1. Rol del usuario (múltiples formatos)
+      // 2. CompanyId virtual del SuperAdmin
+      // 3. CompanyIds especiales del frontend
+      const isSuperAdmin =
+        // Roles de SuperAdmin (diferentes formatos por compatibilidad)
+        ['super_admin', 'Super Admin', 'super admin', 'superadmin'].includes(userRole) ||
+        // CompanyId virtual del SuperAdmin desde AuthService
+        currentCompanyId === '00000000-0000-0000-0000-000000000000' ||
+        // CompanyIds especiales del frontend
+        companyId === 'superadmin-all-users' ||
+        companyId === 'superadmin-company' ||
+        companyId === '00000000-0000-0000-0000-000000000000';
 
       this.logger.debug('getUsersByCompany request', {
         companyId,
         userRole,
+        currentCompanyId,
         isSuperAdmin,
-        userId: req.user?.id
+        userId: req.user?.id,
+        detectionCriteria: {
+          roleMatch: ['super_admin', 'Super Admin', 'super admin', 'superadmin'].includes(userRole),
+          companyIdMatch: currentCompanyId === '00000000-0000-0000-0000-000000000000',
+          paramCompanyIdMatch: ['superadmin-all-users', 'superadmin-company', '00000000-0000-0000-0000-000000000000'].includes(companyId)
+        }
       });
 
       let users;

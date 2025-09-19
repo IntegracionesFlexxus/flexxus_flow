@@ -550,7 +550,7 @@ export const RoleManagement: React.FC = () => {
             Ver permisos
           </Button>
           
-          {!isSystem && (
+          {canEditRole(role) && (
             <Button
               size="small"
               startIcon={<Edit size={16} />}
@@ -773,7 +773,7 @@ export const RoleManagement: React.FC = () => {
           <ListItemText>Ver permisos</ListItemText>
         </MenuItem>
         
-        {!(selectedRole?.isSystemRole || (selectedRole as any)?.is_system_role) && (
+        {selectedRole && canEditRole(selectedRole) && (
           <>
             <MenuItem onClick={handleEditRole}>
               <ListItemIcon>

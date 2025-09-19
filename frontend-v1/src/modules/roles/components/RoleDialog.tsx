@@ -169,12 +169,32 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
   /**
    * Fetch all available permissions
    */
-  const { data: allPermissions = [] } = useQuery({
+  const { data: allPermissions = [], isLoading: isLoadingPermissions, error: permissionsError } = useQuery({
     queryKey: ['all-permissions'],
-    queryFn: () => roleService.getAllPermissions(),
+    queryFn: () => {
+      console.log('🚀 [RoleDialog] Fetching all permissions...');
+      return roleService.getAllPermissions();
+    },
     enabled: open,
-    select: (data) => Array.isArray(data) ? data : []
+    select: (data) => {
+      console.log('📥 [RoleDialog] Raw permissions data received:', {
+        data,
+        isArray: Array.isArray(data),
+        length: data?.length
+      });
+      return Array.isArray(data) ? data : [];
+    }
   });
+
+  // Debug de permisos
+  useEffect(() => {
+    console.log('🔍 [RoleDialog] Permissions state:', {
+      isLoadingPermissions,
+      permissionsError: permissionsError?.message,
+      allPermissionsLength: allPermissions?.length,
+      firstPermission: allPermissions?.[0]
+    });
+  }, [isLoadingPermissions, permissionsError, allPermissions]);
 
   /**
    * Check if role name is available
@@ -263,13 +283,23 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
    * Initialize form when role changes
    */
   useEffect(() => {
+    console.log('🔄 [RoleDialog] Initializing form:', {
+      role: role?.name,
+      rolePermissions: role?.permissions?.length,
+      rolePermissionsIds: role?.permissions?.map(p => p.id),
+      open
+    });
+
     if (role && open) {
+      const permissionIds = role.permissions?.map(p => p.id) || [];
       reset({
         name: role.name,
         description: role.description || '',
-        permissions: role.permissions.map(p => p.id),
+        permissions: permissionIds,
         isActive: role.isActive !== false
       });
+
+      console.log('✅ [RoleDialog] Form initialized with permissions:', permissionIds);
     } else if (open) {
       reset({
         name: '',
@@ -288,12 +318,32 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
    * Group permissions by module
    */
   const permissionGroups = useMemo<PermissionGroup[]>(() => {
+    console.log('🔍 [RoleDialog] Grouping permissions:', {
+      allPermissions: allPermissions?.length,
+      firstPermission: allPermissions?.[0],
+      isArray: Array.isArray(allPermissions)
+    });
+
     if (!Array.isArray(allPermissions)) {
       console.warn('allPermissions is not an array:', allPermissions);
       return [];
     }
+
     const groups = allPermissions.reduce((acc, permission) => {
-      const module = permission.module || 'General';
+      // Extract module from permission name (e.g., "admin.users.view" -> "users")
+      let module = 'General';
+
+      if (permission.name && permission.name.includes('.')) {
+        const parts = permission.name.split('.');
+        if (parts.length >= 2) {
+          if (parts[0] === 'admin' && parts.length >= 3) {
+            module = parts[1].charAt(0).toUpperCase() + parts[1].slice(1); // admin.users.view -> Users
+          } else {
+            module = parts[0].charAt(0).toUpperCase() + parts[0].slice(1); // users.view -> Users
+          }
+        }
+      }
+
       if (!acc[module]) {
         acc[module] = {
           module,
@@ -304,23 +354,42 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
       return acc;
     }, {} as Record<string, PermissionGroup>);
 
-    return Object.values(groups).sort((a, b) => a.module.localeCompare(b.module));
+    const result = Object.values(groups).sort((a, b) => a.module.localeCompare(b.module));
+
+    console.log('📊 [RoleDialog] Permission groups created:', {
+      groupCount: result.length,
+      groups: result.map(g => ({ module: g.module, count: g.permissions.length }))
+    });
+
+    return result;
   }, [allPermissions]);
 
   /**
    * Filter permissions based on search
    */
   const filteredGroups = useMemo(() => {
-    if (!searchTerm) return permissionGroups;
+    let result;
+    if (!searchTerm) {
+      result = permissionGroups;
+    } else {
+      result = permissionGroups.map(group => ({
+        ...group,
+        permissions: group.permissions.filter(p =>
+          p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (p.displayName && p.displayName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+      })).filter(group => group.permissions.length > 0);
+    }
 
-    return permissionGroups.map(group => ({
-      ...group,
-      permissions: group.permissions.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    })).filter(group => group.permissions.length > 0);
+    console.log('🔍 [RoleDialog] Filtered groups:', {
+      searchTerm,
+      totalGroups: permissionGroups.length,
+      filteredGroups: result.length,
+      groups: result.map(g => ({ module: g.module, count: g.permissions.length }))
+    });
+
+    return result;
   }, [permissionGroups, searchTerm]);
 
   /**
@@ -514,9 +583,6 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
       <ListItem
         key={permission.id}
         dense
-        button
-        onClick={() => handlePermissionToggle(permission.id)}
-        disabled={isDisabled}
         sx={{
           pl: 4,
           opacity: isDisabled ? 0.6 : 1,
@@ -526,28 +592,21 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
         }}
       >
         <ListItemIcon sx={{ minWidth: 36 }}>
-          <Checkbox
-            edge="start"
-            checked={isSelected}
-            disabled={isDisabled}
-            tabIndex={-1}
-            size="small"
-            color={isRestricted ? 'warning' : 'primary'}
-          />
+          {getActionIcon(permission.name)}
         </ListItemIcon>
 
         <ListItemText
           primary={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {getActionIcon(permission.name)}
               <Typography
                 variant="body2"
                 sx={{
                   color: isRestricted && !isSelected ? 'text.secondary' : 'text.primary',
-                  fontStyle: isRestricted && !isSelected ? 'italic' : 'normal'
+                  fontStyle: isRestricted && !isSelected ? 'italic' : 'normal',
+                  fontWeight: isSelected ? 600 : 400
                 }}
               >
-                {permission.displayName}
+                {permission.displayName || permission.name}
               </Typography>
               {isRestricted && (
                 <Chip
@@ -568,7 +627,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
         />
 
         <ListItemSecondaryAction>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {permission.critical && (
               <Tooltip title="Permiso crítico">
                 <AlertCircle size={16} color="#ff9800" />
@@ -579,6 +638,13 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                 <Shield size={14} color="#f57c00" />
               </Tooltip>
             )}
+            <Switch
+              checked={isSelected}
+              onChange={() => handlePermissionToggle(permission.id)}
+              disabled={isDisabled}
+              size="small"
+              color={isRestricted ? 'warning' : 'primary'}
+            />
           </Box>
         </ListItemSecondaryAction>
       </ListItem>
@@ -591,8 +657,9 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
     ) : listItem;
   };
 
+
   /**
-   * Render module section with real-time validation
+   * Render module section with real-time validation (ORIGINAL)
    */
   const renderModuleSection = (group: PermissionGroup) => {
     const isExpanded = expandedModules.includes(group.module);
@@ -655,9 +722,8 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
               'Seleccionar/deseleccionar todos los permisos del módulo'
             }
           >
-            <Checkbox
+            <Switch
               checked={allSelected}
-              indeterminate={someSelected}
               color={hasRestrictions ? 'warning' : 'primary'}
               onChange={(e) => {
                 e.stopPropagation();
@@ -810,7 +876,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
               </StepContent>
             </Step>
 
-            {/* Step 2: Permissions */}
+            {/* Step 2: Permissions - Simplified with Switches */}
             <Step>
               <StepLabel>
                 <Typography variant="subtitle1">Permisos</Typography>
@@ -834,7 +900,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                     }}
                   />
 
-                  {/* Permission stats with real-time validation */}
+                  {/* Permission stats */}
                   <Box sx={{ mb: 2 }}>
                     <Alert severity="info" sx={{ mb: 1 }}>
                       <Typography variant="body2">
@@ -842,33 +908,33 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                         ({permissionStats.percentage}%)
                       </Typography>
                     </Alert>
-
-                    {/* Mostrar resumen de restricciones */}
-                    {(() => {
-                      const restrictedTotal = allPermissions.filter(p => !canAssignPermission(p)).length;
-                      const selectedRestricted = selectedPermissions.filter(pId => {
-                        const perm = allPermissions.find(p => p.id === pId);
-                        return perm && !canAssignPermission(perm);
-                      }).length;
-
-                      if (restrictedTotal > 0) {
-                        return (
-                          <Alert severity="warning" sx={{ fontSize: '0.875rem' }}>
-                            <Typography variant="caption">
-                              {restrictedTotal} permisos restringidos para tu rol
-                              {selectedRestricted > 0 && ` (${selectedRestricted} ya asignados)`}
-                            </Typography>
-                          </Alert>
-                        );
-                      }
-                      return null;
-                    })()
-                    }
                   </Box>
 
-                  {/* Permissions list */}
+                  {/* Permissions list with switches */}
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                    {filteredGroups.map(renderModuleSection)}
+                    {isLoadingPermissions ? (
+                      <Alert severity="info">Cargando permisos...</Alert>
+                    ) : permissionsError ? (
+                      <Alert severity="error">
+                        Error al cargar permisos: {permissionsError.message}
+                      </Alert>
+                    ) : allPermissions.length === 0 ? (
+                      <Alert severity="warning">
+                        <Typography variant="h6">No hay permisos disponibles</Typography>
+                        <Typography variant="body2">
+                          El backend no está devolviendo permisos. Verifica:
+                          <br />• Que la base de datos tenga permisos creados
+                          <br />• Que el endpoint /api/v1/roles/permissions funcione
+                          <br />• Los logs del backend para errores
+                        </Typography>
+                      </Alert>
+                    ) : filteredGroups.length === 0 ? (
+                      <Alert severity="info">
+                        No se encontraron permisos que coincidan con tu búsqueda.
+                      </Alert>
+                    ) : (
+                      filteredGroups.map(renderModuleSection)
+                    )}
                   </Box>
 
                   {/* Navigation */}

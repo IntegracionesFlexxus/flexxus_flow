@@ -13,6 +13,7 @@ export interface User {
   email: string
   firstName: string
   lastName: string
+  role?: string // Rol directo del usuario (para SuperAdmin)
   avatar?: string
   timezone?: string
   language?: string
@@ -33,7 +34,8 @@ export interface Company {
   id: string
   name: string
   plan: string
-  features: Record<string, boolean>
+  role?: string // Rol del usuario en esta empresa
+  features?: Record<string, boolean>
   settings?: Record<string, any>
 }
 
@@ -329,12 +331,17 @@ export const useAuthStore = create<AuthState>()(
           const state = get()
           if (!state.user) return false
 
-          // Verificar rol en currentCompany (incluye empresa virtual para SuperAdmin)
+          // PASO 1: Verificar rol directo del usuario (para SuperAdmin)
+          if (state.user.role === role) {
+            return true
+          }
+
+          // PASO 2: Verificar rol en currentCompany (incluye empresa virtual para SuperAdmin)
           if (state.currentCompany?.role === role) {
             return true
           }
 
-          // Verificar rol en user.companies (para compatibilidad)
+          // PASO 3: Verificar rol en user.companies (para compatibilidad)
           if (state.currentCompany) {
             const userCompany = state.user.companies?.find(c => c.id === state.currentCompany?.id)
             return userCompany?.role === role
@@ -346,7 +353,19 @@ export const useAuthStore = create<AuthState>()(
         hasPermission: (permission: string): boolean => {
           const state = get()
           if (!state.user || !state.currentCompany) return false
-          
+
+          // SUPER ADMIN: Tiene todos los permisos automáticamente
+          if (
+            // Rol directo del usuario
+            ['super_admin', 'Super Admin', 'super admin', 'superadmin'].includes(state.user.role || '') ||
+            // Rol en la empresa virtual
+            ['super_admin', 'Super Admin', 'super admin', 'superadmin'].includes(state.currentCompany.role || '') ||
+            // Empresa virtual del SuperAdmin
+            state.currentCompany.id === '00000000-0000-0000-0000-000000000000'
+          ) {
+            return true; // Super Admin tiene TODOS los permisos
+          }
+
           const userCompany = state.user.companies?.find(c => c.id === state.currentCompany?.id)
           return userCompany?.permissions.includes(permission) || false
         },

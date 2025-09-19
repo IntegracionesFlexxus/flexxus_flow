@@ -123,10 +123,22 @@ export class AuthService implements IAuthService {
 
       // Obtener empresa para el token
       const userCompany = await this.getUserCompanyForLogin(user.id, dto.company_id);
-      const company = await this.companyRepository.findById(userCompany.companyId);
 
-      if (!company) {
-        throw this.createAuthError('Company not found');
+      // Manejar caso especial de SuperAdmin
+      let company;
+      if (userCompany.companyId === '00000000-0000-0000-0000-000000000000') {
+        // SuperAdmin con empresa virtual
+        company = {
+          id: '00000000-0000-0000-0000-000000000000',
+          name: 'Sistema Global',
+          plan: 'enterprise',
+          status: 'active'
+        };
+      } else {
+        company = await this.companyRepository.findById(userCompany.companyId);
+        if (!company) {
+          throw this.createAuthError('Company not found');
+        }
       }
 
       // [Removed 6 lines of commented code]
@@ -587,35 +599,43 @@ export class AuthService implements IAuthService {
     try {
       console.log('🔍 [AuthService] getUserCompanies called for userId:', userId);
 
-      // Verificar si el usuario tiene rol SuperAdmin
-      const userRoles = await this.roleRepository.getUserRoles(userId);
-      console.log('🔍 [AuthService] User roles retrieved:', userRoles);
+      const roleInfo = await this.getUserRoleInfo(userId);
+      console.log('🔍 [AuthService] User role info:', roleInfo);
 
-      const isSuperAdmin = userRoles.some((role) => role.name === 'Super Admin');
-      console.log('🔍 [AuthService] Is SuperAdmin:', isSuperAdmin);
+      if (roleInfo.isSuperAdmin) {
+        // SuperAdmin usa solo empresa virtual para login directo
+        console.log('👑 [AuthService] SuperAdmin detected, returning virtual company only');
 
-      if (isSuperAdmin) {
-        // SuperAdmin tiene una empresa virtual con todos los permisos
-        this.logger.info('SuperAdmin detected, returning virtual company', { userId });
-        console.log('👑 [AuthService] SuperAdmin detected, returning virtual company');
-
-        const virtualCompany = [{
-          id: 'superadmin-company',
-          name: 'SuperAdmin Access',
+        return [{
+          id: '00000000-0000-0000-0000-000000000000',
+          name: 'Sistema Global',
           plan: 'enterprise',
-          role: 'Super Admin',
+          role: 'super_admin',
           isDefault: true
         }];
-
-        console.log('👑 [AuthService] Virtual company created:', virtualCompany);
-        return virtualCompany;
       }
 
-      console.log('👤 [AuthService] Normal user, getting companies from repository');
-      const companies = await this.userCompanyRepository.getUserCompanies(userId);
-      console.log('👤 [AuthService] Companies from repository:', companies);
+      // Admin/User: Solo su empresa asignada
+      if (!roleInfo.companyId) {
+        console.log('❌ [AuthService] No company assigned to user role');
+        return [];
+      }
 
-      return companies;
+      const company = await this.companyRepository.findById(roleInfo.companyId);
+      if (!company) {
+        console.log('❌ [AuthService] Company not found');
+        return [];
+      }
+
+      console.log('✅ [AuthService] Found company for user');
+      return [{
+        id: company.id,
+        name: company.name,
+        plan: company.plan || 'basic',
+        role: roleInfo.role,
+        isDefault: true
+      }];
+
     } catch (error) {
       console.error('❌ [AuthService] Error getting user companies:', error);
       this.logger.error('Error getting user companies:', error);
@@ -687,9 +707,14 @@ export class AuthService implements IAuthService {
       })
     );
 
+    // FIXED: Include role and companyId in user object for frontend response
     return {
       success: true,
-      user: userWithoutPassword,
+      user: {
+        ...userWithoutPassword,
+        role,
+        companyId: company.id
+      },
       company: {
         id: company.id,
         name: company.name,
@@ -717,55 +742,106 @@ export class AuthService implements IAuthService {
    * Obtener empresa del usuario para login
    * Sprint 3: Actualizado para usar UserRepository
    */
+  /**
+   * Obtener información completa del rol del usuario
+   * NUEVA LÓGICA: SuperAdmin = campo directo, Admin/User = tabla user_roles
+   */
+  private async getUserRoleInfo(userId: string): Promise<{
+    role: 'super_admin' | 'admin' | 'user';
+    companyId: string | null;
+    permissions: string[];
+    isSuperAdmin: boolean;
+  }> {
+    // PASO 1: Verificar campo directo users.role (para super_admin)
+    const user = await this.userRepository.findById(userId);
+    if (user?.role === 'super_admin') {
+      return {
+        role: 'super_admin',
+        companyId: null, // SuperAdmin no tiene empresa
+        permissions: ['*'], // Permisos ilimitados
+        isSuperAdmin: true
+      };
+    }
+
+    // PASO 2: Buscar en user_roles (para admin/user)
+    const userRoleAssignments = await this.roleRepository.getUserRoles(userId);
+
+    if (userRoleAssignments.length === 0) {
+      throw this.createAuthError('User has no roles assigned');
+    }
+
+    // Tomar el primer rol encontrado (debería haber solo uno por empresa)
+    const roleAssignment = userRoleAssignments[0];
+    const roleName = roleAssignment.name?.toLowerCase();
+
+    // Mapear roles válidos a roles básicos del sistema
+    const roleMapping: Record<string, 'admin' | 'user'> = {
+      'admin': 'admin',
+      'administrator': 'admin',
+      'super admin': 'admin',
+      'super_admin': 'admin',
+      'superadmin': 'admin',
+      'manager': 'admin',
+      'department manager': 'admin',
+      'team lead': 'admin',
+      'user': 'user',
+      'agent': 'user',
+      'sales_rep': 'user',
+      'viewer': 'user'
+    };
+
+    const mappedRole = roleMapping[roleName];
+    if (!mappedRole) {
+      throw this.createAuthError(`Invalid role assigned to user: ${roleAssignment.name}`);
+    }
+
+    // Obtener permisos específicos del rol
+    const permissions = await this.roleRepository.getRolePermissions(roleAssignment.id);
+    const permissionNames = permissions.map(p => p.name);
+
+    // Detectar si es SuperAdmin basado en el rol original
+    const isSuperAdmin = ['super admin', 'super_admin', 'superadmin'].includes(roleName);
+
+    return {
+      role: mappedRole,
+      companyId: roleAssignment.company_id,
+      permissions: permissionNames,
+      isSuperAdmin
+    };
+  }
+
+  /**
+   * Obtener empresa del usuario para login (simplificado)
+   */
   private async getUserCompanyForLogin(
     userId: string,
     requestedCompanyId?: string
   ): Promise<{ companyId: string; role: string; isDefault: boolean }> {
-    // Verificar si el usuario tiene rol SuperAdmin (sin empresa específica)
-    const userRoles = await this.roleRepository.getUserRoles(userId);
-    const isSuperAdmin = userRoles.some((role) => role.name === 'Super Admin');
+    const roleInfo = await this.getUserRoleInfo(userId);
 
-    if (isSuperAdmin) {
-      // SuperAdmin no necesita empresa específica, usar la primera empresa disponible
-      // o crear una empresa virtual para el contexto del token
-      const companies = await this.companyRepository.findAll();
-      const firstCompany = companies.length > 0 ? companies[0] : null;
-
-      if (!firstCompany) {
-        throw this.createAuthError('No companies available in the system');
-      }
-
+    // SuperAdmin: Usar empresa virtual
+    if (roleInfo.isSuperAdmin) {
       return {
-        companyId: firstCompany.id,
-        role: 'Super Admin',
+        companyId: '00000000-0000-0000-0000-000000000000',
+        role: 'super_admin',
         isDefault: true,
       };
     }
 
-    const userCompanies = await this.userCompanyRepository.getUserCompanies(userId);
-
-    if (userCompanies.length === 0) {
-      throw this.createAuthError('User has no associated companies');
+    // Admin/User: Debe tener empresa obligatoria
+    if (!roleInfo.companyId) {
+      throw this.createAuthError('User role requires company association');
     }
 
-    if (requestedCompanyId) {
-      const company = userCompanies.find((uc) => uc.companyId === requestedCompanyId);
-      if (!company) {
-        throw this.createAuthError('User does not have access to this company');
-      }
-      return {
-        companyId: company.companyId,
-        role: company.role,
-        isDefault: company.isDefault,
-      };
+    // Validar empresa solicitada si se especifica
+    if (requestedCompanyId && requestedCompanyId !== roleInfo.companyId) {
+      throw this.createAuthError('User does not have access to requested company');
     }
 
-    // Retornar empresa por defecto o la primera
-    const defaultCompany = userCompanies.find((uc) => uc.isDefault) || userCompanies[0];
     return {
-      companyId: defaultCompany.companyId,
-      role: defaultCompany.role,
-      isDefault: defaultCompany.isDefault,
+      companyId: roleInfo.companyId,
+      role: roleInfo.role,
+      isDefault: true,
     };
   }
 

@@ -112,10 +112,13 @@ export interface BulkInviteRequest {
 export interface Permission {
   id: string;
   name: string;
+  displayName?: string;
   description?: string;
   resource: string;
   action: string;
-  category: PermissionCategory;
+  category?: PermissionCategory;
+  module?: string;
+  critical?: boolean;
 }
 
 export enum PermissionCategory {

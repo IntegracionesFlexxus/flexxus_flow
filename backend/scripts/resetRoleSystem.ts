@@ -32,12 +32,12 @@ async function resetRoleSystem() {
     console.log('📊 Estado actual de la base de datos:');
     const currentRoles = await db.query('SELECT id, name, description, company_id, is_system_role FROM roles WHERE deleted_at IS NULL ORDER BY name');
     console.log('Roles actuales:', currentRoles.length);
-    currentRoles.forEach((role: Role) => {
+    currentRoles.forEach((role: any) => {
       console.log(`  - ${role.name}: company_id=${role.company_id}, is_system=${role.is_system_role}`);
     });
 
     const currentPermissions = await db.query('SELECT COUNT(*) as total FROM permissions WHERE deleted_at IS NULL');
-    console.log(`Permisos actuales: ${currentPermissions[0].total}\n`);
+    console.log(`Permisos actuales: ${(currentPermissions[0] as any).total}\n`);
 
     // 2. Limpiar asociaciones existentes
     console.log('🧹 Limpiando asociaciones existentes...');
@@ -81,7 +81,7 @@ async function resetRoleSystem() {
         RETURNING id
       `, [role.name, role.description, role.company_id, role.is_system_role]);
 
-      console.log(`✅ Creado rol del sistema: ${role.name} (ID: ${roleId[0].id})`);
+      console.log(`✅ Creado rol del sistema: ${role.name} (ID: ${(roleId[0] as any).id})`);
     }
 
     // 4. Crear permisos básicos
@@ -128,7 +128,7 @@ async function resetRoleSystem() {
         RETURNING id
       `, [permission.name, permission.description, permission.resource, permission.action]);
 
-      permissionIds[permission.name] = result[0].id;
+      permissionIds[permission.name] = (result[0] as any).id;
       console.log(`✅ Creado permiso: ${permission.name}`);
     }
 
@@ -137,7 +137,7 @@ async function resetRoleSystem() {
 
     const roles = await db.query('SELECT id, name FROM roles WHERE deleted_at IS NULL ORDER BY name');
     const roleMap: { [key: string]: string } = {};
-    roles.forEach((role: Role) => {
+    roles.forEach((role: any) => {
       roleMap[role.name] = role.id;
     });
 
@@ -152,12 +152,12 @@ async function resetRoleSystem() {
       console.log('✅ Super Admin: Todos los permisos asignados');
     }
 
-    // Admin: permisos de administración de empresa
+    // Admin: permisos de administración de empresa (SIN admin.users.view para ocultar módulo en Dashboard)
     if (roleMap['Admin']) {
       const adminPermissions = [
         'users.view', 'users.create', 'users.edit', 'users.delete',
         'roles.view', 'roles.create', 'roles.edit',
-        'admin.users.view', 'admin.users.manage', 'admin.roles.manage'
+        'admin.users.manage', 'admin.roles.manage'
       ];
 
       for (const permissionName of adminPermissions) {
@@ -199,14 +199,14 @@ async function resetRoleSystem() {
       await db.query(`
         UPDATE users SET role = 'admin', updated_at = NOW()
         WHERE id = $1
-      `, [adminUser[0].id]);
+      `, [(adminUser[0] as any).id]);
 
       // Asignar rol en user_roles
       await db.query(`
         INSERT INTO user_roles (user_id, role_id, company_id, created_at)
         VALUES ($1, $2, $3, NOW())
         ON CONFLICT (user_id, role_id) DO NOTHING
-      `, [adminUser[0].id, roleMap['Admin'], adminUser[0].company_id]);
+      `, [(adminUser[0] as any).id, roleMap['Admin'], (adminUser[0] as any).company_id]);
 
       console.log(`✅ Usuario admin@flexxus.com asignado al rol Admin`);
     }
@@ -215,12 +215,12 @@ async function resetRoleSystem() {
     console.log('\n📊 Estado final:');
     const finalRoles = await db.query('SELECT id, name, company_id, is_system_role FROM roles WHERE deleted_at IS NULL ORDER BY name');
     console.log('Roles del sistema:');
-    finalRoles.forEach((role: Role) => {
+    finalRoles.forEach((role: any) => {
       console.log(`  - ${role.name}: company_id=${role.company_id}, is_system=${role.is_system_role}`);
     });
 
     const finalPermissions = await db.query('SELECT COUNT(*) as total FROM permissions WHERE deleted_at IS NULL');
-    console.log(`\nPermisos totales: ${finalPermissions[0].total}`);
+    console.log(`\nPermisos totales: ${(finalPermissions[0] as any).total}`);
 
     const rolePermissionCount = await db.query(`
       SELECT r.name, COUNT(rp.permission_id) as permission_count

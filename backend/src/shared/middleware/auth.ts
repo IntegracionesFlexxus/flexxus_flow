@@ -587,9 +587,120 @@ async function setDatabaseContext(userId: string, companyId: string): Promise<vo
 }
 
 async function getUserPermissions(userId: string, companyId: string): Promise<string[]> {
-  // This would typically fetch from a user/role service
-  // For now, return empty array as placeholder
-  return [];
+  try {
+    console.log('🔍 [getUserPermissions] Getting permissions for user (v3):', { userId, companyId });
+
+    // FIRST: Check if user has direct super_admin role
+    const userRepository = container.get(TYPES.UserRepository);
+    const user = await userRepository.findById(userId);
+
+    console.log('🔍 [getUserPermissions] User direct role:', user?.role);
+
+    // Check for SuperAdmin - direct role has priority
+    if (user?.role === 'super_admin') {
+      console.log('👑 [getUserPermissions] SuperAdmin detected by DIRECT ROLE - granting ALL permissions');
+      return [
+        'users:view', 'users:create', 'users:update', 'users:delete',
+        'roles:view', 'roles:create', 'roles:update', 'roles:delete',
+        'companies:view', 'companies:create', 'companies:update', 'companies:delete',
+        'admin:users.manage', 'admin:roles.manage', 'admin:companies.view',
+        'permissions:view', 'permissions:create', 'permissions:update', 'permissions:delete',
+        'system:admin', 'system:manage', '*'
+      ];
+    }
+
+    // SECOND: Check user_roles table for Admin/User
+    const roleRepository = container.get(TYPES.RoleRepository);
+    console.log('🔍 [getUserPermissions] Checking user_roles for Admin/User...');
+
+    let userRoles = await roleRepository.getUserRoles(userId, companyId);
+    console.log('🔍 [getUserPermissions] UserRoles result:', {
+      length: userRoles?.length,
+      roles: userRoles?.map(r => ({ name: r.name, id: r.id, company_id: r.company_id }))
+    });
+
+    const isSuperAdmin = userRoles.some(role =>
+      role.name === 'Super Admin' ||
+      role.name === 'super_admin' ||
+      role.name.toLowerCase().includes('super')
+    );
+
+    console.log('🔍 [getUserPermissions] SuperAdmin check:', {
+      isSuperAdmin,
+      roleNames: userRoles?.map(r => r.name),
+      checkConditions: userRoles?.map(r => ({
+        name: r.name,
+        exact1: r.name === 'Super Admin',
+        exact2: r.name === 'super_admin',
+        includes: r.name.toLowerCase().includes('super')
+      }))
+    });
+
+    if (isSuperAdmin) {
+      console.log('👑 [getUserPermissions] SuperAdmin detected by role - granting ALL permissions without restrictions');
+      return [
+        'users:view', 'users:create', 'users:update', 'users:delete',
+        'roles:view', 'roles:create', 'roles:update', 'roles:delete',
+        'companies:view', 'companies:create', 'companies:update', 'companies:delete',
+        'admin:users.manage', 'admin:roles.manage', 'admin:companies.view',
+        'permissions:view', 'permissions:create', 'permissions:update', 'permissions:delete',
+        'system:admin', 'system:manage', '*'
+      ];
+    }
+
+    // Get PermissionService from container
+    const permissionService = container.get<PermissionService>(TYPES.PermissionService);
+
+    // Get user permissions
+    const permissions = await permissionService.getUserPermissions(userId, companyId);
+
+    console.log('📊 [getUserPermissions] Found permissions:', {
+      count: permissions.length,
+      permissions: permissions.map(p => p.name)
+    });
+
+    // Check for wildcard permission (fallback check)
+    const hasWildcard = permissions.some(p => p.name === '*');
+    if (hasWildcard) {
+      console.log('👑 [getUserPermissions] SuperAdmin detected with wildcard permission - granting all permissions');
+      // Return a comprehensive list of common permissions for SuperAdmin
+      return [
+        'users:view', 'users:create', 'users:update', 'users:delete',
+        'roles:view', 'roles:create', 'roles:update', 'roles:delete',
+        'companies:view', 'companies:create', 'companies:update', 'companies:delete',
+        'admin:users.manage', 'admin:roles.manage', 'admin:companies.view',
+        '*' // Keep wildcard for complete coverage
+      ];
+    }
+
+    // Convert to permission names array and handle format conversion
+    const permissionNames = permissions.map(p => {
+      // Convert dot notation to colon notation for middleware compatibility
+      // e.g., "roles.edit" -> "roles:update", "users.view" -> "users:view"
+      let permissionName = p.name;
+      if (permissionName.includes('.')) {
+        const [resource, action] = permissionName.split('.');
+        // Map some common action names
+        const actionMap: Record<string, string> = {
+          'edit': 'update',
+          'view': 'view',
+          'create': 'create',
+          'delete': 'delete'
+        };
+        const mappedAction = actionMap[action] || action;
+        permissionName = `${resource}:${mappedAction}`;
+      }
+      return permissionName;
+    });
+
+    console.log('🔄 [getUserPermissions] Converted permission names:', permissionNames);
+
+    return permissionNames;
+  } catch (error) {
+    console.error('❌ [getUserPermissions] Error fetching user permissions:', error);
+    // Return empty array on error to avoid blocking requests
+    return [];
+  }
 }
 
 function generateRequestId(): string {

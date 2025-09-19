@@ -10,7 +10,7 @@ import type { Role, Permission, PermissionCategory } from '@modules/users/types'
 interface RoleRequest {
   name: string;
   description?: string;
-  permissions: string[];
+  permissions?: string[];
 }
 
 
@@ -144,9 +144,20 @@ class RoleService {
    * Obtener todos los permisos disponibles
    */
   async getAllPermissions(): Promise<Permission[]> {
+    console.log('🚀 [RoleService] Calling getAllPermissions, URL:', this.permissionsUrl);
+
     const response = await api.get<{ success: boolean; data: Permission[] }>(
       this.permissionsUrl
     );
+
+    console.log('📥 [RoleService] getAllPermissions response:', {
+      url: this.permissionsUrl,
+      status: response.status,
+      success: response.data?.success,
+      dataLength: response.data?.data?.length,
+      data: response.data
+    });
+
     return response.data.data;
   }
 

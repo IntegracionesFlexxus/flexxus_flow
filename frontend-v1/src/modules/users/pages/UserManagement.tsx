@@ -125,8 +125,14 @@ export const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Validación de permisos basada en el rol del usuario - Sincronizado con backend
-  // SuperAdmin se detecta por el rol del usuario, no por la empresa
-  const isSuperAdmin = currentCompany?.role === 'Super Admin' || currentUser?.role === 'Super Admin';
+  // SuperAdmin se detecta por múltiples formatos de rol (compatibilidad con AuthService)
+  const isSuperAdmin =
+    // Roles en la empresa actual
+    ['Super Admin', 'super_admin', 'super admin', 'superadmin'].includes(currentCompany?.role || '') ||
+    // Roles del usuario actual
+    ['Super Admin', 'super_admin', 'super admin', 'superadmin'].includes(currentUser?.role || '') ||
+    // CompanyId virtual del SuperAdmin
+    currentCompany?.id === '00000000-0000-0000-0000-000000000000';
   const canManageUsers = isSuperAdmin || ['admin', 'manager', 'Admin', 'Manager'].includes(currentCompany?.role || currentUser?.role || '');
   const canInviteUsers = canManageUsers; // Sincronizado con canManageUsers para consistencia
   const { isEnabled: canManagePermissions } = useFeatureFlag('permission_management', { defaultValue: true });
@@ -139,9 +145,18 @@ export const UserManagement: React.FC = () => {
     clearSelection
   } = useUserManagement();
 
-  // Debug logs
+  // Debug logs detallados para diagnóstico
   console.log('🏢 Current Company:', currentCompany);
   console.log('👤 Current User:', currentUser);
+  console.log('🔍 Super Admin Detection:', {
+    currentCompanyRole: currentCompany?.role,
+    currentUserRole: currentUser?.role,
+    currentCompanyId: currentCompany?.id,
+    roleInCompany: ['Super Admin', 'super_admin', 'super admin', 'superadmin'].includes(currentCompany?.role || ''),
+    roleInUser: ['Super Admin', 'super_admin', 'super admin', 'superadmin'].includes(currentUser?.role || ''),
+    virtualCompanyId: currentCompany?.id === '00000000-0000-0000-0000-000000000000',
+    finalResult: isSuperAdmin
+  });
   console.log('👑 Is SuperAdmin:', isSuperAdmin);
   console.log('🚦 Can Manage Users:', canManageUsers);
   console.log('📝 Dialogs state:', dialogs);
@@ -169,8 +184,11 @@ export const UserManagement: React.FC = () => {
 
       if (isSuperAdmin) {
         console.log('👑 [UserManagement] SuperAdmin query - using company ID:', currentCompany?.id || 'superadmin-all-users');
-        // SuperAdmin usa el companyId virtual o uno especial para que el backend sepa que debe devolver todos los usuarios
-        const superAdminCompanyId = currentCompany?.id === 'superadmin-company' ? currentCompany.id : 'superadmin-all-users';
+        // SuperAdmin: Usar el companyId virtual del AuthService o uno especial
+        const superAdminCompanyId =
+          currentCompany?.id === '00000000-0000-0000-0000-000000000000' ? currentCompany.id :
+          currentCompany?.id === 'superadmin-company' ? currentCompany.id :
+          'superadmin-all-users';
         return userService.getCompanyUsers(superAdminCompanyId, filters);
       }
 

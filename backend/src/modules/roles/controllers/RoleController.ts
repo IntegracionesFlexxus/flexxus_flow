@@ -81,6 +81,14 @@ export class RoleController {
 
       const role = await this.roleService.updateRole(roleId, updateData, userId);
 
+      console.log('🔍 [RoleController] DEBUG - Role before response:', {
+        id: role.id,
+        name: role.name,
+        name_type: typeof role.name,
+        name_length: role.name?.length,
+        description: role.description
+      });
+
       res.json({
         success: true,
         data: role,

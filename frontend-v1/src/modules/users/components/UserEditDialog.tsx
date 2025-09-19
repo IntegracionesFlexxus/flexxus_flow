@@ -122,20 +122,11 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   mode = 'create',
   companyId
 }) => {
-  // Debug logs para edición
-  // console.log('📝 [UserEditDialog] Dialog abierto:', { open, mode });
-  // console.log('👤 [UserEditDialog] Usuario recibido:', user);
-  // console.log('🔑 [UserEditDialog] Propiedades del usuario:', user ? Object.keys(user) : 'No user');
-  // console.log('📧 [UserEditDialog] Datos del usuario:', {
-  //   id: user?.id,
-  //   email: user?.email,
-  //   firstName: user?.firstName,
-  //   lastName: user?.lastName,
-  //   role: user?.role,
-  //   roleId: user?.roleId,
-  //   status: user?.status
-  // });
-  // console.log('🏭 [UserEditDialog] Company ID:', companyId);
+  // Debug logs para edición y permisos
+  console.log('📝 [UserEditDialog] Dialog abierto:', { open, mode });
+  console.log('👤 [UserEditDialog] Usuario recibido:', user);
+  console.log('🔑 [UserEditDialog] Propiedades del usuario:', user ? Object.keys(user) : 'No user');
+  console.log('🏭 [UserEditDialog] Company ID:', companyId);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,8 +134,27 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
 
   // Hook para verificar permisos
-  const { hasPermission } = useAuthGuard();
-  const canManageUserCompanies = hasPermission('admin.users.companies.manage') || hasPermission('admin.companies.view');
+  const { hasPermission, hasRole } = useAuthGuard();
+
+  // Super Admin siempre puede gestionar empresas + permisos específicos
+  const canManageUserCompanies =
+    hasRole('super_admin') ||
+    hasRole('Super Admin') ||
+    hasRole('super admin') ||
+    hasRole('superadmin') ||
+    hasPermission('admin.users.companies.manage') ||
+    hasPermission('admin.companies.view');
+
+  // Debug logs para permisos
+  console.log('🔐 [UserEditDialog] Permission check:', {
+    hasRoleSuperAdmin: hasRole('super_admin'),
+    hasRoleSuperAdminSpace: hasRole('Super Admin'),
+    hasRoleSuperAdminLower: hasRole('super admin'),
+    hasRoleSuperAdminNospace: hasRole('superadmin'),
+    hasPermissionUsersCompanies: hasPermission('admin.users.companies.manage'),
+    hasPermissionCompaniesView: hasPermission('admin.companies.view'),
+    finalResult: canManageUserCompanies
+  });
 
   const {
     control,

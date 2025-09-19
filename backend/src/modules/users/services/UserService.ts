@@ -192,6 +192,7 @@ export class UserService implements IUserService {
         firstName: user.first_name || '',
         lastName: user.last_name || '',
         role: userCompany.role || 'user',
+        roleId: userCompany.roleId || null,
         avatar: null,
         phone: null,
         isActive: true,
@@ -414,29 +415,52 @@ export class UserService implements IUserService {
 
 
     try {
-      // Verify user belongs to company
-      this.logger.debug('[UserService.deleteUser] Checking if user belongs to company', {
-        userId,
-        companyId
-      });
-      const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
+      // SUPER ADMIN: Bypass company verification for virtual company
+      const isSuperAdminContext = companyId === '00000000-0000-0000-0000-000000000000';
 
-      this.logger.debug('[UserService.deleteUser] User company check result', {
-        userId,
-        companyId,
-        userCompany,
-        exists: !!userCompany,
-        roleId: userCompany?.roleId,
-        role: userCompany?.role
-      });
+      let userCompany = null;
+      if (!isSuperAdminContext) {
+        // Verify user belongs to company (solo para usuarios normales)
+        this.logger.debug('[UserService.deleteUser] Checking if user belongs to company', {
+          userId,
+          companyId
+        });
+        userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
 
-      if (!userCompany) {
-        this.logger.warn('[UserService.deleteUser] User does not belong to company', {
+        this.logger.debug('[UserService.deleteUser] User company check result', {
           userId,
           companyId,
-          message: 'User not found in company or already removed'
+          userCompany,
+          exists: !!userCompany,
+          roleId: userCompany?.roleId,
+          role: userCompany?.role
         });
-        return false;
+
+        if (!userCompany) {
+          this.logger.warn('[UserService.deleteUser] User does not belong to company', {
+            userId,
+            companyId,
+            message: 'User not found in company or already removed'
+          });
+          return false;
+        }
+      } else {
+        this.logger.info('[UserService.deleteUser] Super Admin context - skipping company verification', {
+          userId,
+          companyId,
+          message: 'Super Admin can delete any user'
+        });
+        // Para Super Admin, verificar que el usuario existe
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+          this.logger.warn('[UserService.deleteUser] User not found in system', {
+            userId,
+            companyId: 'super_admin_context'
+          });
+          return false;
+        }
+        // Crear un objeto mock para compatibilidad
+        userCompany = { role: 'any', roleId: 'any' };
       }
 
       // Soft delete user

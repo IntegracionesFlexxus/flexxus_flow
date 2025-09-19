@@ -167,7 +167,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
       email: user?.email || '',
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      role: user?.roleId || user?.role || '',  // Usar roleId si está disponible
+      role: user?.roleId || '',  // Usar roleId (UUID) para el formulario
       status: user?.status || 'active',
       password: '',
       confirmPassword: '',
@@ -195,7 +195,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           email: user.email || '',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
-          role: user.roleId || user.role || '',  // Usar roleId si está disponible
+          role: user.roleId || '',  // Usar roleId (UUID) para el formulario
           status: user.status || 'active',
           password: '',
           confirmPassword: '',
@@ -244,27 +244,12 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
     setError(null);
     try {
       // console.log('🎯 [UserEditDialog] Original form values:', values);
-      // console.log('🎯 [UserEditDialog] Original role value:', values.role);
+      // console.log('🎯 [UserEditDialog] Role value (UUID):', values.role);
       // console.log('🎯 [UserEditDialog] Available roles:', roles);
-      
-      // Map role UUID to role name
-      let roleValue = values.role;
-      if (roleValue) {
-        // Find the role object by UUID
-        const selectedRole = roles.find(r => r.id === roleValue);
-        // console.log('🎯 [UserEditDialog] Found role object:', selectedRole);
-        if (selectedRole) {
-          // Use the role name instead of UUID
-          roleValue = selectedRole.name.toLowerCase(); // Ensure lowercase (admin, manager, user, viewer)
-          // console.log('🎯 [UserEditDialog] Mapped role to name:', roleValue);
-        } else {
-          // console.log('⚠️ [UserEditDialog] Role not found in roles array, keeping original:', roleValue);
-        }
-      }
-      
+
       const userData = {
         ...values,
-        role: roleValue, // Use the mapped role name
+        role: values.role, // Send role UUID directly to backend
         companies: selectedCompanies,
         mode
       };

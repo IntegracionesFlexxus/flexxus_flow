@@ -49,7 +49,6 @@ export class UpdateUserDto {
   @IsOptional()
   phone?: string;
 
-  @IsString()
   @IsEnum(['active', 'inactive', 'suspended'])
   @IsOptional()
   status?: string;

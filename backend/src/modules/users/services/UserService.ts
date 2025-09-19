@@ -280,13 +280,37 @@ export class UserService implements IUserService {
     role?: string;
     avatar?: string;
     phone?: string;
+    status?: string;
     isActive?: boolean;
   }): Promise<IUser | null> {
     try {
-      // Verify user belongs to company
-      const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
-      if (!userCompany) {
-        return null;
+      this.logger.debug('[UserService.updateUser] Starting update', {
+        userId,
+        companyId,
+        updateFields: Object.keys(data)
+      });
+
+      // SUPER ADMIN: Saltear verificación de empresa para empresa virtual
+      const isSuperAdminContext = companyId === '00000000-0000-0000-0000-000000000000';
+
+      let userCompany = null;
+      if (!isSuperAdminContext) {
+        // Verify user belongs to company (solo para usuarios normales)
+        userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
+        if (!userCompany) {
+          this.logger.warn('[UserService.updateUser] User does not belong to company', {
+            userId,
+            companyId
+          });
+          return null;
+        }
+      } else {
+        this.logger.info('[UserService.updateUser] Super Admin context - skipping company verification', {
+          userId,
+          companyId
+        });
+        // Para Super Admin, crear un objeto mock para compatibilidad
+        userCompany = { role: 'super_admin' };
       }
       // Update user data
       const updates: IUpdateUserData = {
@@ -296,11 +320,29 @@ export class UserService implements IUserService {
       if (data.lastName !== undefined) updates.last_name = data.lastName;
       if (data.avatar !== undefined) updates.avatar = data.avatar;
       if (data.phone !== undefined) updates.phone = data.phone;
-      if (data.status !== undefined) updates.status = data.status;
+
+      // Manejar status - priorizar status directo, sino usar isActive
+      if (data.status !== undefined) {
+        updates.status = data.status;
+      } else if (data.isActive !== undefined) {
+        updates.status = data.isActive ? 'active' : 'inactive';
+      }
       const user = await this.userRepository.update(userId, updates);
-      // Update role if provided
-      if (data.role && data.role !== userCompany.role) {
+
+      // Update role if provided (solo para usuarios normales, no Super Admin)
+      if (data.role && data.role !== userCompany.role && !isSuperAdminContext) {
+        this.logger.debug('[UserService.updateUser] Updating user role in company', {
+          userId,
+          companyId,
+          oldRole: userCompany.role,
+          newRole: data.role
+        });
         await this.userCompanyRepository.updateUserRoleInCompany(userId, companyId, data.role);
+      } else if (isSuperAdminContext && data.role) {
+        this.logger.info('[UserService.updateUser] Super Admin context - role update skipped', {
+          userId,
+          requestedRole: data.role
+        });
       }
       return {
         id: user.id,
@@ -314,10 +356,13 @@ export class UserService implements IUserService {
         updatedAt: user.updated_at
       };
     } catch (error) {
-      this.logger.error('Error updating user', {
+      this.logger.error('[UserService.updateUser] Error updating user', {
         error: error.message,
+        stack: error.stack,
         userId,
-        companyId
+        companyId,
+        isSuperAdminContext: companyId === '00000000-0000-0000-0000-000000000000',
+        updateData: data
       });
       throw error;
     }

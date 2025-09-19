@@ -236,11 +236,22 @@ export const requireRole = (allowedRoles: string | string[], options?: {
 
     const userRole = req.user.role?.toLowerCase() || '';
     const normalizedRoles = roles.map(role => role.toLowerCase());
-    
+
+    // SUPER ADMIN: Tiene acceso automático a todo
+    const isSuperAdmin = isSuperAdminUser(req.user);
+
     console.log('🔍 [Backend RequireRole] User role:', req.user.role);
     console.log('🔍 [Backend RequireRole] Normalized user role:', userRole);
+    console.log('🔍 [Backend RequireRole] Is Super Admin:', isSuperAdmin);
     console.log('🔍 [Backend RequireRole] Normalized required roles:', normalizedRoles);
-    console.log('🔍 [Backend RequireRole] Role check result:', normalizedRoles.includes(userRole));
+    console.log('🔍 [Backend RequireRole] Role check result:', normalizedRoles.includes(userRole) || isSuperAdmin);
+
+    if (isSuperAdmin) {
+      console.log('👑 [Backend RequireRole] SUPER ADMIN ACCESS GRANTED - bypassing role check');
+      console.log('========================================\n');
+      next();
+      return;
+    }
 
     if (!normalizedRoles.includes(userRole)) {
       console.log('❌ [Backend RequireRole] AUTHORIZATION FAILED');
@@ -285,6 +296,15 @@ export const requireCompanyAccess = (resourceCompanyIdExtractor?: (req: Request)
         message: 'Authentication required',
         code: 'AUTH_REQUIRED'
       });
+      return;
+    }
+
+    // SUPER ADMIN: Bypass company access checks completely
+    if (isSuperAdminUser(req.user)) {
+      console.log('👑 [Backend RequireCompanyAccess] SUPER ADMIN ACCESS GRANTED - bypassing company check');
+      console.log('  User:', { id: req.user.id, role: req.user.role, companyId: req.user.companyId });
+      console.log('  Path:', req.path, 'Method:', req.method);
+      next();
       return;
     }
 
@@ -458,6 +478,15 @@ export const requirePermission = (permission: string | string[], options?: {
       return;
     }
 
+    // SUPER ADMIN: Bypass permission checks completely
+    if (isSuperAdminUser(req.user)) {
+      console.log('👑 [Backend RequirePermission] SUPER ADMIN ACCESS GRANTED - bypassing permission check');
+      console.log('  Required permissions:', permissions);
+      console.log('  User:', { id: req.user.id, role: req.user.role, companyId: req.user.companyId });
+      next();
+      return;
+    }
+
     const logger = container.get<Logger>(TYPES.Logger);
 
     try {
@@ -575,6 +604,26 @@ export const requireApiVersion = (supportedVersions: string[], options?: {
 /**
  * Helper functions
  */
+
+/**
+ * Check if user is Super Admin
+ * Centralized function to detect Super Admin consistently across all middlewares
+ */
+function isSuperAdminUser(user: any): boolean {
+  if (!user) return false;
+
+  const userRole = user.role?.toLowerCase() || '';
+
+  return (
+    // Direct role check
+    userRole === 'super_admin' ||
+    userRole === 'super admin' ||
+    userRole === 'superadmin' ||
+    // Virtual company check
+    user.companyId === '00000000-0000-0000-0000-000000000000'
+  );
+}
+
 async function setDatabaseContext(userId: string, companyId: string): Promise<void> {
   // This would set session variables for Row Level Security
   // Implementation depends on database connection management
@@ -841,6 +890,15 @@ export const requireOwnership = (options?: {
       return;
     }
 
+    // SUPER ADMIN: Bypass ownership checks completely
+    if (isSuperAdminUser(req.user)) {
+      console.log('👑 [Backend RequireOwnership] SUPER ADMIN ACCESS GRANTED - bypassing ownership check');
+      console.log('  Resource type:', options?.resourceType || 'resource');
+      console.log('  User:', { id: req.user.id, role: req.user.role, companyId: req.user.companyId });
+      next();
+      return;
+    }
+
     const resourceType = options?.resourceType || 'resource';
     const idParam = options?.idParam || 'id';
     const resourceId = req.params[idParam];
@@ -907,15 +965,24 @@ export const requireScope = (scope: 'global' | 'company' | 'team' | 'self', opti
       return;
     }
 
+    // SUPER ADMIN: Bypass scope checks completely
+    if (isSuperAdminUser(req.user)) {
+      console.log('👑 [Backend RequireScope] SUPER ADMIN ACCESS GRANTED - bypassing scope check');
+      console.log('  Required scope:', scope);
+      console.log('  User:', { id: req.user.id, role: req.user.role, companyId: req.user.companyId });
+      next();
+      return;
+    }
+
     let hasScope = false;
     const logger = container.get<Logger>(TYPES.Logger);
 
     switch (scope) {
       case 'global':
         // Check if user has global admin permissions
-        hasScope = req.user.permissions?.includes('admin.*') || 
+        hasScope = req.user.permissions?.includes('admin.*') ||
                   req.user.permissions?.includes('*') ||
-                  req.user.role === 'super_admin';
+                  isSuperAdminUser(req.user);
         break;
 
       case 'company':

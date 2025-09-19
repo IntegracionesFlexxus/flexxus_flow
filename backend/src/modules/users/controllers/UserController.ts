@@ -314,7 +314,27 @@ export class UserController {
         return;
       }
 
-      const user = await this.userService.updateUser(id, updateUserDto);
+      // Detectar Super Admin para usar empresa correcta
+      const userRole = req.user?.role;
+      const currentCompanyId = req.user?.companyId;
+
+      const isSuperAdmin =
+        ['super_admin', 'Super Admin', 'super admin', 'superadmin'].includes(userRole) ||
+        currentCompanyId === '00000000-0000-0000-0000-000000000000';
+
+      // Super Admin puede editar cualquier usuario, usuarios normales solo de su empresa
+      const companyIdToUse = isSuperAdmin ? (currentCompanyId || '00000000-0000-0000-0000-000000000000') : currentCompanyId;
+
+      this.logger.debug('Update user request', {
+        userId: id,
+        userRole,
+        currentCompanyId,
+        isSuperAdmin,
+        companyIdToUse,
+        updateData: Object.keys(updateUserDto)
+      });
+
+      const user = await this.userService.updateUser(id, companyIdToUse, updateUserDto);
 
       if (!user) {
         res.status(404).json({

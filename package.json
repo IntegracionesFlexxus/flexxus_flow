@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "prepare": "husky install",
     "backend:dev": "cd backend && npm run dev",
     "frontend:dev": "cd frontend-v1 && npm run dev",
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
@@ -12,7 +11,6 @@
     "install:all": "npm install && npm run backend:install && npm run frontend:install"
   },
   "devDependencies": {
-    "husky": "^8.0.3",
     "concurrently": "^8.2.0"
   }
 }

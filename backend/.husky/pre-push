@@ -1,9 +1,0 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Temporalmente deshabilitado mientras se arreglan los tests de TypeScript
-# Para reactivar, descomenta la siguiente línea:
-# cd backend && npm run test:unit -- --passWithNoTests
-
-# Por ahora solo retornamos 0 para permitir el push
-exit 0

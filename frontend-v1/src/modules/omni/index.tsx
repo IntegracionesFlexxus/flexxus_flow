@@ -1,20 +1,21 @@
-import { Routes, Route } from 'react-router-dom'
-import OmniDashboard from './pages/OmniDashboard'
+// index.tsx
+import React from 'react';
+import { OmniRoutes } from './routes';
 
-// Módulo Omnicanalidad - MVP Nivel 1
-// TODO: En Nivel 2 implementar funcionalidad completa de mensajería
+// Exportar componentes y tipos principales para uso externo
+export * from './components';
+export * from './hooks';
+export * from './services';
+export * from './store';
+export * from './types';
+export * from './utils';
+
+// Exportar rutas
+export { OmniRoutes } from './routes';
+
+// Componente principal del módulo
 export function OmniModule() {
-  return (
-    <Routes>
-      <Route index element={<OmniDashboard />} />
-      {/* TODO: Nivel 2 - Agregar más rutas
-      <Route path="conversations" element={<ConversationsPage />} />
-      <Route path="conversations/:id" element={<ConversationDetail />} />
-      <Route path="channels" element={<ChannelsPage />} />
-      <Route path="templates" element={<TemplatesPage />} />
-      */}
-    </Routes>
-  )
+  return <OmniRoutes />;
 }
 
-export default OmniModule
+export default OmniModule;

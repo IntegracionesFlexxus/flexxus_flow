@@ -17,7 +17,7 @@ import userRoutes from '@/modules/users';
 import roleRoutes from '@/modules/roles';
 import companyRoutes from '@/modules/companies';
 // TODO: Importar rutas de otros módulos cuando estén implementadas
-// import omniRoutes from '@/modules/omni/routes';
+import { initializeOmniModule } from '@/modules/omni';
 // import crmRoutes from '@/modules/crm/routes';
 // import workflowRoutes from '@/modules/workflow/routes';
 // import analyticsRoutes from '@/modules/analytics/routes';
@@ -38,6 +38,7 @@ class App {
     this.app = express();
     this.logger = container.get<winston.Logger>(TYPES.Logger);
     this.initializeMiddleware();
+    this.initializeModules();
     this.initializeRoutes();
     this.initializeErrorHandling();
   }
@@ -86,6 +87,25 @@ class App {
     // Trust proxy for accurate IP addresses
     this.app.set('trust proxy', 1);
   }
+
+  /**
+   * Configurar módulos de la aplicación
+   * Clean Code: Inicialización modular
+   * Nota: El módulo Omni se inicializa en main.ts con soporte WebSocket
+   */
+  private initializeModules(): void {
+    try {
+      // Los módulos que requieren WebSocket se inicializan en main.ts
+      // Aquí se pueden inicializar otros módulos que no requieran WebSocket
+      this.logger.info('✅ Basic modules initialized');
+    } catch (error) {
+      this.logger.error('❌ Failed to initialize modules:', error);
+      // En desarrollo, continuar sin el módulo
+      if (environment.nodeEnv !== 'development') {
+        throw error;
+      }
+    }
+  }
   /**
    * Configurar rutas de la aplicación
    * Clean Code: Rutas organizadas por versión y módulo
@@ -110,9 +130,7 @@ class App {
     apiV1Router.use('/companies', companyRoutes);
     // Placeholder routes for other modules
     // TODO: Reemplazar con implementaciones reales en Sprint 2
-    apiV1Router.get('/omni/health', (req, res) => {
-      res.json({ module: 'omni', status: 'not_implemented' });
-    });
+    // Omni module routes are now handled by the module itself at /api/omni
     apiV1Router.get('/crm/health', (req, res) => {
       res.json({ module: 'crm', status: 'not_implemented' });
     });

@@ -95,8 +95,8 @@ const envSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.optional().default('postgres123')
   }),
-  // Redis Configuration
-  REDIS_HOST: Joi.string().default('localhost'),
+  // Redis Configuration (optional)
+  REDIS_HOST: Joi.string().optional(),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().allow('').default(''),
   REDIS_DB: Joi.number().min(0).max(15).default(0),
@@ -305,15 +305,15 @@ export const environment = {
       dbName: 'analytics'
     }
   },
-  // Redis
-  redis: {
+  // Redis (only enable if host is configured)
+  redis: env.REDIS_HOST ? {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
     password: env.REDIS_PASSWORD,
     db: env.REDIS_DB,
     keyPrefix: env.REDIS_KEY_PREFIX,
     ttl: env.REDIS_TTL,
-  },
+  } : undefined,
   // JWT
   jwt: {
     secret: env.JWT_SECRET,

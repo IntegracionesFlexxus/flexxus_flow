@@ -77,9 +77,7 @@ export const TYPES = {
   SessionRepository: Symbol.for('SessionRepository'),
   SessionValidator: Symbol.for('SessionValidator'),
   // Omni Module Services
-  OmniChannelRepository: Symbol.for('OmniChannelRepository'),
-  OmniChannelService: Symbol.for('OmniChannelService'),
-  OmniController: Symbol.for('OmniController'),
+OmniDbPool: Symbol.for('OmniDbPool'),  // Omni Repositories  ChannelRepository: Symbol.for('ChannelRepository'),  ConversationRepository: Symbol.for('ConversationRepository'),  MessageRepository: Symbol.for('MessageRepository'),  CustomerRepository: Symbol.for('CustomerRepository'),  TemplateRepository: Symbol.for('TemplateRepository'),  // Omni Services  ChannelService: Symbol.for('ChannelService'),  ConversationService: Symbol.for('ConversationService'),  MessageService: Symbol.for('MessageService'),  CustomerService: Symbol.for('CustomerService'),  TemplateService: Symbol.for('TemplateService'),  WebSocketService: Symbol.for('WebSocketService'),  // Omni Controllers  ChannelController: Symbol.for('ChannelController'),  ConversationController: Symbol.for('ConversationController'),  MessageController: Symbol.for('MessageController'),  CustomerController: Symbol.for('CustomerController'),  TemplateController: Symbol.for('TemplateController'),
   // CRM Module Services
   ContactRepository: Symbol.for('ContactRepository'),
   ContactService: Symbol.for('ContactService'),

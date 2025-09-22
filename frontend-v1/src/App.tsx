@@ -20,6 +20,9 @@ import { EnhancedErrorBoundary } from './error-handling'
 import { initWebVitals, logWebVitals } from './utils/webVitals'
 import PerformanceMonitor from './components/dev/PerformanceMonitor'
 
+// WebSocket initialization for Omni module
+import { useWebSocket } from './modules/omni/hooks'
+
 // Loading component for lazy loading
 const LoadingFallback = () => {
   console.log('🔄 LoadingFallback: Showing loading indicator for lazy module');
@@ -87,6 +90,9 @@ const queryClient = new QueryClient({
 
 // App principal con arquitectura modular y lazy loading
 function App() {
+  // Inicializar WebSocket para módulo Omni
+  useWebSocket();
+
   // Inicializar Web Vitals en desarrollo
   useEffect(() => {
     if (import.meta.env.DEV) {

@@ -16,9 +16,10 @@ import featureFlagRoutes from '@/modules/feature-flags';
 import userRoutes from '@/modules/users';
 import roleRoutes from '@/modules/roles';
 import companyRoutes from '@/modules/companies';
+// Import CRM routes (Sprint 15)
+import crmRoutes, { initializeCRMModule, shutdownCRMModule } from '@/modules/crm';
 // TODO: Importar rutas de otros módulos cuando estén implementadas
 // import omniRoutes from '@/modules/omni/routes';
-// import crmRoutes from '@/modules/crm/routes';
 // import workflowRoutes from '@/modules/workflow/routes';
 // import analyticsRoutes from '@/modules/analytics/routes';
 // Middleware imports
@@ -26,6 +27,7 @@ import { errorHandler } from '@/shared/middleware/errorHandler';
 import { requestLogger } from '@/shared/middleware/requestLogger';
 import { generalLimiter } from '@/shared/middleware/rateLimiter';
 import { setupCors } from '@/shared/middleware/security';
+import { devAuthBypass } from '@/modules/auth/middleware/devAuthBypass';
 /**
  * Express Application Class
  * Patrón: Application Controller
@@ -76,6 +78,11 @@ class App {
     this.app.use(cookieParser());
     // Request logging
     this.app.use(requestLogger);
+    // Dev auth bypass (ONLY in development)
+    if (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') {
+      this.app.use(devAuthBypass);
+      this.logger.warn('⚠️  DEV AUTH BYPASS IS ENABLED - DO NOT USE IN PRODUCTION');
+    }
     // Rate limiting - ENABLED IN PRODUCTION
     if (environment.nodeEnv === 'production' || environment.nodeEnv === 'staging') {
       this.app.use('/api/', generalLimiter);
@@ -108,13 +115,14 @@ class App {
     apiV1Router.use('/roles', roleRoutes);
     // Companies module routes (Sprint 3)
     apiV1Router.use('/companies', companyRoutes);
+
+    // CRM module routes (Sprint 15)
+    apiV1Router.use('/crm', crmRoutes(container));
+
     // Placeholder routes for other modules
     // TODO: Reemplazar con implementaciones reales en Sprint 2
     apiV1Router.get('/omni/health', (req, res) => {
       res.json({ module: 'omni', status: 'not_implemented' });
-    });
-    apiV1Router.get('/crm/health', (req, res) => {
-      res.json({ module: 'crm', status: 'not_implemented' });
     });
     apiV1Router.get('/workflow/health', (req, res) => {
       res.json({ module: 'workflow', status: 'not_implemented' });

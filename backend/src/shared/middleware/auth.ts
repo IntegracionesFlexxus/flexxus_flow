@@ -58,6 +58,24 @@ export const authenticateToken = async (
   });
 
   try {
+    // DEVELOPMENT ONLY: Bypass auth for testing
+    if (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || authHeader === 'Bearer test-token' || authHeader === 'Bearer test-token-123') {
+        console.log('⚠️  [DEV AUTH BYPASS] Authentication bypassed for development');
+        req.user = {
+          id: '1',
+          email: 'dev@test.com',
+          companyId: req.headers['x-company-id'] as string || '0a8e08a1-fdad-4caa-b90e-d8d791fa82ee',
+          role: 'admin',
+          sessionId: 'dev-session',
+          permissions: ['*']
+        };
+        next();
+        return;
+      }
+    }
+
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 

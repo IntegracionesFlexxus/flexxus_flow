@@ -7,6 +7,7 @@ import { container, verifyDatabaseConnections, closeDatabaseConnections } from '
 import { TYPES } from '@/container/types';
 import winston from 'winston';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
+import { initializeCRMModule, shutdownCRMModule } from '@/modules/crm';
 
 /**
 // Logger instance
@@ -37,6 +38,12 @@ class Server {
         throw new Error('Database connections are not healthy');
       }
       this.logger.info('✅ All database connections are healthy');
+
+      // Initialize CRM module (Sprint 15)
+      this.logger.info('Initializing CRM module...');
+      await initializeCRMModule(container);
+      this.logger.info('✅ CRM module initialized successfully');
+
       // Iniciar servidor HTTP
       const PORT = environment.port;
       this.server = this.app.app.listen(PORT, () => {
@@ -71,6 +78,10 @@ class Server {
         this.server.close(async () => {
           this.logger.info('HTTP server closed');
           try {
+            // Shutdown CRM module
+            await shutdownCRMModule(container);
+            this.logger.info('CRM module shutdown completed');
+
             // Cerrar conexiones de base de datos
             await closeDatabaseConnections();
             this.logger.info('Database connections closed');

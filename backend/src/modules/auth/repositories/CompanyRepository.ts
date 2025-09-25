@@ -109,4 +109,76 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
     const results = await this.db.query<UserCompany>(query, [userId, companyId]);
     return results.length > 0 ? results[0] : null;
   }
+
+  /**
+   * Find multiple companies by IDs - BATCH FETCHING
+   * @param ids Array of company IDs (UUIDs) to fetch
+   * @returns Array of companies found
+   */
+  async findByIds(ids: string[]): Promise<Company[]> {
+    if (ids.length === 0) return [];
+
+    const query = `
+      SELECT * FROM ${this.tableName}
+      WHERE id = ANY($1::uuid[])
+        AND deleted_at IS NULL
+    `;
+
+    try {
+      return await this.db.query<Company>(query, [ids]);
+    } catch (error) {
+      this.logger?.error('Error fetching companies by IDs', { error, ids });
+      return [];
+    }
+  }
+
+  /**
+   * Find companies basic info by IDs - OPTIMIZED FOR CROSS-DATABASE
+   * @param ids Array of company IDs to fetch
+   * @returns Array of companies with basic info only
+   */
+  async findBasicInfoByIds(ids: string[]): Promise<any[]> {
+    if (ids.length === 0) return [];
+
+    const query = `
+      SELECT
+        id,
+        name,
+        industry,
+        size,
+        status
+      FROM ${this.tableName}
+      WHERE id = ANY($1::uuid[])
+        AND deleted_at IS NULL
+    `;
+
+    try {
+      return await this.db.query(query, [ids]);
+    } catch (error) {
+      this.logger?.error('Error fetching companies basic info by IDs', { error, ids });
+      return [];
+    }
+  }
+
+  /**
+   * Get active company IDs for cache warming
+   * @param limit Maximum number of IDs to return
+   * @returns Array of active company IDs
+   */
+  async getActiveCompanyIds(limit: number = 500): Promise<string[]> {
+    const query = `
+      SELECT id FROM ${this.tableName}
+      WHERE status = 'active'
+        AND deleted_at IS NULL
+      LIMIT $1
+    `;
+
+    try {
+      const results = await this.db.query<{ id: string }>(query, [limit]);
+      return results.map(row => row.id);
+    } catch (error) {
+      this.logger?.error('Error fetching active company IDs', { error });
+      return [];
+    }
+  }
 }

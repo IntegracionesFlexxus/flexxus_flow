@@ -206,4 +206,86 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
     `;
     return await this.db.query<User>(query, [startDate, endDate]);
   }
+
+  /**
+   * Find multiple users by IDs - BATCH FETCHING
+   * @param ids Array of user IDs to fetch
+   * @returns Array of users found
+   */
+  async findByIds(ids: number[]): Promise<User[]> {
+    if (ids.length === 0) return [];
+
+    const query = `
+      SELECT * FROM ${this.tableName}
+      WHERE id = ANY($1::int[])
+        AND deleted_at IS NULL
+    `;
+
+    try {
+      return await this.db.query<User>(query, [ids]);
+    } catch (error) {
+      this.logger?.error('Error fetching users by IDs', { error, ids });
+      return [];
+    }
+  }
+
+  /**
+   * Find users basic info by IDs - OPTIMIZED FOR CROSS-DATABASE
+   * @param ids Array of user IDs to fetch
+   * @returns Array of users with basic info only
+   */
+  async findBasicInfoByIds(ids: (number | string)[]): Promise<any[]> {
+    if (ids.length === 0) return [];
+
+    // Filter out non-UUID values for now (owner_id is integer in CRM but UUID in users table)
+    // This is a temporary workaround - ideally we'd have a mapping table
+    const validIds = ids.filter(id => typeof id === 'string' && id.includes('-'));
+
+    if (validIds.length === 0) {
+      return [];
+    }
+
+    const query = `
+      SELECT
+        id,
+        email,
+        COALESCE(first_name || ' ' || last_name, email) as name,
+        first_name,
+        last_name,
+        avatar,
+        status
+      FROM ${this.tableName}
+      WHERE id = ANY($1::uuid[])
+        AND deleted_at IS NULL
+    `;
+
+    try {
+      return await this.db.query(query, [validIds]);
+    } catch (error) {
+      this.logger?.error('Error fetching users basic info by IDs', { error, ids: validIds });
+      return [];
+    }
+  }
+
+  /**
+   * Get active user IDs for cache warming
+   * @param limit Maximum number of IDs to return
+   * @returns Array of active user IDs
+   */
+  async getActiveUserIds(limit: number = 1000): Promise<number[]> {
+    const query = `
+      SELECT id FROM ${this.tableName}
+      WHERE status = 'active'
+        AND deleted_at IS NULL
+      LIMIT $1
+    `;
+
+    try {
+      const results = await this.db.query<{ id: number }>(query, [limit]);
+      return results.map(row => row.id);
+    } catch (error) {
+      this.logger?.error('Error fetching active user IDs', { error });
+      return [];
+    }
+  }
 }

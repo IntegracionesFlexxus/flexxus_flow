@@ -10,6 +10,7 @@ export const TYPES = {
   DataSource: Symbol.for('DataSource'),
   RedisClient: Symbol.for('RedisClient'),
   EventBus: Symbol.for('EventBus'),
+  EventEmitter: Symbol.for('EventEmitter'),
   // Event System (Sprint 4)
   EventStore: Symbol.for('EventStore'),
   DeadLetterQueue: Symbol.for('DeadLetterQueue'),
@@ -26,6 +27,8 @@ export const TYPES = {
   CrmConnection: Symbol.for('CrmConnection'),
   WorkflowConnection: Symbol.for('WorkflowConnection'),
   AnalyticsConnection: Symbol.for('AnalyticsConnection'),
+  DatabasePool: Symbol.for('DatabasePool'),
+  DatabaseConnection: Symbol.for('DatabaseConnection'),
   // Configuration Services
   ConfigService: Symbol.for('ConfigService'),
   DatabaseConfig: Symbol.for('DatabaseConfig'),
@@ -81,9 +84,41 @@ export const TYPES = {
   OmniChannelService: Symbol.for('OmniChannelService'),
   OmniController: Symbol.for('OmniController'),
   // CRM Module Services
+  CRMDatabaseConnection: Symbol.for('CRMDatabaseConnection'),
+  LeadRepository: Symbol.for('LeadRepository'),
+  LeadService: Symbol.for('LeadService'),
+  LeadScoringService: Symbol.for('LeadScoringService'),
+  ConversionService: Symbol.for('ConversionService'),
+  AccountRepository: Symbol.for('AccountRepository'),
+  AccountService: Symbol.for('AccountService'),
   ContactRepository: Symbol.for('ContactRepository'),
   ContactService: Symbol.for('ContactService'),
+  OpportunityRepository: Symbol.for('OpportunityRepository'),
+  OpportunityService: Symbol.for('OpportunityService'),
+  ActivityRepository: Symbol.for('ActivityRepository'),
+  ActivityService: Symbol.for('ActivityService'),
+  ReferenceDataRepository: Symbol.for('ReferenceDataRepository'),
+  LeadController: Symbol.for('LeadController'),
+  AccountController: Symbol.for('AccountController'),
+  ContactController: Symbol.for('ContactController'),
+  OpportunityController: Symbol.for('OpportunityController'),
+  ActivityController: Symbol.for('ActivityController'),
   CrmController: Symbol.for('CrmController'),
+  // Product & Quote Module Services (Sprint 20)
+  ProductController: Symbol.for('ProductController'),
+  QuoteController: Symbol.for('QuoteController'),
+  ProductRepository: Symbol.for('ProductRepository'),
+  QuoteRepository: Symbol.for('QuoteRepository'),
+  ProductService: Symbol.for('ProductService'),
+  QuoteService: Symbol.for('QuoteService'),
+  PricingService: Symbol.for('PricingService'),
+  ApprovalService: Symbol.for('ApprovalService'),
+  // Sprint 17 CRM Extended Services
+  AccountHierarchyService: Symbol.for('AccountHierarchyService'),
+  TerritoryManagementService: Symbol.for('TerritoryManagementService'),
+  AccountHealthScoringService: Symbol.for('AccountHealthScoringService'),
+  ContactRoleManagementService: Symbol.for('ContactRoleManagementService'),
+  CalendarController: Symbol.for('CalendarController'),
   // Workflow Module Services
   WorkflowRepository: Symbol.for('WorkflowRepository'),
   WorkflowService: Symbol.for('WorkflowService'),
@@ -175,7 +210,58 @@ export const TYPES = {
   // Migration Framework Services (Sprint 4)
   MigrationManager: Symbol.for('MigrationManager'),
   MigrationVersion: Symbol.for('MigrationVersion'),
-  DataTransformer: Symbol.for('DataTransformer')
+  DataTransformer: Symbol.for('DataTransformer'),
+
+  // Product & Quote Module (Sprint 20)
+  ProductController: Symbol.for('ProductController'),
+  QuoteController: Symbol.for('QuoteController'),
+  ProductRepository: Symbol.for('ProductRepository'),
+  QuoteRepository: Symbol.for('QuoteRepository'),
+  ProductService: Symbol.for('ProductService'),
+  QuoteService: Symbol.for('QuoteService'),
+  PricingService: Symbol.for('PricingService'),
+  ApprovalService: Symbol.for('ApprovalService'),
+
+  // Sprint 17 - Advanced Account & Contact Management Services
+  AccountHierarchyService: Symbol.for('AccountHierarchyService'),
+  AccountHierarchyRepository: Symbol.for('AccountHierarchyRepository'),
+  TerritoryManagementService: Symbol.for('TerritoryManagementService'),
+  TerritoryRepository: Symbol.for('TerritoryRepository'),
+  TerritoryController: Symbol.for('TerritoryController'),
+  ContactRoleManagementService: Symbol.for('ContactRoleManagementService'),
+  ContactRoleRepository: Symbol.for('ContactRoleRepository'),
+  AccountHealthScoringService: Symbol.for('AccountHealthScoringService'),
+  AccountHealthRepository: Symbol.for('AccountHealthRepository'),
+  AdvancedSearchService: Symbol.for('AdvancedSearchService'),
+  SearchController: Symbol.for('SearchController'),
+
+  // Sprint 21 - Activities & Task Management
+  CalendarIntegrationService: Symbol.for('CalendarIntegrationService'),
+  TaskAutomationService: Symbol.for('TaskAutomationService'),
+  CalendarController: Symbol.for('CalendarController'),
+  ActivityTemplateRepository: Symbol.for('ActivityTemplateRepository'),
+  CalendarIntegrationRepository: Symbol.for('CalendarIntegrationRepository'),
+  TaskAutomationRepository: Symbol.for('TaskAutomationRepository'),
+
+  // Sprint 22 - CRM Analytics & Integration
+  AnalyticsService: Symbol.for('AnalyticsService'),
+  ReportService: Symbol.for('ReportService'),
+  KpiService: Symbol.for('KpiService'),
+  DashboardService: Symbol.for('DashboardService'),
+  ExportService: Symbol.for('ExportService'),
+  ReportRepository: Symbol.for('ReportRepository'),
+  KpiRepository: Symbol.for('KpiRepository'),
+  DashboardRepository: Symbol.for('DashboardRepository'),
+  ExportRepository: Symbol.for('ExportRepository'),
+  IntegrationLogRepository: Symbol.for('IntegrationLogRepository'),
+  AnalyticsController: Symbol.for('AnalyticsController'),
+  ReportController: Symbol.for('ReportController'),
+  ExportController: Symbol.for('ExportController'),
+
+  // Cross-Database Services
+  CrossDatabaseService: Symbol.for('CrossDatabaseService'),
+  UserDataProvider: Symbol.for('UserDataProvider'),
+  CompanyDataProvider: Symbol.for('CompanyDataProvider')
 };
 /**
  * Service identifiers for multi-injection

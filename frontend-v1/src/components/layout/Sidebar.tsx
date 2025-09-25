@@ -30,11 +30,18 @@ import {
   Support as SupportIcon,
   Help as HelpIcon,
   Group as UsersIcon,
-  Security as RolesIcon
+  Security as RolesIcon,
+  ShoppingCart as ProductQuoteIcon,
+  Task as TaskIcon,
+  CalendarMonth as CalendarIcon,
+  Assignment as ActivitiesIcon
 } from '@mui/icons-material'
 
 // Store
 import { useAuthStore } from '@/shared/store'
+
+// Sprint 19 - Product Quote Navigation
+import { ProductQuoteNavigation } from '@/modules/crm/components/navigation/ProductQuoteNavigation'
 
 // Sidebar mejorado con soporte para collapsed state - MVP
 // TODO: En Nivel 2 agregar submenús y badges de notificaciones
@@ -97,6 +104,48 @@ const Sidebar: React.FC<SidebarProps> = ({
       text: 'CRM',
       icon: <PeopleIcon />,
       path: '/crm',
+      children: [
+        {
+          text: 'Dashboard',
+          icon: <DashboardIcon />,
+          path: '/crm',
+        },
+        {
+          text: 'Leads',
+          icon: <PeopleIcon />,
+          path: '/crm/leads',
+        },
+        {
+          text: 'Accounts',
+          icon: <PeopleIcon />,
+          path: '/crm/accounts',
+        },
+        {
+          text: 'Pipeline',
+          icon: <WorkflowIcon />,
+          path: '/crm/pipeline',
+        },
+        {
+          text: 'Product & Quote',
+          icon: <ProductQuoteIcon />,
+          path: '/crm/product-quote',
+        },
+        {
+          text: 'Activities',
+          icon: <ActivitiesIcon />,
+          path: '/crm/activities',
+        },
+        {
+          text: 'Calendar',
+          icon: <CalendarIcon />,
+          path: '/crm/calendar',
+        },
+        {
+          text: 'Tasks',
+          icon: <TaskIcon />,
+          path: '/crm/tasks',
+        },
+      ]
     },
     {
       text: 'Workflows',

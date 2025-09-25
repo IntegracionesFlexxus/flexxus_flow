@@ -11,6 +11,8 @@ import 'reflect-metadata';
 import { Container } from 'inversify';
 import { TYPES } from '@/container/types';
 import winston from 'winston';
+import { EventEmitter } from 'events';
+import Redis from 'ioredis';
 // Configuration
 import { environment } from '@/config/environment';
 // Database
@@ -106,6 +108,11 @@ const logger = winston.createLogger({
   ]
 });
 container.bind<winston.Logger>(TYPES.Logger).toConstantValue(logger);
+
+// ========== Event System ==========
+// EventEmitter para el sistema de eventos del módulo CRM
+container.bind<EventEmitter>(TYPES.EventEmitter).toDynamicValue(() => new EventEmitter()).inSingletonScope();
+
 // ========== Database Connections (5 DBs) ==========
 // Patrón: Abstract Factory para diferentes conexiones
 console.log('Environment database config:', {
@@ -145,6 +152,79 @@ container.bind<IDatabaseConnection>(TYPES.WorkflowConnection)
 container.bind<IDatabaseConnection>(TYPES.AnalyticsConnection)
   .toDynamicValue(() => new DatabaseConnection(environment.database.analytics, logger))
   .inSingletonScope();
+
+// Redis Client - Production-ready configuration with proper error handling
+class RedisClientFactory {
+  private static instance: Redis | null = null;
+  private static isConnected: boolean = false;
+
+  static create(): Redis {
+    if (!this.instance) {
+      this.instance = new Redis({
+        host: environment.redis?.host || 'localhost',
+        port: environment.redis?.port || 6379,
+        password: environment.redis?.password,
+        db: environment.redis?.db || 0,
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: true,
+        connectTimeout: 10000,
+        retryStrategy: (times: number) => {
+          if (times > 3) {
+            logger.error('Redis connection failed after 3 attempts');
+            return null; // Stop retrying
+          }
+          const delay = Math.min(times * 1000, 3000);
+          logger.info(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
+          return delay;
+        },
+        reconnectOnError: (err: Error) => {
+          const targetError = 'READONLY';
+          if (err.message.includes(targetError)) {
+            return true; // Reconnect when Redis is in readonly mode
+          }
+          return false;
+        }
+      });
+
+      // Handle connection events
+      this.instance.on('connect', () => {
+        this.isConnected = true;
+        logger.info('Redis client connected successfully');
+      });
+
+      this.instance.on('ready', () => {
+        logger.info('Redis client is ready to accept commands');
+      });
+
+      this.instance.on('error', (err: Error) => {
+        this.isConnected = false;
+        logger.error('Redis client error:', err.message);
+      });
+
+      this.instance.on('close', () => {
+        this.isConnected = false;
+        logger.warn('Redis connection closed');
+      });
+
+      this.instance.on('reconnecting', () => {
+        logger.info('Redis client reconnecting...');
+      });
+    }
+
+    return this.instance;
+  }
+
+  static isHealthy(): boolean {
+    return this.isConnected;
+  }
+}
+
+// Create a singleton Redis client
+const redisClient = RedisClientFactory.create();
+
+// Bind the Redis client
+container.bind(TYPES.RedisClient).toConstantValue(redisClient);
+
 // ========== Auth Module Bindings ==========
 // Repositories - Refactored following SRP
 container.bind<IUserRepository>(TYPES.UserRepository).to(UserRepository);
@@ -254,10 +334,60 @@ import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 container.bind(TYPES.MigrationManager).to(MigrationManager).inSingletonScope();
 container.bind(TYPES.MigrationVersion).to(MigrationVersion).inSingletonScope();
 container.bind(TYPES.DataTransformer).to(DataTransformer).inSingletonScope();
+
+// ========== Cross-Database Services ==========
+import { CrossDatabaseService } from '@/shared/services/cross-database/CrossDatabaseService';
+import { UserDataProvider } from '@/shared/services/cross-database/providers/UserDataProvider';
+import { CompanyDataProvider } from '@/shared/services/cross-database/providers/CompanyDataProvider';
+
+// Bind cross-database providers
+container.bind(TYPES.UserDataProvider).to(UserDataProvider).inSingletonScope();
+container.bind(TYPES.CompanyDataProvider).to(CompanyDataProvider).inSingletonScope();
+
+// Bind cross-database service
+container.bind(TYPES.CrossDatabaseService).to(CrossDatabaseService).inSingletonScope();
+
+// ========== CRM Module Configuration (Sprint 15) ==========
+import { configureCRMContainer } from '@/modules/crm';
+
+// Configure CRM module bindings
+configureCRMContainer(container);
+
+// ========== Product & Quote Module (Sprint 20) ==========
+import { ProductController } from '@/modules/crm/product-quote/catalog/controllers/ProductController';
+import { QuoteController } from '@/modules/crm/product-quote/quotes/controllers/QuoteController';
+import { ProductRepository } from '@/modules/crm/product-quote/catalog/repositories/ProductRepository';
+import { QuoteRepository } from '@/modules/crm/product-quote/quotes/repositories/QuoteRepository';
+import { ProductServiceImpl } from '@/modules/crm/product-quote/catalog/services/ProductServiceImpl';
+import { QuoteServiceImpl } from '@/modules/crm/product-quote/quotes/services/QuoteServiceImpl';
+
+// Bind controllers
+container.bind(TYPES.ProductController).to(ProductController).inSingletonScope();
+container.bind(TYPES.QuoteController).to(QuoteController).inSingletonScope();
+
+// Bind repositories
+container.bind(TYPES.ProductRepository).to(ProductRepository).inSingletonScope();
+container.bind(TYPES.QuoteRepository).to(QuoteRepository).inSingletonScope();
+
+// Bind services
+container.bind(TYPES.ProductService).to(ProductServiceImpl).inSingletonScope();
+container.bind(TYPES.QuoteService).to(QuoteServiceImpl).inSingletonScope();
+
+// Mock services (temporary until implemented)
+container.bind(TYPES.PricingService).toConstantValue({
+  calculatePrice: async () => ({ price: 0, discount: 0, total: 0 }),
+  applyPromotion: async () => ({ success: true })
+});
+
+container.bind(TYPES.ApprovalService).toConstantValue({
+  requestApproval: async () => ({ id: 1, status: 'approved' }),
+  processApproval: async () => ({ success: true }),
+  getApprovalStatus: async () => ({ status: 'approved' })
+});
+
 // TODO: Bind otros módulos cuando estén implementados
 // Nivel 2: Agregar más módulos siguiendo el mismo patrón
 // - Omni Module
-// - CRM Module
 // - Workflow Module
 // - Analytics Module
 /**

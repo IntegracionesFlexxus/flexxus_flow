@@ -208,7 +208,7 @@ export function useNotification(options: NotificationOptions = {}) {
           : messages.error
         : 'Ocurrió un error';
       
-      this.error(errorMessage);
+      error(errorMessage);
       
       throw error;
     }

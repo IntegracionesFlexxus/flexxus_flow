@@ -1,0 +1,457 @@
+openapi: 3.0.0
+info:
+  title: Flexxus Flow CRM - Products & Quotes API
+  version: 1.0.0
+  description: API documentation for Sprint 20 - Products & Quotes System
+
+servers:
+  - url: http://localhost:3000/api/crm/product-quote
+    description: Development server
+
+paths:
+  /products:
+    get:
+      summary: List all products
+      tags: [Products]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: category_id
+          schema:
+            type: integer
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      summary: Create a new product
+      tags: [Products]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        201:
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+                  message:
+                    type: string
+
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Product details
+        404:
+          description: Product not found
+
+    put:
+      summary: Update product
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        200:
+          description: Product updated successfully
+
+    delete:
+      summary: Delete product
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Product deleted successfully
+        409:
+          description: Cannot delete product with active quotes
+
+  /quotes:
+    get:
+      summary: List all quotes
+      tags: [Quotes]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: customer_id
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, sent, accepted, rejected, cancelled, expired]
+      responses:
+        200:
+          description: List of quotes
+
+    post:
+      summary: Create a new quote
+      tags: [Quotes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        201:
+          description: Quote created successfully
+
+  /categories:
+    get:
+      summary: List all categories
+      tags: [Categories]
+      parameters:
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: List of categories
+
+    post:
+      summary: Create a new category
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        201:
+          description: Category created successfully
+
+  /promotions:
+    get:
+      summary: List active promotions
+      tags: [Promotions]
+      parameters:
+        - in: query
+          name: target_type
+          schema:
+            type: string
+            enum: [product, category, order]
+        - in: query
+          name: product_id
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List of active promotions
+
+    post:
+      summary: Create a new promotion
+      tags: [Promotions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromotionInput'
+      responses:
+        201:
+          description: Promotion created successfully
+
+  /pricing/calculate:
+    post:
+      summary: Calculate item price with discounts
+      tags: [Pricing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - quantity
+              properties:
+                productId:
+                  type: integer
+                quantity:
+                  type: number
+                customerId:
+                  type: integer
+                options:
+                  type: object
+      responses:
+        200:
+          description: Calculated pricing
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        product_id:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category_id:
+          type: integer
+        base_price:
+          type: number
+        cost_price:
+          type: number
+        profit_margin:
+          type: number
+        currency:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    ProductInput:
+      type: object
+      required:
+        - sku
+        - name
+        - base_price
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category_id:
+          type: integer
+        base_price:
+          type: number
+        cost_price:
+          type: number
+        currency:
+          type: string
+
+    Quote:
+      type: object
+      properties:
+        quote_id:
+          type: integer
+        quote_number:
+          type: string
+        customer_id:
+          type: integer
+        status:
+          type: string
+        subtotal:
+          type: number
+        total_amount:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteItem'
+
+    QuoteInput:
+      type: object
+      required:
+        - customer_id
+      properties:
+        customer_id:
+          type: integer
+        contact_id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteItemInput'
+
+    QuoteItem:
+      type: object
+      properties:
+        item_id:
+          type: integer
+        product_id:
+          type: integer
+        quantity:
+          type: number
+        unit_price:
+          type: number
+        discount_percentage:
+          type: number
+        line_total:
+          type: number
+
+    QuoteItemInput:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: integer
+        quantity:
+          type: number
+
+    Category:
+      type: object
+      properties:
+        category_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        parent_category_id:
+          type: integer
+        level:
+          type: integer
+        path:
+          type: string
+        is_active:
+          type: boolean
+
+    CategoryInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parent_category_id:
+          type: integer
+
+    Promotion:
+      type: object
+      properties:
+        rule_id:
+          type: integer
+        promotion_code:
+          type: string
+        promotion_name:
+          type: string
+        promotion_type:
+          type: string
+        discount_percentage:
+          type: number
+        discount_amount:
+          type: number
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    PromotionInput:
+      type: object
+      required:
+        - promotion_name
+        - promotion_type
+      properties:
+        promotion_code:
+          type: string
+        promotion_name:
+          type: string
+        description:
+          type: string
+        promotion_type:
+          type: string
+          enum: [discount_percentage, discount_amount, buy_x_get_y]
+        discount_percentage:
+          type: number
+        discount_amount:
+          type: number
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer

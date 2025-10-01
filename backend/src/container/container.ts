@@ -354,39 +354,9 @@ import { configureCRMContainer } from '@/modules/crm';
 configureCRMContainer(container);
 
 // ========== Product & Quote Module (Sprint 20) ==========
-import { ProductController } from '@/modules/crm/product-quote/catalog/controllers/ProductController';
-import { QuoteController } from '@/modules/crm/product-quote/quotes/controllers/QuoteController';
-import { ProductRepository } from '@/modules/crm/product-quote/catalog/repositories/ProductRepository';
-import { QuoteRepository } from '@/modules/crm/product-quote/quotes/repositories/QuoteRepository';
-import { ProductServiceImpl } from '@/modules/crm/product-quote/catalog/services/ProductServiceImpl';
-import { QuoteServiceImpl } from '@/modules/crm/product-quote/quotes/services/QuoteServiceImpl';
-
-// Bind controllers
-container.bind(TYPES.ProductController).to(ProductController).inSingletonScope();
-container.bind(TYPES.QuoteController).to(QuoteController).inSingletonScope();
-
-// Bind repositories
-container.bind(TYPES.ProductRepository).to(ProductRepository).inSingletonScope();
-container.bind(TYPES.QuoteRepository).to(QuoteRepository).inSingletonScope();
-
-// Bind services
-container.bind(TYPES.ProductService).to(ProductServiceImpl).inSingletonScope();
-container.bind(TYPES.QuoteService).to(QuoteServiceImpl).inSingletonScope();
-
-// Mock services (temporary until implemented)
-container.bind(TYPES.PricingService).toConstantValue({
-  calculatePrice: async () => ({ price: 0, discount: 0, total: 0 }),
-  applyPromotion: async () => ({ success: true })
-});
-
-container.bind(TYPES.ApprovalService).toConstantValue({
-  requestApproval: async () => ({ id: 1, status: 'approved' }),
-  processApproval: async () => ({ success: true }),
-  getApprovalStatus: async () => ({ status: 'approved' })
-});
-
-// TODO: Bind otros módulos cuando estén implementados
-// Nivel 2: Agregar más módulos siguiendo el mismo patrón
+// Note: Product & Quote module bindings are now handled by configureProductQuoteContainer()
+// in src/modules/crm/product-quote/config/product-quote.container.ts
+// This prevents duplicate bindings and keeps module dependencies isolated
 // - Omni Module
 // - Workflow Module
 // - Analytics Module

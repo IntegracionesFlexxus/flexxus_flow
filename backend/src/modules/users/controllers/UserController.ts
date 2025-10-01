@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { inject, injectable } from 'tsyringe';
+import { inject, injectable } from 'inversify';
 import { TYPES } from '@/container/types';
 import { IUserService } from '@modules/users/interfaces/IUserService';
 import { ILoggerService } from '@/shared/services/logger/LoggerService';

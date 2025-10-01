@@ -266,10 +266,13 @@ export const TYPES = {
   OpportunityRepository: Symbol.for('OpportunityRepository'),
   OpportunityService: Symbol.for('OpportunityService'),
   ActivityRepository: Symbol.for('ActivityRepository'),
+  ActivityTemplateRepository: Symbol.for('ActivityTemplateRepository'), // Sprint 21
+  TaskAutomationRepository: Symbol.for('TaskAutomationRepository'), // Sprint 21
   CalendarIntegrationRepository: Symbol.for('CalendarIntegrationRepository'), // Sprint 21
   CalendarIntegrationService: Symbol.for('CalendarIntegrationService'), // Sprint 21
   TaskAutomationService: Symbol.for('TaskAutomationService'), // Sprint 21
   ActivityService: Symbol.for('ActivityService'),
+  AdvancedSearchService: Symbol.for('AdvancedSearchService'), // Sprint 22
   ReferenceDataRepository: Symbol.for('ReferenceDataRepository'),
   LeadController: Symbol.for('LeadController'),
   AccountController: Symbol.for('AccountController'),
@@ -285,16 +288,26 @@ export const TYPES = {
   ProductService: Symbol.for('ProductService'),
   QuoteService: Symbol.for('QuoteService'),
   PricingService: Symbol.for('PricingService'),
+  DynamicPricingEngine: Symbol.for('DynamicPricingEngine'), // Sprint 20
   ApprovalService: Symbol.for('ApprovalService'),
+  ApprovalRepository: Symbol.for('ApprovalRepository'), // Sprint 20
+  ApprovalWorkflowService: Symbol.for('ApprovalWorkflowService'), // Sprint 20
   // Product & Quote - Additional Repositories (Sprint 20)
   ProductCategoryRepository: Symbol.for('ProductCategoryRepository'),
   QuoteLineItemRepository: Symbol.for('QuoteLineItemRepository'),
   PricingRepository: Symbol.for('PricingRepository'),
+  PricingRuleRepository: Symbol.for('PricingRuleRepository'), // Sprint 20
+  CategoryRepository: Symbol.for('CategoryRepository'), // Sprint 20
   // Product & Quote - Additional Controllers (Sprint 20)
   ProductCategoryController: Symbol.for('ProductCategoryController'),
   PricingController: Symbol.for('PricingController'),
+  // Product & Quote - Additional Services (Sprint 20)
+  ProductCatalogService: Symbol.for('ProductCatalogService'),
+  QuoteBuilderService: Symbol.for('QuoteBuilderService'),
+  QuoteManagementService: Symbol.for('QuoteManagementService'),
   // Product & Quote - Document Services (Sprint 20)
   DocumentGenerationService: Symbol.for('DocumentGenerationService'),
+  DocumentTemplateRepository: Symbol.for('DocumentTemplateRepository'),
   // Product & Quote - Pricing Services (Sprint 20)
   PromotionService: Symbol.for('PromotionService'),
   PromotionController: Symbol.for('PromotionController'),
@@ -422,6 +435,14 @@ export const TYPES = {
   CRMAnalyticsController: Symbol.for('CRMAnalyticsController'),
   CRMReportController: Symbol.for('CRMReportController'),
   CRMExportController: Symbol.for('CRMExportController'),
+
+  // Standalone symbols (used in some Sprint 20-22 services)
+  ReportRepository: Symbol.for('ReportRepository'),
+  KpiRepository: Symbol.for('KpiRepository'),
+  DashboardRepository: Symbol.for('DashboardRepository'),
+  ExportRepository: Symbol.for('ExportRepository'),
+  ExportService: Symbol.for('ExportService'),
+  IntegrationLogRepository: Symbol.for('IntegrationLogRepository'),
 
   // Cross-Database Services
   CrossDatabaseService: Symbol.for('CrossDatabaseService'),

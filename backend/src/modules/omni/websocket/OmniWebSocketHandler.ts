@@ -13,6 +13,7 @@ interface OmniSocketData {
   userId: string;
   conversationRooms: Set<string>;
   aiEventSubscriptions?: Set<string>; // AI event types subscribed to
+  crmSubscription?: boolean; // CRM integration subscription (Sprint N+2)
 }
 
 @injectable()
@@ -100,6 +101,15 @@ export class OmniWebSocketHandler {
    * Register event handlers for socket
    */
   private registerEventHandlers(socket: Socket): void {
+    // CRM Integration Events (Sprint N+2)
+    socket.on('crm:subscribe', (data: any) => {
+      this.handleCRMSubscription(socket, data);
+    });
+
+    socket.on('crm:unsubscribe', () => {
+      this.handleCRMUnsubscription(socket);
+    });
+
     // Join conversation room
     socket.on('conversation:join', (conversationId: string) => {
       this.handleJoinConversation(socket, conversationId);
@@ -630,6 +640,118 @@ export class OmniWebSocketHandler {
         } else if (connection.aiEventSubscriptions.size > 0) {
           count++;
         }
+      }
+    });
+    return count;
+  }
+
+  // =======================
+  // CRM INTEGRATION HANDLERS (Sprint N+2)
+  // =======================
+
+  /**
+   * Handle CRM subscription request
+   */
+  private handleCRMSubscription(socket: Socket, data: any): void {
+    const connectionData = this.activeConnections.get(socket.id);
+    if (!connectionData) return;
+
+    connectionData.crmSubscription = true;
+
+    // Join CRM events room
+    socket.join('crm:events');
+
+    this.logger.info('CRM subscription added', {
+      socketId: socket.id,
+      userId: connectionData.userId,
+      events: data.events
+    });
+
+    socket.emit('crm:subscription_confirmed', {
+      events: data.events || ['conversation.qualified', 'form.submitted', 'email.engaged'],
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Handle CRM unsubscription request
+   */
+  private handleCRMUnsubscription(socket: Socket): void {
+    const connectionData = this.activeConnections.get(socket.id);
+    if (!connectionData) return;
+
+    connectionData.crmSubscription = false;
+    socket.leave('crm:events');
+
+    this.logger.info('CRM subscription removed', {
+      socketId: socket.id
+    });
+
+    socket.emit('crm:unsubscription_confirmed', {
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Emit conversation qualified event to CRM subscribers
+   */
+  emitConversationQualified(conversationId: string, companyId: string): void {
+    this.namespace.to('crm:events').emit('crm:conversation_qualified', {
+      conversationId,
+      companyId,
+      timestamp: new Date()
+    });
+
+    this.logger.debug('CRM conversation qualified event emitted', {
+      conversationId,
+      companyId
+    });
+  }
+
+  /**
+   * Emit form submission event to CRM subscribers
+   */
+  emitFormSubmitted(submissionId: string, companyId: string, formData: any): void {
+    this.namespace.to('crm:events').emit('crm:form_submitted', {
+      submissionId,
+      companyId,
+      formData,
+      timestamp: new Date()
+    });
+
+    this.logger.debug('CRM form submitted event emitted', {
+      submissionId,
+      companyId
+    });
+  }
+
+  /**
+   * Emit email engagement event to CRM subscribers
+   */
+  emitEmailEngaged(contactEmail: string, companyId: string, engagement: any): void {
+    this.namespace.to('crm:events').emit('crm:email_engaged', {
+      contactEmail,
+      companyId,
+      campaignId: engagement.campaignId,
+      action: engagement.action,
+      linkUrl: engagement.linkUrl,
+      timestamp: new Date()
+    });
+
+    this.logger.debug('CRM email engaged event emitted', {
+      contactEmail,
+      action: engagement.action
+    });
+  }
+
+  /**
+   * Get CRM subscribers count
+   */
+  getCRMSubscribersCount(): number {
+    let count = 0;
+    this.activeConnections.forEach(connection => {
+      if (connection.crmSubscription) {
+        count++;
       }
     });
     return count;

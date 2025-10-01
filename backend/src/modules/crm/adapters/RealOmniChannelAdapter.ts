@@ -7,6 +7,7 @@
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import axios, { AxiosInstance } from 'axios';
+import { io, Socket } from 'socket.io-client';
 import {
   IOmniChannelAdapter,
   IConversation,
@@ -19,6 +20,8 @@ export interface IOmniApiConfig {
   baseUrl: string;
   timeout: number;
   retries: number;
+  enableWebSocket?: boolean;
+  webSocketPath?: string;
 }
 
 @injectable()
@@ -26,6 +29,10 @@ export class RealOmniChannelAdapter implements IOmniChannelAdapter {
   private httpClient: AxiosInstance;
   private eventSubscribers: Array<(event: IOmniChannelEvent) => void> = [];
   private config: IOmniApiConfig;
+  private wsClient: Socket | null = null;
+  private isWsConnected: boolean = false;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
 
   constructor(
     @inject(TYPES.Logger) private logger: any
@@ -34,7 +41,9 @@ export class RealOmniChannelAdapter implements IOmniChannelAdapter {
     this.config = {
       baseUrl: process.env.OMNI_API_BASE_URL || 'http://localhost:3000',
       timeout: parseInt(process.env.OMNI_API_TIMEOUT || '10000'),
-      retries: parseInt(process.env.OMNI_API_RETRIES || '3')
+      retries: parseInt(process.env.OMNI_API_RETRIES || '3'),
+      enableWebSocket: process.env.OMNI_WEBSOCKET_ENABLED === 'true',
+      webSocketPath: process.env.OMNI_WEBSOCKET_PATH || '/omni'
     };
 
     // Initialize HTTP client
@@ -95,8 +104,14 @@ export class RealOmniChannelAdapter implements IOmniChannelAdapter {
     );
 
     this.logger.info('[RealOmniChannelAdapter] Initialized', {
-      baseUrl: this.config.baseUrl
+      baseUrl: this.config.baseUrl,
+      webSocketEnabled: this.config.enableWebSocket
     });
+
+    // Initialize WebSocket if enabled
+    if (this.config.enableWebSocket) {
+      this.initializeWebSocket();
+    }
   }
 
   /**
@@ -302,6 +317,132 @@ export class RealOmniChannelAdapter implements IOmniChannelAdapter {
   }
 
   /**
+   * Initialize WebSocket connection
+   */
+  private initializeWebSocket(): void {
+    try {
+      this.logger.info('[RealOmniChannelAdapter] Initializing WebSocket connection', {
+        baseUrl: this.config.baseUrl,
+        path: this.config.webSocketPath
+      });
+
+      // Create WebSocket client
+      this.wsClient = io(this.config.baseUrl, {
+        path: this.config.webSocketPath,
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        auth: {
+          // TODO: Add proper authentication token
+          token: process.env.OMNI_WS_AUTH_TOKEN || 'crm-integration',
+          companyId: 'system', // System-wide events
+          userId: 'crm-adapter'
+        }
+      });
+
+      // Register WebSocket event handlers
+      this.registerWebSocketHandlers();
+
+    } catch (error: any) {
+      this.logger.error('Failed to initialize WebSocket', { error: error.message });
+    }
+  }
+
+  /**
+   * Register WebSocket event handlers
+   */
+  private registerWebSocketHandlers(): void {
+    if (!this.wsClient) return;
+
+    // Connection events
+    this.wsClient.on('connect', () => {
+      this.isWsConnected = true;
+      this.reconnectAttempts = 0;
+      this.logger.info('[RealOmniChannelAdapter] WebSocket connected', {
+        socketId: this.wsClient?.id
+      });
+
+      // Subscribe to CRM-relevant events
+      this.wsClient?.emit('crm:subscribe', {
+        events: ['conversation.qualified', 'form.submitted', 'email.engaged']
+      });
+    });
+
+    this.wsClient.on('disconnect', (reason: string) => {
+      this.isWsConnected = false;
+      this.logger.warn('[RealOmniChannelAdapter] WebSocket disconnected', { reason });
+    });
+
+    this.wsClient.on('connect_error', (error: Error) => {
+      this.reconnectAttempts++;
+      this.logger.error('[RealOmniChannelAdapter] WebSocket connection error', {
+        error: error.message,
+        attempt: this.reconnectAttempts
+      });
+    });
+
+    // CRM Integration Events
+    this.wsClient.on('crm:conversation_qualified', (data: any) => {
+      this.logger.info('[RealOmniChannelAdapter] Received conversation qualified event', {
+        conversationId: data.conversationId
+      });
+
+      this.emitEvent({
+        type: 'conversation.qualified',
+        data: {
+          conversationId: data.conversationId,
+          companyId: data.companyId
+        },
+        timestamp: new Date(),
+        companyId: data.companyId
+      });
+    });
+
+    this.wsClient.on('crm:form_submitted', (data: any) => {
+      this.logger.info('[RealOmniChannelAdapter] Received form submission event', {
+        submissionId: data.submissionId
+      });
+
+      this.emitEvent({
+        type: 'form.submitted',
+        data: {
+          submissionId: data.submissionId,
+          companyId: data.companyId
+        },
+        timestamp: new Date(),
+        companyId: data.companyId
+      });
+    });
+
+    this.wsClient.on('crm:email_engaged', (data: any) => {
+      this.logger.info('[RealOmniChannelAdapter] Received email engagement event', {
+        contactEmail: data.contactEmail,
+        action: data.action
+      });
+
+      this.emitEvent({
+        type: 'email.engaged',
+        data: {
+          contactEmail: data.contactEmail,
+          campaignId: data.campaignId,
+          action: data.action,
+          linkUrl: data.linkUrl,
+          companyId: data.companyId
+        },
+        timestamp: new Date(),
+        companyId: data.companyId
+      });
+    });
+
+    // Health check response
+    this.wsClient.on('pong', () => {
+      this.logger.debug('[RealOmniChannelAdapter] WebSocket pong received');
+    });
+  }
+
+  /**
    * Subscribe to omnichannel events
    */
   subscribeToEvents(eventHandler: (event: IOmniChannelEvent) => void): void {
@@ -310,8 +451,11 @@ export class RealOmniChannelAdapter implements IOmniChannelAdapter {
       totalSubscribers: this.eventSubscribers.length
     });
 
-    // TODO: Implement WebSocket or polling mechanism for real-time events
-    // For now, events will be polled or pushed via other mechanisms
+    // If WebSocket is not enabled, log warning
+    if (!this.config.enableWebSocket) {
+      this.logger.warn('[RealOmniChannelAdapter] WebSocket is disabled - real-time events will not be received');
+      this.logger.warn('[RealOmniChannelAdapter] Set OMNI_WEBSOCKET_ENABLED=true to enable real-time events');
+    }
   }
 
   /**
@@ -320,6 +464,15 @@ export class RealOmniChannelAdapter implements IOmniChannelAdapter {
   unsubscribeFromEvents(): void {
     this.eventSubscribers = [];
     this.logger.info('[RealOmniChannelAdapter] All event subscribers removed');
+
+    // Disconnect WebSocket if connected
+    if (this.wsClient && this.isWsConnected) {
+      this.wsClient.emit('crm:unsubscribe');
+      this.wsClient.disconnect();
+      this.wsClient = null;
+      this.isWsConnected = false;
+      this.logger.info('[RealOmniChannelAdapter] WebSocket disconnected');
+    }
   }
 
   /**

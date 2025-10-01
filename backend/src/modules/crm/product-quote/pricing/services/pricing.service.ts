@@ -1,4 +1,5 @@
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IPricingService } from '../interfaces/IPricingService';
 import { IPricingRepository } from '../interfaces/IPricingRepository';
 import { PricingResult } from '../../../types/pricing.types';
@@ -8,9 +9,9 @@ import { Pool } from 'pg';
 @injectable()
 export class PricingService implements IPricingService {
   constructor(
-    @inject('PricingRepository')
+    @inject(TYPES.PricingRepository)
     private pricingRepository: IPricingRepository,
-    @inject('DatabasePool')
+    @inject(TYPES.DatabasePool)
     private pool: Pool
   ) {}
 

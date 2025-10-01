@@ -3,7 +3,8 @@
  * Complete implementation of pricing rules and calculations
  */
 
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { Pool, PoolClient } from 'pg';
 import { Logger } from 'winston';
 import { Redis } from 'ioredis';
@@ -168,9 +169,9 @@ export class PricingServiceImpl {
   private readonly MAX_DISCOUNT_STACK = 3;
 
   constructor(
-    @inject('Pool') private pool: Pool,
-    @inject('Logger') private logger: Logger,
-    @inject('Redis') private redis: Redis
+    @inject(TYPES.DatabasePool) private pool: Pool,
+    @inject(TYPES.Logger) private logger: Logger,
+    @inject(TYPES.RedisClient) private redis: Redis
   ) {}
 
   /**

@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IPromotionService } from '../interfaces/IPromotionService';
 import { AppError } from '../../../../../shared/errors/AppError';
 
 @injectable()
 export class PromotionController {
   constructor(
-    @inject('PromotionService')
+    @inject(TYPES.PromotionService)
     private promotionService: IPromotionService
   ) {}
 

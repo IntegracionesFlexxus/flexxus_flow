@@ -17,12 +17,14 @@ import { ProductServiceImpl } from '../catalog/services/ProductServiceImpl';
 import { QuoteServiceImpl } from '../quotes/services/QuoteServiceImpl';
 import { PricingServiceImpl } from '../pricing/services/PricingServiceImpl';
 import { DocumentGenerationService } from '../documents/services/document-generation.service';
+import { PromotionService } from '../pricing/services/promotion.service';
 
 // Import Controllers
 import { ProductController } from '../catalog/controllers/ProductController';
 import { QuoteController } from '../quotes/controllers/QuoteController';
 import { PricingController } from '../pricing/controllers/pricing.controller';
 import { ProductCategoryController } from '../catalog/controllers/product-category.controller';
+import { PromotionController } from '../pricing/controllers/promotion.controller';
 
 /**
  * Configure the Product & Quote module container
@@ -62,6 +64,10 @@ export function configureProductQuoteContainer(container: Container): void {
     .to(DocumentGenerationService)
     .inSingletonScope();
 
+  container.bind(TYPES.PromotionService)
+    .to(PromotionService)
+    .inSingletonScope();
+
   // Note: ApprovalService not implemented in Sprint 20 yet
   // container.bind(TYPES.ApprovalService).to(ApprovalServiceImpl).inSingletonScope();
 
@@ -80,6 +86,10 @@ export function configureProductQuoteContainer(container: Container): void {
 
   container.bind(TYPES.ProductCategoryController)
     .to(ProductCategoryController)
+    .inSingletonScope();
+
+  container.bind(TYPES.PromotionController)
+    .to(PromotionController)
     .inSingletonScope();
 
   console.log('✅ Product & Quote Module (Sprint 20) services registered');

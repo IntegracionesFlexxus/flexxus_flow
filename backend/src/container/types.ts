@@ -285,11 +285,15 @@ export const TYPES = {
   // Product & Quote - Additional Repositories (Sprint 20)
   ProductCategoryRepository: Symbol.for('ProductCategoryRepository'),
   QuoteLineItemRepository: Symbol.for('QuoteLineItemRepository'),
+  PricingRepository: Symbol.for('PricingRepository'),
   // Product & Quote - Additional Controllers (Sprint 20)
   ProductCategoryController: Symbol.for('ProductCategoryController'),
   PricingController: Symbol.for('PricingController'),
   // Product & Quote - Document Services (Sprint 20)
   DocumentGenerationService: Symbol.for('DocumentGenerationService'),
+  // Product & Quote - Pricing Services (Sprint 20)
+  PromotionService: Symbol.for('PromotionService'),
+  PromotionController: Symbol.for('PromotionController'),
   // Sprint 17 CRM Extended Services
   AccountHierarchyService: Symbol.for('AccountHierarchyService'),
   TerritoryManagementService: Symbol.for('TerritoryManagementService'),

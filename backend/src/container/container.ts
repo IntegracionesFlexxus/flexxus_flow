@@ -353,13 +353,16 @@ import { configureCRMContainer } from '@/modules/crm';
 // Configure CRM module bindings
 configureCRMContainer(container);
 
+// ========== Omni Module Configuration (Sprint 05-06) ==========
+import { configureOmniContainer } from '@/modules/omni/config/omni.container';
+
+// Configure Omni module bindings
+configureOmniContainer(container);
+
 // ========== Product & Quote Module (Sprint 20) ==========
 // Note: Product & Quote module bindings are now handled by configureProductQuoteContainer()
 // in src/modules/crm/product-quote/config/product-quote.container.ts
 // This prevents duplicate bindings and keeps module dependencies isolated
-// - Omni Module
-// - Workflow Module
-// - Analytics Module
 /**
  * Verificar salud de las conexiones de base de datos
  * Clean Code: Función auxiliar para health checks

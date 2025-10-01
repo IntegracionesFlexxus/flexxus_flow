@@ -88,6 +88,7 @@ export const TYPES = {
   OmniTemplateRepository: Symbol.for('OmniTemplateRepository'),
   OmniLandingPageRepository: Symbol.for('OmniLandingPageRepository'),
   OmniFormRepository: Symbol.for('OmniFormRepository'),
+  OmniEmailEngagementRepository: Symbol.for('OmniEmailEngagementRepository'), // Sprint N+3
 
   // Services
   OmniChannelService: Symbol.for('OmniChannelService'),

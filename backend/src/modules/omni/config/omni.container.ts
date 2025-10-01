@@ -12,6 +12,8 @@ import { ConversationRepository } from '../repositories/ConversationRepository';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { CustomerRepository } from '../repositories/CustomerRepository';
 import { TemplateRepository, QuickReplyRepository } from '../repositories/TemplateRepository';
+import { LandingPageRepository } from '../repositories/LandingPageRepository'; // Sprint N+3
+import { EmailEngagementRepository } from '../repositories/EmailEngagementRepository'; // Sprint N+3
 
 // Import services
 import {
@@ -99,6 +101,15 @@ export function configureOmniContainer(container: Container): void {
 
   container.bind<TemplateRepository>(TYPES.OmniTemplateRepository)
     .to(TemplateRepository)
+    .inSingletonScope();
+
+  // Sprint N+3: Landing Pages & Email Engagement
+  container.bind<LandingPageRepository>(TYPES.OmniLandingPageRepository)
+    .to(LandingPageRepository)
+    .inSingletonScope();
+
+  container.bind<EmailEngagementRepository>(TYPES.OmniEmailEngagementRepository)
+    .to(EmailEngagementRepository)
     .inSingletonScope();
 
   // Bind services

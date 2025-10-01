@@ -8,6 +8,8 @@ import { Request, Response } from 'express';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { ConversationService } from '../services';
+import { LandingPageRepository } from '../repositories/LandingPageRepository'; // Sprint N+3
+import { EmailEngagementRepository } from '../repositories/EmailEngagementRepository'; // Sprint N+3
 
 // Helper for consistent API responses
 const apiResponse = (success: boolean, data: any = null, message: string = '') => ({
@@ -20,7 +22,9 @@ const apiResponse = (success: boolean, data: any = null, message: string = '') =
 @injectable()
 export class CRMIntegrationController {
   constructor(
-    @inject(TYPES.OmniConversationService) private conversationService: ConversationService
+    @inject(TYPES.OmniConversationService) private conversationService: ConversationService,
+    @inject(TYPES.OmniLandingPageRepository) private landingPageRepo: LandingPageRepository, // Sprint N+3
+    @inject(TYPES.OmniEmailEngagementRepository) private emailEngagementRepo: EmailEngagementRepository // Sprint N+3
   ) {}
 
   /**
@@ -151,9 +155,35 @@ export class CRMIntegrationController {
       const { id } = req.params;
       const companyId = (req as any).user?.companyId;
 
-      // TODO: Implement landing page submissions repository
-      // For now, return mock structure
-      res.status(501).json(apiResponse(false, null, 'Landing page submissions not yet implemented'));
+      if (!companyId) {
+        res.status(401).json(apiResponse(false, null, 'Company ID not found'));
+        return;
+      }
+
+      const submission = await this.landingPageRepo.findSubmissionById(id, companyId);
+
+      if (!submission) {
+        res.status(404).json(apiResponse(false, null, 'Submission not found'));
+        return;
+      }
+
+      // Format submission for CRM consumption
+      const formattedSubmission = {
+        id: submission.submission_id,
+        landingPageId: submission.landing_page_id,
+        formData: submission.form_data,
+        utm: {
+          source: submission.utm_source,
+          medium: submission.utm_medium,
+          campaign: submission.utm_campaign,
+          term: submission.utm_term,
+          content: submission.utm_content
+        },
+        referrer: submission.referrer_url,
+        submittedAt: submission.submitted_at
+      };
+
+      res.json(apiResponse(true, formattedSubmission, 'Submission retrieved successfully'));
     } catch (error: any) {
       res.status(500).json(apiResponse(false, null, error.message));
     }
@@ -168,8 +198,36 @@ export class CRMIntegrationController {
       const companyId = (req as any).user?.companyId;
       const since = req.query.since ? new Date(req.query.since as string) : undefined;
 
-      // TODO: Implement landing page submissions repository
-      res.status(501).json(apiResponse(false, null, 'Landing page submissions not yet implemented'));
+      if (!companyId) {
+        res.status(401).json(apiResponse(false, null, 'Company ID not found'));
+        return;
+      }
+
+      const submissions = await this.landingPageRepo.findRecentSubmissions(companyId, since);
+
+      // Format submissions for CRM consumption
+      const formattedSubmissions = submissions.map(sub => ({
+        id: sub.submission_id,
+        landingPageId: sub.landing_page_id,
+        formData: sub.form_data,
+        email: sub.email,
+        firstName: sub.first_name,
+        lastName: sub.last_name,
+        phone: sub.phone,
+        company: sub.company_name,
+        utm: {
+          source: sub.utm_source,
+          medium: sub.utm_medium,
+          campaign: sub.utm_campaign,
+          term: sub.utm_term,
+          content: sub.utm_content
+        },
+        referrer: sub.referrer_url,
+        status: sub.status,
+        submittedAt: sub.submitted_at
+      }));
+
+      res.json(apiResponse(true, formattedSubmissions, 'Submissions retrieved successfully'));
     } catch (error: any) {
       res.status(500).json(apiResponse(false, null, error.message));
     }
@@ -189,8 +247,23 @@ export class CRMIntegrationController {
         return;
       }
 
-      // TODO: Implement email engagement tracking
-      res.status(501).json(apiResponse(false, null, 'Email engagement tracking not yet implemented'));
+      if (!companyId) {
+        res.status(401).json(apiResponse(false, null, 'Company ID not found'));
+        return;
+      }
+
+      const events = await this.emailEngagementRepo.findEventsByEmail(email as string, companyId);
+
+      // Format engagement events for CRM consumption
+      const formattedEvents = events.map(event => ({
+        contactEmail: event.contact_email,
+        campaignId: event.campaign_id,
+        action: event.event_type,
+        linkUrl: event.link_url,
+        timestamp: event.occurred_at
+      }));
+
+      res.json(apiResponse(true, formattedEvents, 'Email engagements retrieved successfully'));
     } catch (error: any) {
       res.status(500).json(apiResponse(false, null, error.message));
     }
@@ -210,8 +283,22 @@ export class CRMIntegrationController {
         return;
       }
 
-      // TODO: Implement email engagement tracking
-      res.status(501).json(apiResponse(false, null, 'Email engagement tracking not yet implemented'));
+      if (!companyId) {
+        res.status(401).json(apiResponse(false, null, 'Company ID not found'));
+        return;
+      }
+
+      // Track the engagement event
+      const event = await this.emailEngagementRepo.trackEvent({
+        campaign_id: campaignId,
+        company_id: companyId,
+        contact_email: contactEmail,
+        event_type: action as any,
+        link_url: linkUrl,
+        occurred_at: new Date()
+      });
+
+      res.json(apiResponse(true, { eventId: event.event_id }, 'Email engagement tracked successfully'));
     } catch (error: any) {
       res.status(500).json(apiResponse(false, null, error.message));
     }

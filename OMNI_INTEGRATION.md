@@ -40,15 +40,25 @@ IntegrationService                    Controller
   - Body: `{ "leadId": number }`
   - Response: Success confirmation
 
-#### Landing Page Endpoints (Not yet implemented)
+#### Landing Page Endpoints (Sprint N+3 - Implemented)
 
-- **GET /submissions/:id** - Get submission by ID (501)
-- **GET /submissions** - Get recent submissions (501)
+- **GET /submissions/:id** - Get submission by ID
+  - Query params: None
+  - Response: Submission object with form data and UTM tracking
 
-#### Email Engagement Endpoints (Not yet implemented)
+- **GET /submissions** - Get recent submissions
+  - Query params: `?since=2024-01-01T00:00:00Z` (optional)
+  - Response: Array of submission objects
 
-- **GET /email-engagements** - Get engagements by email (501)
-- **POST /email-engagements** - Track engagement event (501)
+#### Email Engagement Endpoints (Sprint N+3 - Implemented)
+
+- **GET /email-engagements** - Get engagements by email
+  - Query params: `?email=contact@example.com` (required)
+  - Response: Array of engagement events (opens, clicks, etc.)
+
+- **POST /email-engagements** - Track engagement event
+  - Body: `{ "contactEmail": string, "campaignId": string, "action": string, "linkUrl": string (optional) }`
+  - Response: Success confirmation with event ID
 
 ### 2. CRM Module - Adapter Implementation
 
@@ -84,6 +94,11 @@ OMNICHANNEL_ADAPTER_TYPE=api
 OMNI_API_BASE_URL=http://localhost:3000
 OMNI_API_TIMEOUT=10000
 OMNI_API_RETRIES=3
+
+# WebSocket Real-Time Events (Sprint N+2)
+OMNI_WEBSOCKET_ENABLED=true
+OMNI_WEBSOCKET_PATH=/omni
+OMNI_WS_AUTH_TOKEN=your-token-here
 ```
 
 ### Local Development
@@ -208,23 +223,72 @@ All integration activity is logged with `[RealOmniChannelAdapter]` prefix:
 - Qualified conversations processed
 - Successful lead captures
 
+## WebSocket Real-Time Events (Sprint N+2)
+
+### Overview
+
+Instead of polling for new leads, the CRM module can now receive real-time events from Omni via WebSocket:
+
+- **conversation.qualified** - New qualified conversation ready for lead capture
+- **form.submitted** - Landing page form submission
+- **email.engaged** - Email engagement (open, click, reply)
+
+### How It Works
+
+1. **CRM Adapter** connects to Omni WebSocket namespace (`/omni`)
+2. **Subscribe** to CRM events on connection
+3. **Receive** events in real-time as they happen
+4. **Process** leads immediately without delay
+
+### Event Flow
+
+```
+Omni Module                     WebSocket                    CRM Module
+    │                               │                             │
+    ├─ Conversation qualified      │                             │
+    ├──────────────────────────────▶│                             │
+    │                               ├───crm:conversation_qualified▶│
+    │                               │                             ├─ Create Lead
+    │                               │                             ├─ Link conversation
+    │                               │                             │
+    ├─ Form submitted              │                             │
+    ├──────────────────────────────▶│                             │
+    │                               ├───crm:form_submitted────────▶│
+    │                               │                             ├─ Create Lead + UTM
+```
+
+### Benefits
+
+- **Instant Lead Capture** - No polling delay (0-5 seconds vs 30-60 seconds)
+- **Reduced Load** - No repeated API calls
+- **Better UX** - Leads appear immediately in CRM
+- **Scalable** - Handles high-volume events efficiently
+
 ## Roadmap
 
-### Phase 1 (Current - Sprint N+1)
+### Phase 1 (Completed - Sprint N+1)
 - ✅ Real API integration
 - ✅ Conversation capture
 - ✅ Link tracking
 
-### Phase 2 (Future)
-- ⏳ Landing page submissions
-- ⏳ Email engagement tracking
-- ⏳ WebSocket for real-time events
-- ⏳ Bidirectional sync
+### Phase 2 (Completed - Sprint N+2)
+- ✅ Unit & Integration tests
+- ✅ WebSocket for real-time events
 
-### Phase 3 (Future)
+### Phase 3 (Completed - Sprint N+3)
+- ✅ Landing page submissions (full implementation)
+- ✅ Email engagement tracking (full implementation)
+- ✅ Database schema for landing pages and email campaigns
+- ✅ Repositories with analytics and aggregations
+- ✅ API endpoints fully functional
+
+### Phase 4 (Future)
 - ⏳ CRM activities sync to Omni
 - ⏳ Unified customer view
 - ⏳ Cross-module analytics
+- ⏳ Bidirectional sync
+- ⏳ Advanced lead scoring with email engagement
+- ⏳ Automated nurture campaigns based on CRM data
 
 ## Troubleshooting
 

@@ -266,6 +266,9 @@ export const TYPES = {
   OpportunityRepository: Symbol.for('OpportunityRepository'),
   OpportunityService: Symbol.for('OpportunityService'),
   ActivityRepository: Symbol.for('ActivityRepository'),
+  CalendarIntegrationRepository: Symbol.for('CalendarIntegrationRepository'), // Sprint 21
+  CalendarIntegrationService: Symbol.for('CalendarIntegrationService'), // Sprint 21
+  TaskAutomationService: Symbol.for('TaskAutomationService'), // Sprint 21
   ActivityService: Symbol.for('ActivityService'),
   ReferenceDataRepository: Symbol.for('ReferenceDataRepository'),
   LeadController: Symbol.for('LeadController'),

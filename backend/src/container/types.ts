@@ -282,6 +282,7 @@ export const TYPES = {
   CrmController: Symbol.for('CrmController'),
   SearchController: Symbol.for('SearchController'), // Sprint 17
   TerritoryController: Symbol.for('TerritoryController'), // Sprint 17
+  AnalyticsController: Symbol.for('AnalyticsController'), // Omni Module
   // Sprint 17 - Advanced Account & Contact Management
   AccountHierarchyRepository: Symbol.for('AccountHierarchyRepository'),
   TerritoryRepository: Symbol.for('TerritoryRepository'),

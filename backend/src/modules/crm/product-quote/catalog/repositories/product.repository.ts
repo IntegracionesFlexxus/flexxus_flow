@@ -223,6 +223,19 @@ export class ProductRepository {
     return result.rows[0] || null;
   }
 
+  async hasActiveQuotes(productId: number): Promise<boolean> {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM quote_line_items qli
+      INNER JOIN quotes q ON qli.quote_id = q.quote_id
+      WHERE qli.product_id = $1
+        AND q.status IN ('draft', 'sent', 'accepted')
+    `;
+
+    const result = await this.pool.query(query, [productId]);
+    return parseInt(result.rows[0].count) > 0;
+  }
+
   private mapToProduct(row: any): IProduct {
     return {
       product_id: row.product_id,

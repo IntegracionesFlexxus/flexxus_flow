@@ -11,6 +11,7 @@ import { ProductRepository } from '../catalog/repositories/ProductRepository';
 import { QuoteRepository } from '../quotes/repositories/QuoteRepository';
 import { ProductCategoryRepository } from '../catalog/repositories/product-category.repository';
 import { QuoteLineItemRepository } from '../quotes/repositories/quote-line-item.repository';
+import { PricingRepository } from '../pricing/repositories/pricing.repository';
 
 // Import Services
 import { ProductServiceImpl } from '../catalog/services/ProductServiceImpl';
@@ -45,6 +46,10 @@ export function configureProductQuoteContainer(container: Container): void {
 
   container.bind(TYPES.QuoteLineItemRepository)
     .to(QuoteLineItemRepository)
+    .inSingletonScope();
+
+  container.bind(TYPES.PricingRepository)
+    .to(PricingRepository)
     .inSingletonScope();
 
   // Bind Services

@@ -373,6 +373,20 @@ export class QuoteRepository {
     return result.rows[0];
   }
 
+  async getLastQuoteNumber(year: number, month: number): Promise<string | null> {
+    const query = `
+      SELECT quote_number
+      FROM quotes
+      WHERE quote_number LIKE $1
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+
+    const pattern = `QT-${year}${String(month).padStart(2, '0')}-%`;
+    const result = await this.pool.query(query, [pattern]);
+    return result.rows[0]?.quote_number || null;
+  }
+
   private async generateQuoteNumber(companyId: number): Promise<string> {
     const query = `SELECT generate_quote_number($1) as quote_number`;
     const result = await this.pool.query(query, [companyId]);

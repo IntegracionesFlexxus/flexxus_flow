@@ -5,6 +5,7 @@
  */
 
 import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { Pool } from 'pg';
 import { LeadRepository } from '../../../repositories/LeadRepository';
 import { IOmniChannelAdapter, IOmniChannelEvent } from '../../../adapters/IOmniChannelAdapter';
@@ -19,9 +20,9 @@ export class OmniChannelIntegrationService {
   private eventBus: EventEmitter;
 
   constructor(
-    @inject('LeadRepository') private leadRepo: LeadRepository,
-    @inject('DatabaseConnection') private db: Pool,
-    @inject('EventBus') eventBus: EventEmitter
+    @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
+    @inject(TYPES.DatabasePool) private db: Pool,
+    @inject(TYPES.EventEmitter) eventBus: EventEmitter
   ) {
     this.eventBus = eventBus;
     this.initializeAdapter();

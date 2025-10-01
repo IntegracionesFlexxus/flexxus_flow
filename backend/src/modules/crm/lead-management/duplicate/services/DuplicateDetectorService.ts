@@ -5,6 +5,7 @@
  */
 
 import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { Pool } from 'pg';
 import { LeadRepository } from '../../../repositories/LeadRepository';
 import { EventEmitter } from 'events';
@@ -35,9 +36,9 @@ export class DuplicateDetectorService {
   private readonly HIGH_CONFIDENCE_THRESHOLD = 0.9; // 90% for auto-merge candidates
 
   constructor(
-    @inject('LeadRepository') private leadRepo: LeadRepository,
-    @inject('DatabaseConnection') private db: Pool,
-    @inject('EventBus') private eventBus: EventEmitter
+    @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
+    @inject(TYPES.DatabasePool) private db: Pool,
+    @inject(TYPES.EventEmitter) private eventBus: EventEmitter
   ) {}
 
   /**

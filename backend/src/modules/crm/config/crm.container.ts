@@ -211,28 +211,28 @@ export function configureCRMContainer(container: Container): void {
 
   // Sprint 16: Lead Management Services
   container
-    .bind<ScoringEngineService>('ScoringEngineService')
+    .bind<ScoringEngineService>(TYPES.ScoringEngineService)
     .to(ScoringEngineService)
     .inSingletonScope();
 
   container
-    .bind<AssignmentRuleEngine>('AssignmentRuleEngine')
+    .bind<AssignmentRuleEngine>(TYPES.AssignmentRuleEngine)
     .to(AssignmentRuleEngine)
     .inSingletonScope();
 
   container
-    .bind<DuplicateDetectorService>('DuplicateDetectorService')
+    .bind<DuplicateDetectorService>(TYPES.DuplicateDetectorService)
     .to(DuplicateDetectorService)
     .inSingletonScope();
 
   container
-    .bind<OmniChannelIntegrationService>('OmniChannelIntegrationService')
+    .bind<OmniChannelIntegrationService>(TYPES.OmniChannelIntegrationService)
     .to(OmniChannelIntegrationService)
     .inSingletonScope();
 
   // Sprint 16: Lead Management Controller
   container
-    .bind<LeadManagementController>('LeadManagementController')
+    .bind<LeadManagementController>(TYPES.LeadManagementController)
     .to(LeadManagementController)
     .inSingletonScope();
 

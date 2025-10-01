@@ -15,11 +15,11 @@ import { OmniChannelIntegrationService } from '../lead-management/capture/servic
 @injectable()
 export class LeadManagementController {
   constructor(
-    @inject('LeadRepository') private leadRepo: LeadRepository,
-    @inject('ScoringEngineService') private scoringService: ScoringEngineService,
-    @inject('AssignmentRuleEngine') private assignmentService: AssignmentRuleEngine,
-    @inject('DuplicateDetectorService') private duplicateService: DuplicateDetectorService,
-    @inject('OmniChannelIntegrationService') private omniChannelService: OmniChannelIntegrationService,
+    @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
+    @inject(TYPES.ScoringEngineService) private scoringService: ScoringEngineService,
+    @inject(TYPES.AssignmentRuleEngine) private assignmentService: AssignmentRuleEngine,
+    @inject(TYPES.DuplicateDetectorService) private duplicateService: DuplicateDetectorService,
+    @inject(TYPES.OmniChannelIntegrationService) private omniChannelService: OmniChannelIntegrationService,
     @inject(TYPES.Logger) private logger: any
   ) {}
 

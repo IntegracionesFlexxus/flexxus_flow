@@ -296,6 +296,14 @@ export const TYPES = {
   PromotionController: Symbol.for('PromotionController'),
   // Product & Quote - Catalog Services (Sprint 20)
   ProductCategoryService: Symbol.for('ProductCategoryService'),
+
+  // Sprint 16 - Lead Management Services
+  ScoringEngineService: Symbol.for('ScoringEngineService'),
+  AssignmentRuleEngine: Symbol.for('AssignmentRuleEngine'),
+  DuplicateDetectorService: Symbol.for('DuplicateDetectorService'),
+  OmniChannelIntegrationService: Symbol.for('OmniChannelIntegrationService'),
+  LeadManagementController: Symbol.for('LeadManagementController'),
+
   // Sprint 17 CRM Extended Services
   AccountHierarchyService: Symbol.for('AccountHierarchyService'),
   TerritoryManagementService: Symbol.for('TerritoryManagementService'),

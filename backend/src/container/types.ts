@@ -132,6 +132,7 @@ export const TYPES = {
   OmniAutomationMetricsService: Symbol.for('OmniAutomationMetricsService'),
 
   // Sprint 08 Services - Analytics & Reporting (Legacy)
+  OmniRealTimeAnalytics: Symbol.for('OmniRealTimeAnalytics'),
   RealTimeAnalytics: Symbol.for('RealTimeAnalytics'),
   ReportingService: Symbol.for('ReportingService'),
   OmniDashboardServiceLegacy: Symbol.for('OmniDashboardServiceLegacy'),

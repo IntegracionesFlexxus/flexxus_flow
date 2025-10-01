@@ -6,7 +6,7 @@ import { ReportService } from '../services/ReportService';
 @injectable()
 export class ReportController {
   constructor(
-    @inject(TYPES.ReportService) private reportService: ReportService
+    @inject(TYPES.CRMReportService) private reportService: ReportService
   ) {}
 
   /**

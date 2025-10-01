@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
-import { IPricingService } from '../interfaces/IPricingService';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
+import { PricingServiceImpl } from '../services/PricingServiceImpl';
 import { AppError } from '../../../../../shared/errors/AppError';
 
 @injectable()
 export class PricingController {
   constructor(
-    @inject('PricingService')
-    private pricingService: IPricingService
+    @inject(TYPES.PricingService) private pricingService: PricingServiceImpl,
+    @inject(TYPES.Logger) private logger: any
   ) {}
 
   async calculateItemPrice(req: Request, res: Response): Promise<Response> {

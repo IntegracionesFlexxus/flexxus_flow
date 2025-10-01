@@ -1,4 +1,8 @@
 /**
+ * @deprecated Sprint 19 - Usar implementación Sprint 20 en product-quote/
+ * Este archivo será eliminado en futuras versiones
+ * Ver: backend/src/modules/crm/product-quote/quotes/services/QuoteServiceImpl.ts
+ *
  * Quote Management Service - Sprint 19
  * High-level service orchestrating quote operations
  */

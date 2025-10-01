@@ -8,9 +8,9 @@ import { DashboardService } from '../services/DashboardService';
 @injectable()
 export class AnalyticsController {
   constructor(
-    @inject(TYPES.AnalyticsService) private analyticsService: AnalyticsService,
-    @inject(TYPES.KpiService) private kpiService: KpiService,
-    @inject(TYPES.DashboardService) private dashboardService: DashboardService
+    @inject(TYPES.CRMAnalyticsService) private analyticsService: AnalyticsService,
+    @inject(TYPES.CRMKpiService) private kpiService: KpiService,
+    @inject(TYPES.CRMDashboardService) private dashboardService: DashboardService
   ) {}
 
   /**

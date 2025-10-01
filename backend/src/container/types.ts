@@ -79,10 +79,179 @@ export const TYPES = {
   // Session Management
   SessionRepository: Symbol.for('SessionRepository'),
   SessionValidator: Symbol.for('SessionValidator'),
-  // Omni Module Services
+  // Omni Module Services - Sprint 05 Complete
+  // Repositories
   OmniChannelRepository: Symbol.for('OmniChannelRepository'),
+  OmniConversationRepository: Symbol.for('OmniConversationRepository'),
+  OmniMessageRepository: Symbol.for('OmniMessageRepository'),
+  OmniCustomerRepository: Symbol.for('OmniCustomerRepository'),
+  OmniTemplateRepository: Symbol.for('OmniTemplateRepository'),
+  OmniLandingPageRepository: Symbol.for('OmniLandingPageRepository'),
+  OmniFormRepository: Symbol.for('OmniFormRepository'),
+
+  // Services
   OmniChannelService: Symbol.for('OmniChannelService'),
+  OmniConversationService: Symbol.for('OmniConversationService'),
+  OmniMessageService: Symbol.for('OmniMessageService'),
+  OmniCustomerService: Symbol.for('OmniCustomerService'),
+  OmniTemplateService: Symbol.for('OmniTemplateService'),
+  OmniWebSocketService: Symbol.for('OmniWebSocketService'),
+
+  // Controllers
+  OmniChannelController: Symbol.for('OmniChannelController'),
+  OmniConversationController: Symbol.for('OmniConversationController'),
+  OmniMessageController: Symbol.for('OmniMessageController'),
+  OmniCustomerController: Symbol.for('OmniCustomerController'),
+  OmniTemplateController: Symbol.for('OmniTemplateController'),
   OmniController: Symbol.for('OmniController'),
+
+  // WebSocket Handlers
+  OmniWebSocketHandler: Symbol.for('OmniWebSocketHandler'),
+
+  // Sprint 06 Services
+  OmniChannelHealthMonitor: Symbol.for('OmniChannelHealthMonitor'),
+  OmniRateLimiter: Symbol.for('OmniRateLimiter'),
+  OmniWebhookProcessor: Symbol.for('OmniWebhookProcessor'),
+  OmniMessageQueue: Symbol.for('OmniMessageQueue'),
+
+  // Sprint 07 Services - Automation & Rules
+  OmniRuleEngine: Symbol.for('OmniRuleEngine'),
+  OmniRuleRepository: Symbol.for('OmniRuleRepository'),
+  OmniRuleEvaluator: Symbol.for('OmniRuleEvaluator'),
+  OmniActionExecutor: Symbol.for('OmniActionExecutor'),
+  OmniAutoResponseService: Symbol.for('OmniAutoResponseService'),
+  OmniAutoResponseRepository: Symbol.for('OmniAutoResponseRepository'),
+  OmniKeywordMatcher: Symbol.for('OmniKeywordMatcher'),
+  OmniScheduleManager: Symbol.for('OmniScheduleManager'),
+  OmniConversationRouter: Symbol.for('OmniConversationRouter'),
+  OmniAgentAvailabilityService: Symbol.for('OmniAgentAvailabilityService'),
+  OmniFlowEngine: Symbol.for('OmniFlowEngine'),
+  OmniFlowRepository: Symbol.for('OmniFlowRepository'),
+  OmniCRMIntegrationService: Symbol.for('OmniCRMIntegrationService'),
+  OmniAutomationMetricsService: Symbol.for('OmniAutomationMetricsService'),
+
+  // Sprint 08 Services - Analytics & Reporting (Legacy)
+  RealTimeAnalytics: Symbol.for('RealTimeAnalytics'),
+  ReportingService: Symbol.for('ReportingService'),
+  OmniDashboardServiceLegacy: Symbol.for('OmniDashboardServiceLegacy'),
+  KPIService: Symbol.for('KPIService'),
+  PredictionEngine: Symbol.for('PredictionEngine'),
+  DataPipeline: Symbol.for('DataPipeline'),
+
+  // Sprint 09 Services - External Integrations & APIs
+  IntegrationManager: Symbol.for('IntegrationManager'),
+  OAuthService: Symbol.for('OAuthService'),
+  SalesforceProvider: Symbol.for('SalesforceProvider'),
+  HubSpotProvider: Symbol.for('HubSpotProvider'),
+  GoogleCalendarProvider: Symbol.for('GoogleCalendarProvider'),
+  S3Provider: Symbol.for('S3Provider'),
+  WebhookManager: Symbol.for('WebhookManager'),
+  ApiKeyService: Symbol.for('ApiKeyService'),
+  IntegrationController: Symbol.for('IntegrationController'),
+
+  // Sprint 12 Services - ML/AI Advanced Features
+  // ML Core
+  MLModelRepository: Symbol.for('MLModelRepository'),
+  MLModelService: Symbol.for('MLModelService'),
+  MLDeploymentRepository: Symbol.for('MLDeploymentRepository'),
+  MLDeploymentService: Symbol.for('MLDeploymentService'),
+  PredictionRepository: Symbol.for('PredictionRepository'),
+  PredictionService: Symbol.for('PredictionService'),
+  FeatureStoreRepository: Symbol.for('FeatureStoreRepository'),
+  FeatureStoreService: Symbol.for('FeatureStoreService'),
+  MLExperimentRepository: Symbol.for('MLExperimentRepository'),
+  MLExperimentService: Symbol.for('MLExperimentService'),
+
+  // NLP Services
+  NLPModelRepository: Symbol.for('NLPModelRepository'),
+  NLPModelService: Symbol.for('NLPModelService'),
+  IntentClassificationService: Symbol.for('IntentClassificationService'),
+  EntityExtractionService: Symbol.for('EntityExtractionService'),
+  IntentPatternRepository: Symbol.for('IntentPatternRepository'),
+  ConversationContextRepository: Symbol.for('ConversationContextRepository'),
+  ConversationContextService: Symbol.for('ConversationContextService'),
+  AIResponseTemplateRepository: Symbol.for('AIResponseTemplateRepository'),
+  AIResponseGenerationService: Symbol.for('AIResponseGenerationService'),
+
+  // AI Workflows
+  AIWorkflowRepository: Symbol.for('AIWorkflowRepository'),
+  AIWorkflowService: Symbol.for('AIWorkflowService'),
+  AIWorkflowEngine: Symbol.for('AIWorkflowEngine'),
+  WorkflowExecutionRepository: Symbol.for('WorkflowExecutionRepository'),
+  DecisionRuleRepository: Symbol.for('DecisionRuleRepository'),
+  DecisionRuleService: Symbol.for('DecisionRuleService'),
+  MLBasedRuleEngine: Symbol.for('MLBasedRuleEngine'),
+
+  // Predictive Analytics
+  CustomerBehaviorPredictionService: Symbol.for('CustomerBehaviorPredictionService'),
+  CustomerPredictionRepository: Symbol.for('CustomerPredictionRepository'),
+  AnomalyDetectionService: Symbol.for('AnomalyDetectionService'),
+  AnomalyRepository: Symbol.for('AnomalyRepository'),
+  DemandForecastingService: Symbol.for('DemandForecastingService'),
+  ForecastRepository: Symbol.for('ForecastRepository'),
+
+  // Cognitive Services
+  DocumentAIService: Symbol.for('DocumentAIService'),
+  DocumentAIRepository: Symbol.for('DocumentAIRepository'),
+  VoiceAnalyticsService: Symbol.for('VoiceAnalyticsService'),
+  VoiceAnalyticsRepository: Symbol.for('VoiceAnalyticsRepository'),
+  KnowledgeGraphService: Symbol.for('KnowledgeGraphService'),
+  KnowledgeGraphRepository: Symbol.for('KnowledgeGraphRepository'),
+
+  // ML Monitoring
+  ModelPerformanceMonitoringService: Symbol.for('ModelPerformanceMonitoringService'),
+  ModelMonitoringRepository: Symbol.for('ModelMonitoringRepository'),
+  DataDriftDetectionService: Symbol.for('DataDriftDetectionService'),
+  DriftDetectionRepository: Symbol.for('DriftDetectionRepository'),
+  ABTestingService: Symbol.for('ABTestingService'),
+  ABTestRepository: Symbol.for('ABTestRepository'),
+
+  // Controllers Sprint 12
+  MLModelController: Symbol.for('MLModelController'),
+  PredictionController: Symbol.for('PredictionController'),
+  NLPController: Symbol.for('NLPController'),
+  AIWorkflowController: Symbol.for('AIWorkflowController'),
+  DecisionRuleController: Symbol.for('DecisionRuleController'),
+  PredictiveAnalyticsController: Symbol.for('PredictiveAnalyticsController'),
+  CognitiveController: Symbol.for('CognitiveController'),
+  MLMonitoringController: Symbol.for('MLMonitoringController'),
+
+  // Sprint 13 Services - Analytics & Reporting Module (Omni)
+  // Analytics Services
+  OmniAnalyticsService: Symbol.for('OmniAnalyticsService'),
+  OmniAnalyticsDashboardService: Symbol.for('OmniAnalyticsDashboardService'),
+  OmniAnalyticsReportService: Symbol.for('OmniAnalyticsReportService'),
+  OmniAnalyticsKpiService: Symbol.for('OmniAnalyticsKpiService'),
+  AnalyticsEtlService: Symbol.for('AnalyticsEtlService'),
+  AnalyticsExportService: Symbol.for('AnalyticsExportService'),
+  WidgetDataService: Symbol.for('WidgetDataService'),
+
+  // Analytics Repositories
+  DataMartRepository: Symbol.for('DataMartRepository'),
+  AnalyticsDashboardRepository: Symbol.for('AnalyticsDashboardRepository'),
+  AnalyticsReportRepository: Symbol.for('AnalyticsReportRepository'),
+  AnalyticsKpiRepository: Symbol.for('AnalyticsKpiRepository'),
+  EtlPipelineRepository: Symbol.for('EtlPipelineRepository'),
+  WidgetRepository: Symbol.for('WidgetRepository'),
+
+  // Analytics Engines
+  CalculationEngine: Symbol.for('CalculationEngine'),
+  AggregationEngine: Symbol.for('AggregationEngine'),
+  StreamProcessor: Symbol.for('StreamProcessor'),
+  ReportGenerator: Symbol.for('ReportGenerator'),
+
+  // ETL Components
+  PipelineManager: Symbol.for('PipelineManager'),
+  DataExtractor: Symbol.for('DataExtractor'),
+  DataTransformer: Symbol.for('DataTransformer'),
+  DataLoader: Symbol.for('DataLoader'),
+
+  // Analytics Controllers
+  OmniAnalyticsController: Symbol.for('OmniAnalyticsController'),
+  OmniAnalyticsDashboardController: Symbol.for('OmniAnalyticsDashboardController'),
+  OmniAnalyticsReportController: Symbol.for('OmniAnalyticsReportController'),
+  OmniAnalyticsKpiController: Symbol.for('OmniAnalyticsKpiController'),
+
   // CRM Module Services
   CRMDatabaseConnection: Symbol.for('CRMDatabaseConnection'),
   LeadRepository: Symbol.for('LeadRepository'),
@@ -113,6 +282,12 @@ export const TYPES = {
   QuoteService: Symbol.for('QuoteService'),
   PricingService: Symbol.for('PricingService'),
   ApprovalService: Symbol.for('ApprovalService'),
+  // Product & Quote - Additional Repositories (Sprint 20)
+  ProductCategoryRepository: Symbol.for('ProductCategoryRepository'),
+  QuoteLineItemRepository: Symbol.for('QuoteLineItemRepository'),
+  // Product & Quote - Additional Controllers (Sprint 20)
+  ProductCategoryController: Symbol.for('ProductCategoryController'),
+  PricingController: Symbol.for('PricingController'),
   // Sprint 17 CRM Extended Services
   AccountHierarchyService: Symbol.for('AccountHierarchyService'),
   TerritoryManagementService: Symbol.for('TerritoryManagementService'),
@@ -125,8 +300,6 @@ export const TYPES = {
   WorkflowController: Symbol.for('WorkflowController'),
   // Analytics Module Services
   AnalyticsRepository: Symbol.for('AnalyticsRepository'),
-  AnalyticsService: Symbol.for('AnalyticsService'),
-  AnalyticsController: Symbol.for('AnalyticsController'),
   // Enhanced Services (Sprint 4)
   EnhancedCacheService: Symbol.for('EnhancedCacheService'),
   EnhancedValidatorService: Symbol.for('EnhancedValidatorService'),
@@ -210,53 +383,22 @@ export const TYPES = {
   // Migration Framework Services (Sprint 4)
   MigrationManager: Symbol.for('MigrationManager'),
   MigrationVersion: Symbol.for('MigrationVersion'),
-  DataTransformer: Symbol.for('DataTransformer'),
 
-  // Product & Quote Module (Sprint 20)
-  ProductController: Symbol.for('ProductController'),
-  QuoteController: Symbol.for('QuoteController'),
-  ProductRepository: Symbol.for('ProductRepository'),
-  QuoteRepository: Symbol.for('QuoteRepository'),
-  ProductService: Symbol.for('ProductService'),
-  QuoteService: Symbol.for('QuoteService'),
-  PricingService: Symbol.for('PricingService'),
-  ApprovalService: Symbol.for('ApprovalService'),
-
-  // Sprint 17 - Advanced Account & Contact Management Services
-  AccountHierarchyService: Symbol.for('AccountHierarchyService'),
-  AccountHierarchyRepository: Symbol.for('AccountHierarchyRepository'),
-  TerritoryManagementService: Symbol.for('TerritoryManagementService'),
-  TerritoryRepository: Symbol.for('TerritoryRepository'),
-  TerritoryController: Symbol.for('TerritoryController'),
-  ContactRoleManagementService: Symbol.for('ContactRoleManagementService'),
-  ContactRoleRepository: Symbol.for('ContactRoleRepository'),
-  AccountHealthScoringService: Symbol.for('AccountHealthScoringService'),
-  AccountHealthRepository: Symbol.for('AccountHealthRepository'),
-  AdvancedSearchService: Symbol.for('AdvancedSearchService'),
-  SearchController: Symbol.for('SearchController'),
-
-  // Sprint 21 - Activities & Task Management
-  CalendarIntegrationService: Symbol.for('CalendarIntegrationService'),
-  TaskAutomationService: Symbol.for('TaskAutomationService'),
-  CalendarController: Symbol.for('CalendarController'),
-  ActivityTemplateRepository: Symbol.for('ActivityTemplateRepository'),
-  CalendarIntegrationRepository: Symbol.for('CalendarIntegrationRepository'),
-  TaskAutomationRepository: Symbol.for('TaskAutomationRepository'),
 
   // Sprint 22 - CRM Analytics & Integration
-  AnalyticsService: Symbol.for('AnalyticsService'),
-  ReportService: Symbol.for('ReportService'),
-  KpiService: Symbol.for('KpiService'),
-  DashboardService: Symbol.for('DashboardService'),
-  ExportService: Symbol.for('ExportService'),
-  ReportRepository: Symbol.for('ReportRepository'),
-  KpiRepository: Symbol.for('KpiRepository'),
-  DashboardRepository: Symbol.for('DashboardRepository'),
-  ExportRepository: Symbol.for('ExportRepository'),
-  IntegrationLogRepository: Symbol.for('IntegrationLogRepository'),
-  AnalyticsController: Symbol.for('AnalyticsController'),
-  ReportController: Symbol.for('ReportController'),
-  ExportController: Symbol.for('ExportController'),
+  CRMAnalyticsService: Symbol.for('CRMAnalyticsService'),
+  CRMReportService: Symbol.for('CRMReportService'),
+  CRMKpiService: Symbol.for('CRMKpiService'),
+  CRMDashboardService: Symbol.for('CRMDashboardService'),
+  CRMExportService: Symbol.for('CRMExportService'),
+  CRMReportRepository: Symbol.for('CRMReportRepository'),
+  CRMKpiRepository: Symbol.for('CRMKpiRepository'),
+  CRMDashboardRepository: Symbol.for('CRMDashboardRepository'),
+  CRMExportRepository: Symbol.for('CRMExportRepository'),
+  CRMIntegrationLogRepository: Symbol.for('CRMIntegrationLogRepository'),
+  CRMAnalyticsController: Symbol.for('CRMAnalyticsController'),
+  CRMReportController: Symbol.for('CRMReportController'),
+  CRMExportController: Symbol.for('CRMExportController'),
 
   // Cross-Database Services
   CrossDatabaseService: Symbol.for('CrossDatabaseService'),

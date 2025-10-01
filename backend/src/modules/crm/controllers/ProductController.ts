@@ -1,4 +1,8 @@
 /**
+ * @deprecated Sprint 19 - Usar implementación Sprint 20 en product-quote/
+ * Este archivo será eliminado en futuras versiones
+ * Ver: backend/src/modules/crm/product-quote/catalog/controllers/ProductController.ts
+ *
  * Product Controller - Sprint 19
  * REST API endpoints for product catalog management
  */

@@ -1,4 +1,8 @@
 /**
+ * @deprecated Sprint 19 - Usar implementación Sprint 20 cuando esté disponible
+ * Este archivo será eliminado en futuras versiones
+ * Nota: ApprovalService aún no tiene implementación en Sprint 20
+ *
  * Approval Controller - Sprint 19
  * REST API endpoints for approval workflow management
  */

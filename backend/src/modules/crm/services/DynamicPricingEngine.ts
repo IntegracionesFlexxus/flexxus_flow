@@ -1,4 +1,8 @@
 /**
+ * @deprecated Sprint 19 - Usar implementación Sprint 20 en product-quote/
+ * Este archivo será eliminado en futuras versiones
+ * Ver: backend/src/modules/crm/product-quote/pricing/services/PricingServiceImpl.ts
+ *
  * Dynamic Pricing Engine - Sprint 19
  * Core service for calculating prices with rules and conditions
  */

@@ -1,4 +1,8 @@
 /**
+ * @deprecated Sprint 19 - Usar implementación Sprint 20 en product-quote/
+ * Este archivo será eliminado en futuras versiones
+ * Ver: backend/src/modules/crm/product-quote/quotes/repositories/QuoteRepository.ts
+ *
  * Quote Repository - Sprint 19
  * Handles all database operations for quotes
  */

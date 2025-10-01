@@ -1,4 +1,8 @@
 /**
+ * @deprecated Sprint 19 - Usar implementación Sprint 20 en product-quote/
+ * Este archivo será eliminado en futuras versiones
+ * Ver: backend/src/modules/crm/product-quote/catalog/services/ProductServiceImpl.ts
+ *
  * Product Catalog Service - Sprint 19
  * Manages product catalog, categories, variations, and inventory
  */

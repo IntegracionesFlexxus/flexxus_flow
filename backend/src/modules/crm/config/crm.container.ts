@@ -48,6 +48,9 @@ import { ReportRepository } from '../repositories/ReportRepository';
 import { KpiRepository } from '../repositories/KpiRepository';
 import { DashboardRepository } from '../repositories/DashboardRepository';
 import { ExportRepository } from '../repositories/ExportRepository';
+
+// Sprint 20: Product & Quote Module
+import { configureProductQuoteContainer } from '../product-quote/config/product-quote.container';
 import { IntegrationLogRepository } from '../repositories/IntegrationLogRepository';
 import { AnalyticsController } from '../controllers/AnalyticsController';
 import { ReportController } from '../controllers/ReportController';
@@ -369,71 +372,76 @@ export function configureCRMContainer(container: Container): void {
 
   // Repositories
   container
-    .bind<ReportRepository>(TYPES.ReportRepository)
+    .bind<ReportRepository>(TYPES.CRMReportRepository)
     .to(ReportRepository)
     .inSingletonScope();
 
   container
-    .bind<KpiRepository>(TYPES.KpiRepository)
+    .bind<KpiRepository>(TYPES.CRMKpiRepository)
     .to(KpiRepository)
     .inSingletonScope();
 
   container
-    .bind<DashboardRepository>(TYPES.DashboardRepository)
+    .bind<DashboardRepository>(TYPES.CRMDashboardRepository)
     .to(DashboardRepository)
     .inSingletonScope();
 
   container
-    .bind<ExportRepository>(TYPES.ExportRepository)
+    .bind<ExportRepository>(TYPES.CRMExportRepository)
     .to(ExportRepository)
     .inSingletonScope();
 
   container
-    .bind<IntegrationLogRepository>(TYPES.IntegrationLogRepository)
+    .bind<IntegrationLogRepository>(TYPES.CRMIntegrationLogRepository)
     .to(IntegrationLogRepository)
     .inSingletonScope();
 
   // Services
   container
-    .bind<AnalyticsService>(TYPES.AnalyticsService)
+    .bind<AnalyticsService>(TYPES.CRMAnalyticsService)
     .to(AnalyticsService)
     .inSingletonScope();
 
   container
-    .bind<ReportService>(TYPES.ReportService)
+    .bind<ReportService>(TYPES.CRMReportService)
     .to(ReportService)
     .inSingletonScope();
 
   container
-    .bind<KpiService>(TYPES.KpiService)
+    .bind<KpiService>(TYPES.CRMKpiService)
     .to(KpiService)
     .inSingletonScope();
 
   container
-    .bind<DashboardService>(TYPES.DashboardService)
+    .bind<DashboardService>(TYPES.CRMDashboardService)
     .to(DashboardService)
     .inSingletonScope();
 
   container
-    .bind<ExportService>(TYPES.ExportService)
+    .bind<ExportService>(TYPES.CRMExportService)
     .to(ExportService)
     .inSingletonScope();
 
   // Controllers
   container
-    .bind<AnalyticsController>(TYPES.AnalyticsController)
+    .bind<AnalyticsController>(TYPES.CRMAnalyticsController)
     .to(AnalyticsController)
     .inSingletonScope();
 
   container
-    .bind<ReportController>(TYPES.ReportController)
+    .bind<ReportController>(TYPES.CRMReportController)
     .to(ReportController)
     .inSingletonScope();
 
   container
-    .bind<ExportController>(TYPES.ExportController)
+    .bind<ExportController>(TYPES.CRMExportController)
     .to(ExportController)
     .inSingletonScope();
+
+  // Configure Product & Quote Module (Sprint 20)
+  configureProductQuoteContainer(container);
+
+  console.log('✅ CRM Module fully configured');
 }
 
 /**

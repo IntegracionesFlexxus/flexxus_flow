@@ -24,10 +24,10 @@ export class DashboardService {
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   constructor(
-    @inject(TYPES.DashboardRepository) private dashboardRepository: DashboardRepository,
-    @inject(TYPES.KpiRepository) private kpiRepository: KpiRepository,
-    @inject(TYPES.ReportRepository) private reportRepository: ReportRepository,
-    @inject(TYPES.AnalyticsService) private analyticsService: AnalyticsService,
+    @inject(TYPES.CRMDashboardRepository) private dashboardRepository: DashboardRepository,
+    @inject(TYPES.CRMKpiRepository) private kpiRepository: KpiRepository,
+    @inject(TYPES.CRMReportRepository) private reportRepository: ReportRepository,
+    @inject(TYPES.CRMAnalyticsService) private analyticsService: AnalyticsService,
     @inject(TYPES.DatabasePool) private pool: Pool
   ) {}
 

@@ -16,6 +16,7 @@ import { QuoteLineItemRepository } from '../quotes/repositories/quote-line-item.
 import { ProductServiceImpl } from '../catalog/services/ProductServiceImpl';
 import { QuoteServiceImpl } from '../quotes/services/QuoteServiceImpl';
 import { PricingServiceImpl } from '../pricing/services/PricingServiceImpl';
+import { DocumentGenerationService } from '../documents/services/document-generation.service';
 
 // Import Controllers
 import { ProductController } from '../catalog/controllers/ProductController';
@@ -55,6 +56,10 @@ export function configureProductQuoteContainer(container: Container): void {
 
   container.bind(TYPES.PricingService)
     .to(PricingServiceImpl)
+    .inSingletonScope();
+
+  container.bind(TYPES.DocumentGenerationService)
+    .to(DocumentGenerationService)
     .inSingletonScope();
 
   // Note: ApprovalService not implemented in Sprint 20 yet

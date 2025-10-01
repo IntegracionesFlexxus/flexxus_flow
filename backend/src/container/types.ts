@@ -288,6 +288,8 @@ export const TYPES = {
   // Product & Quote - Additional Controllers (Sprint 20)
   ProductCategoryController: Symbol.for('ProductCategoryController'),
   PricingController: Symbol.for('PricingController'),
+  // Product & Quote - Document Services (Sprint 20)
+  DocumentGenerationService: Symbol.for('DocumentGenerationService'),
   // Sprint 17 CRM Extended Services
   AccountHierarchyService: Symbol.for('AccountHierarchyService'),
   TerritoryManagementService: Symbol.for('TerritoryManagementService'),

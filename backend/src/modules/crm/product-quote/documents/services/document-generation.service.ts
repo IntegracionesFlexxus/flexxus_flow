@@ -1,4 +1,5 @@
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IDocumentGenerationService } from '../interfaces/IDocumentGenerationService';
 import { Pool } from 'pg';
 import { AppError } from '../../../../../shared/errors/AppError';
@@ -8,7 +9,7 @@ import * as path from 'path';
 @injectable()
 export class DocumentGenerationService implements IDocumentGenerationService {
   constructor(
-    @inject('DatabasePool')
+    @inject(TYPES.DatabasePool)
     private pool: Pool
   ) {}
 

@@ -304,6 +304,9 @@ export const TYPES = {
   OmniChannelIntegrationService: Symbol.for('OmniChannelIntegrationService'),
   LeadManagementController: Symbol.for('LeadManagementController'),
 
+  // Sprint N+1 - CRM-Omni Integration
+  CRMIntegrationController: Symbol.for('CRMIntegrationController'),
+
   // Sprint 17 CRM Extended Services
   AccountHierarchyService: Symbol.for('AccountHierarchyService'),
   TerritoryManagementService: Symbol.for('TerritoryManagementService'),

@@ -1,7 +1,7 @@
 /**
  * OmniChannel Integration Service
  * Handles lead capture from omnichannel sources
- * TODO: OMNICHANNEL - Replace mock adapter with real integration
+ * Sprint N+1: Real API integration implemented
  */
 
 import { injectable, inject } from 'inversify';
@@ -12,6 +12,7 @@ import { IOmniChannelAdapter, IOmniChannelEvent } from '../../../adapters/IOmniC
 import { omniChannelConfig, getOmniChannelAdapterType } from '../../../config/omnichannel.config';
 import { MockOmniChannelAdapter } from '../../../adapters/MockOmniChannelAdapter';
 import { StubOmniChannelAdapter } from '../../../adapters/StubOmniChannelAdapter';
+import { RealOmniChannelAdapter } from '../../../adapters/RealOmniChannelAdapter';
 import { EventEmitter } from 'events';
 
 @injectable()
@@ -22,7 +23,8 @@ export class OmniChannelIntegrationService {
   constructor(
     @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
     @inject(TYPES.DatabasePool) private db: Pool,
-    @inject(TYPES.EventEmitter) eventBus: EventEmitter
+    @inject(TYPES.EventEmitter) eventBus: EventEmitter,
+    @inject(TYPES.Logger) private logger: any
   ) {
     this.eventBus = eventBus;
     this.initializeAdapter();
@@ -32,23 +34,25 @@ export class OmniChannelIntegrationService {
   private initializeAdapter(): void {
     const adapterType = getOmniChannelAdapterType();
 
-    // TODO: OMNICHANNEL - Replace with dynamic adapter selection
+    // Sprint N+1: Real API integration implemented
     switch (adapterType) {
       case 'mock':
         this.adapter = new MockOmniChannelAdapter();
-        console.log('[OmniChannelIntegration] Using MOCK adapter for development');
+        this.logger.info('[OmniChannelIntegration] Using MOCK adapter for development');
         break;
       case 'stub':
         this.adapter = new StubOmniChannelAdapter(this.db);
-        console.log('[OmniChannelIntegration] Using STUB adapter - logging only');
+        this.logger.info('[OmniChannelIntegration] Using STUB adapter - logging only');
         break;
       case 'api':
-        // TODO: OMNICHANNEL - Implement ApiOmniChannelAdapter
-        console.warn('[OmniChannelIntegration] API adapter not implemented, falling back to stub');
-        this.adapter = new StubOmniChannelAdapter(this.db);
+        // Sprint N+1: Real adapter implemented!
+        this.adapter = new RealOmniChannelAdapter(this.logger);
+        this.logger.info('[OmniChannelIntegration] Using REAL API adapter - connected to Omni module');
         break;
       default:
-        this.adapter = new StubOmniChannelAdapter(this.db);
+        // Default to API adapter in production
+        this.adapter = new RealOmniChannelAdapter(this.logger);
+        this.logger.info('[OmniChannelIntegration] Using REAL API adapter (default)');
     }
   }
 

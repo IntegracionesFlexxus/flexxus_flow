@@ -159,6 +159,37 @@ export class ConversationService {
   async markAsRead(conversationId: string, companyId: string): Promise<void> {
     await this.conversationRepo.resetUnreadCount(conversationId, companyId);
   }
+
+  /**
+   * Get qualified conversations ready for CRM lead capture
+   * Sprint N+1 - CRM Integration
+   */
+  async getQualifiedConversations(companyId: string, since?: Date): Promise<IConversation[]> {
+    const filters: ConversationFilters = {
+      status: 'qualified',
+      since
+    };
+    return await this.conversationRepo.findWithFilters(companyId, filters);
+  }
+
+  /**
+   * Link conversation to CRM lead
+   * Sprint N+1 - CRM Integration
+   */
+  async linkToCRM(conversationId: string, leadId: number, companyId: string): Promise<void> {
+    this.logger.info('Linking conversation to CRM lead', { conversationId, leadId });
+
+    // Store CRM reference in conversation metadata
+    const updateData: IConversationUpdate = {
+      metadata: {
+        crm_lead_id: leadId,
+        crm_linked_at: new Date().toISOString()
+      },
+      tags: ['crm_linked']
+    };
+
+    await this.conversationRepo.update(conversationId, updateData, companyId);
+  }
 }
 
 /**

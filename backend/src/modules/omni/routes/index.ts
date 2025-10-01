@@ -36,6 +36,8 @@ import rulesRoutes from './rules.routes';
 import predictiveAnalyticsRoutes from './predictive-analytics.routes';
 import cognitiveRoutes from './cognitive.routes';
 import monitoringRoutes from './monitoring.routes';
+// Import CRM Integration routes (Sprint N+1)
+import crmIntegrationRoutes from './crm-integration.routes';
 
 // Create router
 const router = Router();
@@ -336,6 +338,11 @@ router.use('/cognitive', cognitiveRoutes);
 // ML MONITORING ROUTES (Sprint 12 Fase 4)
 // =======================
 router.use('/monitoring', monitoringRoutes);
+
+// =======================
+// CRM INTEGRATION ROUTES (Sprint N+1)
+// =======================
+router.use('/crm-integration', crmIntegrationRoutes);
 
 // =======================
 // HEALTH CHECK

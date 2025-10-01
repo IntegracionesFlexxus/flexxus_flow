@@ -71,6 +71,7 @@ import {
   TemplateController
 } from '../controllers';
 import { AnalyticsController as AnalyticsControllerLegacy } from '../controllers/AnalyticsController';
+import { CRMIntegrationController } from '../controllers/CRMIntegrationController';
 
 // Import WebSocket handler
 import { OmniWebSocketHandler } from '../websocket/OmniWebSocketHandler';
@@ -140,6 +141,11 @@ export function configureOmniContainer(container: Container): void {
 
   container.bind<TemplateController>(TYPES.OmniTemplateController)
     .to(TemplateController)
+    .inSingletonScope();
+
+  // Sprint N+1: CRM Integration Controller
+  container.bind<CRMIntegrationController>(TYPES.CRMIntegrationController)
+    .to(CRMIntegrationController)
     .inSingletonScope();
 
   // Bind WebSocket handler

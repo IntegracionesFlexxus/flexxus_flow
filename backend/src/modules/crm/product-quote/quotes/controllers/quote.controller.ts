@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IQuoteService } from '../interfaces/IQuoteService';
 import { QuoteInput, QuoteFilters } from '../../../types/quote.types';
 import { AppError } from '../../../../../shared/errors/AppError';
@@ -7,7 +8,7 @@ import { AppError } from '../../../../../shared/errors/AppError';
 @injectable()
 export class QuoteController {
   constructor(
-    @inject('QuoteService')
+    @inject(TYPES.QuoteService)
     private quoteService: IQuoteService
   ) {}
 

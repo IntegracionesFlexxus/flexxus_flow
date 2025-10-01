@@ -1,4 +1,5 @@
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IQuoteService } from '../interfaces/IQuoteService';
 import { IQuoteRepository } from '../interfaces/IQuoteRepository';
 import { IPricingService } from '../../pricing/interfaces/IPricingService';
@@ -9,9 +10,9 @@ import { PaginatedResult } from '../../../../../shared/types/pagination.types';
 @injectable()
 export class QuoteService implements IQuoteService {
   constructor(
-    @inject('QuoteRepository')
+    @inject(TYPES.QuoteRepository)
     private quoteRepository: IQuoteRepository,
-    @inject('PricingService')
+    @inject(TYPES.PricingService)
     private pricingService: IPricingService
   ) {}
 

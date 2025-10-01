@@ -10,8 +10,7 @@ import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 import { EventEmitter } from 'events';
 
 // Import AI services
-import { SentimentAnalysisService } from '../services/SentimentAnalysisService';
-import { SummarizationService } from '../services/SummarizationService';
+import { SentimentAnalysisService, SummarizationService } from '../services';
 
 // Import performance services
 import { SmartCacheService } from '../../cache/SmartCacheService';

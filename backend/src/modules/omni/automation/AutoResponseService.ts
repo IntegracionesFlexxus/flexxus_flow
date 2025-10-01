@@ -5,7 +5,7 @@
 
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
-import { MessageService } from '../services/MessageService';
+import { MessageService } from '../services';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 import { AutoResponseRepository } from './AutoResponseRepository';
 import { KeywordMatcher } from './KeywordMatcher';

@@ -280,6 +280,13 @@ export const TYPES = {
   OpportunityController: Symbol.for('OpportunityController'),
   ActivityController: Symbol.for('ActivityController'),
   CrmController: Symbol.for('CrmController'),
+  SearchController: Symbol.for('SearchController'), // Sprint 17
+  TerritoryController: Symbol.for('TerritoryController'), // Sprint 17
+  // Sprint 17 - Advanced Account & Contact Management
+  AccountHierarchyRepository: Symbol.for('AccountHierarchyRepository'),
+  TerritoryRepository: Symbol.for('TerritoryRepository'),
+  ContactRoleRepository: Symbol.for('ContactRoleRepository'),
+  AccountHealthRepository: Symbol.for('AccountHealthRepository'),
   // Product & Quote Module Services (Sprint 20)
   ProductController: Symbol.for('ProductController'),
   QuoteController: Symbol.for('QuoteController'),

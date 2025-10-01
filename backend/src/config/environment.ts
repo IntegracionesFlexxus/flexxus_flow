@@ -439,6 +439,10 @@ export const environment = {
   // External Services
   frontendUrl: env.FRONTEND_URL,
 };
+
+// Backward compatibility alias
+export const config = environment;
+
 // Export type for TypeScript
 export type Environment = typeof environment;
 // Helper functions

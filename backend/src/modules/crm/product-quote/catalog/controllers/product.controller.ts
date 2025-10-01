@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IProductService } from '../interfaces/IProductService';
 import { ProductInput, ProductFilters } from '../../../types/product.types';
 import { AppError } from '../../../../../shared/errors/AppError';
@@ -7,7 +8,7 @@ import { AppError } from '../../../../../shared/errors/AppError';
 @injectable()
 export class ProductController {
   constructor(
-    @inject('ProductService')
+    @inject(TYPES.ProductService)
     private productService: IProductService
   ) {}
 

@@ -1,4 +1,5 @@
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IProductService } from '../interfaces/IProductService';
 import { IProductRepository } from '../interfaces/IProductRepository';
 import { Product, ProductInput, ProductFilters } from '../../../types/product.types';
@@ -8,7 +9,7 @@ import { PaginatedResult } from '../../../../../shared/types/pagination.types';
 @injectable()
 export class ProductService implements IProductService {
   constructor(
-    @inject('ProductRepository')
+    @inject(TYPES.ProductRepository)
     private productRepository: IProductRepository
   ) {}
 

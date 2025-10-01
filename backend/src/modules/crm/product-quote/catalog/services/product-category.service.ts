@@ -1,4 +1,5 @@
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IProductCategoryService } from '../interfaces/IProductCategoryService';
 import { IProductCategoryRepository } from '../interfaces/IProductCategoryRepository';
 import { ProductCategory, ProductCategoryInput } from '../../../types/product.types';
@@ -7,9 +8,9 @@ import { AppError } from '../../../../../shared/errors/AppError';
 @injectable()
 export class ProductCategoryService implements IProductCategoryService {
   constructor(
-    @inject('ProductCategoryRepository')
+    @inject(TYPES.ProductCategoryRepository)
     private categoryRepository: IProductCategoryRepository,
-    @inject('DatabasePool')
+    @inject(TYPES.DatabasePool)
     private pool: any
   ) {}
 

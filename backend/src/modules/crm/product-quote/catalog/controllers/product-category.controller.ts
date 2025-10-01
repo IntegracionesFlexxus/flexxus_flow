@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject } from 'inversify';
+import { TYPES } from '@/container/types';
 import { IProductCategoryService } from '../interfaces/IProductCategoryService';
 import { AppError } from '../../../../../shared/errors/AppError';
 
 @injectable()
 export class ProductCategoryController {
   constructor(
-    @inject('ProductCategoryService')
+    @inject(TYPES.ProductCategoryService)
     private categoryService: IProductCategoryService
   ) {}
 

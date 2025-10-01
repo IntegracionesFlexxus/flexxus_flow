@@ -294,6 +294,8 @@ export const TYPES = {
   // Product & Quote - Pricing Services (Sprint 20)
   PromotionService: Symbol.for('PromotionService'),
   PromotionController: Symbol.for('PromotionController'),
+  // Product & Quote - Catalog Services (Sprint 20)
+  ProductCategoryService: Symbol.for('ProductCategoryService'),
   // Sprint 17 CRM Extended Services
   AccountHierarchyService: Symbol.for('AccountHierarchyService'),
   TerritoryManagementService: Symbol.for('TerritoryManagementService'),

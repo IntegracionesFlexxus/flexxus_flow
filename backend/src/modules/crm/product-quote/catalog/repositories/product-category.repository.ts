@@ -85,6 +85,17 @@ export class ProductCategoryRepository {
     return result.rows[0] ? this.mapToCategory(result.rows[0]) : null;
   }
 
+  async findByName(name: string): Promise<IProductCategory | null> {
+    const query = `
+      SELECT * FROM product_categories
+      WHERE LOWER(name) = LOWER($1)
+      LIMIT 1
+    `;
+
+    const result = await this.pool.query(query, [name]);
+    return result.rows[0] ? this.mapToCategory(result.rows[0]) : null;
+  }
+
   async findAll(companyId: number): Promise<IProductCategory[]> {
     const query = `
       SELECT * FROM product_categories

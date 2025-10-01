@@ -6,9 +6,7 @@
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { IAction, IRuleEvaluationContext, IRuleExecutionResult } from './interfaces/IRule';
-import { MessageService } from '../services/MessageService';
-import { ConversationService } from '../services/ConversationService';
-import { CustomerService } from '../services/CustomerService';
+import { MessageService, ConversationService, CustomerService } from '../services';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()

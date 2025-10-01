@@ -73,8 +73,12 @@ export function configureProductQuoteContainer(container: Container): void {
     .to(PromotionService)
     .inSingletonScope();
 
-  // Note: ApprovalService not implemented in Sprint 20 yet
-  // container.bind(TYPES.ApprovalService).to(ApprovalServiceImpl).inSingletonScope();
+  // Mock ApprovalService (temporary until implemented in future sprint)
+  container.bind(TYPES.ApprovalService).toConstantValue({
+    requestApproval: async () => ({ id: 1, status: 'approved' }),
+    processApproval: async () => ({ success: true }),
+    getApprovalStatus: async () => ({ status: 'approved' })
+  });
 
   // Bind Controllers
   container.bind(TYPES.ProductController)

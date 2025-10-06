@@ -45,7 +45,7 @@ export class QuoteController {
       quoteData.updated_by = req.user?.id || 1;
 
       // Usar QuoteService para lógica de negocio y cálculos
-      const quote = await this.quoteService.createQuote(quoteData);
+      const quote = await this.quoteService.createQuote(quoteData as any);
 
       res.status(201).json({
         success: true,
@@ -335,8 +335,8 @@ export class QuoteController {
         return;
       }
 
-      const { items, customer_id, currency } = req.body;
-      const calculations = await this.quoteService.calculateQuoteTotals(items, customer_id, currency);
+      const { quote_id } = req.body;
+      const calculations = await this.quoteService.calculateQuoteTotals(quote_id);
 
       res.json({
         success: true,
@@ -370,7 +370,7 @@ export class QuoteController {
       const quoteId = parseInt(req.params.id);
       const template = req.query.template as string || 'standard';
 
-      const pdfBuffer = await this.quoteService.generateQuotePdf(quoteId, template);
+      const pdfBuffer = await this.quoteService.generateQuotePDF(quoteId, template);
 
       // Configurar headers para descarga PDF
       const quote = await this.quoteService.getQuoteById(quoteId);

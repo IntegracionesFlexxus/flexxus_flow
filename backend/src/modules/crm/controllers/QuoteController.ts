@@ -84,8 +84,8 @@ export class QuoteController {
         return;
       }
 
-      const company_id = req.user?.company_id;
-      const created_by = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const created_by = req.user?.id;
 
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
@@ -130,7 +130,7 @@ export class QuoteController {
       }
 
       const quote = await this.quoteManagement.searchQuotes({
-        company_id: req.user?.company_id!,
+        company_id: req.user?.companyId!,
         // We'll use the repository directly for single quote fetch
       });
 
@@ -175,7 +175,7 @@ export class QuoteController {
         return;
       }
 
-      const updated_by = req.user?.user_id;
+      const updated_by = req.user?.id;
       const updates: QuoteUpdateRequest = value;
 
       const quote = await this.quoteManagement.updateQuote(quote_id, updates, updated_by);
@@ -217,7 +217,7 @@ export class QuoteController {
         return;
       }
 
-      const changed_by = req.user?.user_id;
+      const changed_by = req.user?.id;
       const transition: QuoteStatusTransition = value;
 
       const quote = await this.quoteManagement.changeStatus(quote_id, transition, changed_by);
@@ -243,7 +243,7 @@ export class QuoteController {
    */
   async searchQuotes(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
         return;
@@ -373,7 +373,7 @@ export class QuoteController {
 
       const template_id = req.body.template_id ? parseInt(req.body.template_id) : undefined;
       const format = req.body.format || 'pdf';
-      const generated_by = req.user?.user_id;
+      const generated_by = req.user?.id;
 
       const document = await this.quoteManagement.generateDocument(
         quote_id,
@@ -403,7 +403,7 @@ export class QuoteController {
    */
   async getMetrics(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
         return;
@@ -474,8 +474,8 @@ export class QuoteController {
 
       // Get pending approvals for this quote
       const approvals = await this.approvalService.getPendingApprovals(
-        req.user?.user_id!,
-        req.user?.company_id!
+        req.user?.id!,
+        req.user?.companyId!
       );
 
       const quoteApprovals = approvals.data.filter(a =>
@@ -520,7 +520,7 @@ export class QuoteController {
       const quote = await this.quoteManagement.changeStatus(
         quote_id,
         transition,
-        req.user?.user_id
+        req.user?.id
       );
 
       res.status(200).json({

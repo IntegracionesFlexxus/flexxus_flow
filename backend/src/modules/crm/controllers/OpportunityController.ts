@@ -8,7 +8,7 @@ import { injectable, inject } from 'inversify';
 import { IOpportunityService } from '../interfaces/IOpportunityService';
 import { OpportunityFilter } from '../types/opportunity.types';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 
 @injectable()
 export class OpportunityController {
@@ -85,7 +85,7 @@ export class OpportunityController {
       const opportunity = await this.opportunityService.getOpportunityById(opportunityId, companyId);
 
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       res.json({
@@ -115,7 +115,7 @@ export class OpportunityController {
       );
 
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       res.json({
@@ -141,7 +141,7 @@ export class OpportunityController {
       const deleted = await this.opportunityService.deleteOpportunity(opportunityId, companyId, userId);
 
       if (!deleted) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       res.json({
@@ -213,7 +213,7 @@ export class OpportunityController {
       const { lostReason } = req.body;
 
       if (!lostReason) {
-        throw new AppError('Lost reason is required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Lost reason is required', 400);
       }
 
       const opportunity = await this.opportunityService.markAsLost(
@@ -385,7 +385,7 @@ export class OpportunityController {
       const opportunity = await this.opportunityService.getOpportunityById(opportunityId, companyId);
 
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       // Build timeline data

@@ -644,7 +644,7 @@ export class DashboardService {
   private stopAutoRefresh(dashboardId: string): void {
     const interval = this.updateIntervals.get(dashboardId);
     if (interval) {
-      clearInterval(interval);
+      clearInterval(interval as any);
       this.updateIntervals.delete(dashboardId);
     }
   }
@@ -702,7 +702,7 @@ export class DashboardService {
   cleanup(): void {
     // Stop all auto-refresh intervals
     this.updateIntervals.forEach((interval) => {
-      clearInterval(interval);
+      clearInterval(interval as any);
     });
     this.updateIntervals.clear();
 

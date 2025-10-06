@@ -7,7 +7,7 @@ import { injectable, inject } from 'inversify';
 import { EventEmitter } from 'events';
 import { CronJob } from 'cron';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { Logger } from 'winston';
 import { Activity, ActivityCreateDTO } from '../types/activity.types';
 import { ActivityService } from './ActivityService';
@@ -243,7 +243,7 @@ export class TaskAutomationService {
       return createdRule;
     } catch (error) {
       this.logger.error('Failed to create automation rule', { error, rule });
-      throw new AppError('Failed to create automation rule', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to create automation rule', 500);
     }
   }
 
@@ -291,7 +291,7 @@ export class TaskAutomationService {
       return updatedRule;
     } catch (error) {
       this.logger.error('Failed to update automation rule', { error, ruleId, updates });
-      throw new AppError('Failed to update automation rule', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to update automation rule', 500);
     }
   }
 
@@ -313,7 +313,7 @@ export class TaskAutomationService {
       return result.rowCount > 0;
     } catch (error) {
       this.logger.error('Failed to delete automation rule', { error, ruleId });
-      throw new AppError('Failed to delete automation rule', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to delete automation rule', 500);
     }
   }
 
@@ -346,7 +346,7 @@ export class TaskAutomationService {
       }));
     } catch (error) {
       this.logger.error('Failed to get automation rules', { error, companyId, filters });
-      throw new AppError('Failed to get automation rules', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to get automation rules', 500);
     }
   }
 
@@ -361,7 +361,7 @@ export class TaskAutomationService {
       // Get rule details
       const rule = await this.getAutomationRule(ruleId);
       if (!rule || !rule.is_active) {
-        throw new AppError('Rule not found or inactive', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Rule not found or inactive', 404);
       }
 
       // Check execution limits
@@ -440,7 +440,7 @@ export class TaskAutomationService {
       };
     } catch (error) {
       this.logger.error('Failed to create recurring task', { error, activityId, pattern });
-      throw new AppError('Failed to create recurring task', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to create recurring task', 500);
     }
   }
 
@@ -499,7 +499,7 @@ export class TaskAutomationService {
       }));
     } catch (error) {
       this.logger.error('Failed to get execution logs', { error, ruleId, limit });
-      throw new AppError('Failed to get execution logs', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to get execution logs', 500);
     }
   }
 
@@ -668,7 +668,7 @@ export class TaskAutomationService {
         return this.executeAssignToUser(rule.action_config, triggerData);
 
       default:
-        throw new AppError(`Unsupported action type: ${rule.action_type}`, 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, `Unsupported action type: ${rule.action_type}`, 400);
     }
   }
 
@@ -677,7 +677,7 @@ export class TaskAutomationService {
     triggerData: any
   ): Promise<any> {
     if (!config.activity_template) {
-      throw new AppError('Activity template not configured', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Activity template not configured', 400);
     }
 
     const template = config.activity_template;
@@ -718,7 +718,7 @@ export class TaskAutomationService {
     triggerData: any
   ): Promise<any> {
     if (!config.notification) {
-      throw new AppError('Notification config not provided', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Notification config not provided', 400);
     }
 
     const notification = config.notification;
@@ -744,7 +744,7 @@ export class TaskAutomationService {
     triggerData: any
   ): Promise<any> {
     if (!config.field_updates || config.field_updates.length === 0) {
-      throw new AppError('Field updates not configured', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Field updates not configured', 400);
     }
 
     const results = [];
@@ -779,7 +779,7 @@ export class TaskAutomationService {
     triggerData: any
   ): Promise<any> {
     if (!config.webhook) {
-      throw new AppError('Webhook config not provided', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Webhook config not provided', 400);
     }
 
     const webhook = config.webhook;
@@ -798,7 +798,7 @@ export class TaskAutomationService {
         data: response.data
       };
     } catch (error: any) {
-      throw new AppError(`Webhook failed: ${error.message}`, 500);
+      throw new AppError(ErrorCode.EXTERNAL_SERVICE_ERROR, `Webhook failed: ${error.message}`, 500);
     }
   }
 
@@ -828,7 +828,7 @@ export class TaskAutomationService {
   ): Promise<any> {
     const activityId = triggerData.activity?.id;
     if (!activityId) {
-      throw new AppError('No activity to assign', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'No activity to assign', 400);
     }
 
     // Determine new assignee (could implement round-robin, load balancing, etc.)

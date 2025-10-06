@@ -2,8 +2,9 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { IPricingService } from '../interfaces/IPricingService';
 import { IPricingRepository } from '../interfaces/IPricingRepository';
-import { PricingResult } from '../../../types/pricing.types';
-import { AppError } from '../../../../../shared/errors/AppError';
+// TODO: Create missing types file
+// import { PricingResult } from '../../../types/pricing.types';
+import { AppError, ErrorCode } from '../../../../../shared/errors/AppError';
 import { Pool } from 'pg';
 
 @injectable()
@@ -11,7 +12,7 @@ export class PricingService implements IPricingService {
   constructor(
     @inject(TYPES.PricingRepository)
     private pricingRepository: IPricingRepository,
-    @inject(TYPES.DatabasePool)
+    @inject(TYPES.CrmConnection)
     private pool: Pool
   ) {}
 
@@ -20,12 +21,12 @@ export class PricingService implements IPricingService {
     quantity: number,
     customerId?: number,
     options?: any
-  ): Promise<PricingResult> {
+  ): Promise<any> {
     try {
       // Obtener precio base del producto
       const product = await this.getProductBasePrice(productId);
       if (!product) {
-        throw new AppError('Product not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Product not found', 404);
       }
 
       let finalPrice = product.base_price;
@@ -98,7 +99,7 @@ export class PricingService implements IPricingService {
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to calculate item price: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to calculate item price: ${error.message}`, 500);
     }
   }
 
@@ -121,7 +122,7 @@ export class PricingService implements IPricingService {
       const product = await this.getProductBasePrice(productId);
       return product?.base_price || 0;
     } catch (error) {
-      throw new AppError(`Failed to get best price: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to get best price: ${error.message}`, 500);
     }
   }
 
@@ -133,17 +134,17 @@ export class PricingService implements IPricingService {
       // Verificar que la promoción existe y está activa
       const promotion = await this.pricingRepository.getPromotionByCode(promotionCode);
       if (!promotion) {
-        throw new AppError('Invalid promotion code', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Invalid promotion code', 404);
       }
 
       if (!promotion.is_active) {
-        throw new AppError('Promotion is not active', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Promotion is not active', 400);
       }
 
       // Verificar vigencia
       const now = new Date();
       if (promotion.valid_from > now || (promotion.valid_until && promotion.valid_until < now)) {
-        throw new AppError('Promotion is not valid at this time', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Promotion is not valid at this time', 400);
       }
 
       // Aplicar promoción usando función de base de datos
@@ -155,7 +156,7 @@ export class PricingService implements IPricingService {
       return result.rows[0];
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to apply promotion: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to apply promotion: ${error.message}`, 500);
     }
   }
 
@@ -168,13 +169,13 @@ export class PricingService implements IPricingService {
       );
 
       if (!result.rows[0].is_valid) {
-        throw new AppError(result.rows[0].conflict_message, 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, result.rows[0].conflict_message, 400);
       }
 
       return true;
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to validate pricing: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to validate pricing: ${error.message}`, 500);
     }
   }
 

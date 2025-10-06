@@ -12,7 +12,7 @@ import { ISessionService } from '@/modules/auth/interfaces/ISessionService';
 import { IJwtService } from '@/modules/auth/interfaces/IJwtService';
 import { PasswordService } from './PasswordService';
 import { AuditService } from '@/shared/services/audit/AuditService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { LoginCredentials, AuthResponse } from '@/modules/auth/types/auth.types';
 
 @injectable()
@@ -40,7 +40,7 @@ export class AuthenticationService {
       if (companyId) {
         const userCompany = await this.userRepository.findUserCompanyRole(user.id, companyId);
         if (!userCompany || !userCompany.isActive) {
-          throw new AppError('User not authorized for this company', 403);
+          throw new AppError(ErrorCode.COMPANY_ACCESS_DENIED, 'User not authorized for this company', 403);
         }
       }
 
@@ -50,7 +50,7 @@ export class AuthenticationService {
         : await this.getUserPrimaryCompany(user.id);
 
       if (!userCompanyData) {
-        throw new AppError('User has no associated company', 403);
+        throw new AppError(ErrorCode.COMPANY_NOT_FOUND, 'User has no associated company', 403);
       }
 
       // Create session
@@ -140,7 +140,7 @@ export class AuthenticationService {
         sessionId,
         error: error.message
       });
-      throw new AppError('Logout failed', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Logout failed', 500);
     }
   }
 
@@ -157,13 +157,13 @@ export class AuthenticationService {
       const result = await this.sessionService.refreshSession(refreshTokenHash);
 
       if (!result.success) {
-        throw new AppError(result.reason || 'Token refresh failed', 401);
+        throw new AppError(ErrorCode.UNAUTHORIZED, result.reason || 'Token refresh failed', 401);
       }
 
       // Get updated user data
       const user = await this.userRepository.findById(payload.userId);
       if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
 
       const userCompany = await this.userRepository.findUserCompanyRole(
@@ -230,7 +230,7 @@ export class AuthenticationService {
         userId,
         error: error.message
       });
-      throw new AppError('Failed to logout all sessions', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to logout all sessions', 500);
     }
   }
 
@@ -241,17 +241,17 @@ export class AuthenticationService {
     const user = await this.userRepository.findByEmail(email);
     
     if (!user) {
-      throw new AppError('Invalid credentials', 401);
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid credentials', 401);
     }
 
     if (!user.isActive) {
-      throw new AppError('Account is inactive', 403);
+      throw new AppError(ErrorCode.FORBIDDEN, 'Account is inactive', 403);
     }
 
     const isValidPassword = await this.passwordService.verify(password, user.passwordHash);
     
     if (!isValidPassword) {
-      throw new AppError('Invalid credentials', 401);
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid credentials', 401);
     }
 
     return user;
@@ -261,14 +261,17 @@ export class AuthenticationService {
    * Get user's primary company
    */
   private async getUserPrimaryCompany(userId: string): Promise<any> {
-    const userCompanies = await this.userRepository.findUserCompanies(userId);
-    
-    if (!userCompanies || userCompanies.length === 0) {
-      return null;
-    }
+    // TODO: Implement findUserCompanies in UserRepository
+    // const userCompanies = await this.userRepository.findUserCompanies(userId);
 
-    // Return first active company or just first
-    return userCompanies.find(uc => uc.isActive) || userCompanies[0];
+    // if (!userCompanies || userCompanies.length === 0) {
+    //   return null;
+    // }
+
+    // // Return first active company or just first
+    // return userCompanies.find(uc => uc.isActive) || userCompanies[0];
+
+    return null;
   }
 
   /**

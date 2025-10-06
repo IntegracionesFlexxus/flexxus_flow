@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { IQuoteService } from '../interfaces/IQuoteService';
-import { QuoteInput, QuoteFilters } from '../../../types/quote.types';
+// TODO: Create missing types file
+// import { QuoteInput, QuoteFilters } from '../../../types/quote.types';
 import { AppError } from '../../../../../shared/errors/AppError';
 
 @injectable()
@@ -14,10 +15,10 @@ export class QuoteController {
 
   async create(req: Request, res: Response): Promise<Response> {
     try {
-      const quoteData: QuoteInput = req.body;
-      quoteData.company_id = req.user?.company_id || 1;
-      quoteData.created_by = req.user?.user_id;
-      quoteData.salesperson_id = req.user?.user_id;
+      const quoteData: any = req.body;
+      quoteData.company_id = req.user?.companyId || 1;
+      quoteData.created_by = req.user?.id;
+      quoteData.salesperson_id = req.user?.id;
 
       const quote = await this.quoteService.create(quoteData);
       
@@ -43,8 +44,8 @@ export class QuoteController {
   async update(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const quoteData: Partial<QuoteInput> = req.body;
-      quoteData.updated_by = req.user?.user_id;
+      const quoteData: Partial<any> = req.body;
+      quoteData.updated_by = req.user?.id;
 
       const quote = await this.quoteService.update(Number(id), quoteData);
       
@@ -155,7 +156,7 @@ export class QuoteController {
 
   async findAll(req: Request, res: Response): Promise<Response> {
     try {
-      const filters: QuoteFilters = {
+      const filters: any = {
         page: Number(req.query.page) || 1,
         limit: Number(req.query.limit) || 10,
         search: req.query.search as string,

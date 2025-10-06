@@ -517,7 +517,7 @@ export class FeatureFlagRepository implements IFeatureFlagRepository {
 
     if (featureNames && featureNames.length > 0) {
       whereClause += ' AND feature_name = ANY($3)';
-      values.push(featureNames);
+      values.push(featureNames as any); // PostgreSQL array parameter
     }
 
     const query = `

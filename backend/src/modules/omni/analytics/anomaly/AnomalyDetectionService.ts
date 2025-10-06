@@ -9,7 +9,7 @@ import { AnomalyRepository, IAnomaly } from './AnomalyRepository';
 import { FeatureStoreService } from '../../ml/services/FeatureStoreService';
 import { PredictionService } from '../../ml/services/PredictionService';
 import { AnomalyType, AnomalySeverity } from '../../types/prediction.types';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 interface DetectionResult {
   isAnomaly: boolean;
@@ -50,10 +50,10 @@ export class AnomalyDetectionService {
   ): Promise<IAnomaly | null> {
     try {
       // Get historical features
-      const historicalFeatures = await this.featureStoreService.getFeatures(
-        tenantId,
-        entityType,
-        entityId
+      const featureId = `${entityType}_${entityId}`;
+      const historicalFeatures = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
       let detectionResult: DetectionResult;
@@ -118,10 +118,10 @@ export class AnomalyDetectionService {
     }
   ): Promise<IAnomaly | null> {
     try {
-      const historicalFeatures = await this.featureStoreService.getFeatures(
-        tenantId,
-        `${entityType}_performance`,
-        entityId
+      const featureId = `${entityType}_performance_${entityId}`;
+      const historicalFeatures = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
       let detectionResult: DetectionResult;

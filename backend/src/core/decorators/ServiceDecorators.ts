@@ -6,7 +6,7 @@
 
 import 'reflect-metadata';
 import { injectable } from 'inversify';
-import { METADATA_KEY } from '../../../container/types';
+import { METADATA_KEY } from '@/container/types';
 
 /**
  * Transactional decorator for methods that require database transactions

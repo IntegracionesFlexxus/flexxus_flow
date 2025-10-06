@@ -40,7 +40,7 @@ export interface DashboardWidget {
 @injectable()
 export class DashboardRepository {
   constructor(
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async createDashboard(dashboard: DashboardConfiguration): Promise<DashboardConfiguration> {

@@ -4,9 +4,10 @@
  */
 
 import { injectable, inject } from 'inversify';
-import { Pool, PoolClient } from 'pg';
+import { PoolClient } from 'pg';
 import { TYPES } from '@/container/types';
 import { Logger } from 'winston';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
 import { CRMBaseRepository } from './CRMBaseRepository';
 
 export interface ProductCategory {
@@ -48,19 +49,19 @@ export interface CategoryFilter {
 }
 
 @injectable()
-export class CategoryRepository extends CRMBaseRepository {
+export class CategoryRepository extends CRMBaseRepository<ProductCategory> {
   constructor(
-    @inject(TYPES.DatabasePool) pool: Pool,
+    @inject(TYPES.CRMDatabaseConnection) db: IDatabaseConnection,
     @inject(TYPES.Logger) logger: Logger
   ) {
-    super(pool, logger);
+    super('categories', db, logger);
   }
 
   /**
    * Create a new category
    */
   async createCategory(category: ProductCategory, userId?: number): Promise<ProductCategory> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -190,7 +191,7 @@ export class CategoryRepository extends CRMBaseRepository {
       RETURNING *
     `;
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -198,7 +199,7 @@ export class CategoryRepository extends CRMBaseRepository {
    * Get category by ID
    */
   async getCategoryById(categoryId: number, companyId: number): Promise<ProductCategory | null> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM product_categories
        WHERE category_id = $1 AND company_id = $2`,
       [categoryId, companyId]
@@ -213,7 +214,7 @@ export class CategoryRepository extends CRMBaseRepository {
   async getCategoryTree(companyId: number, includeInactive: boolean = false): Promise<CategoryNode[]> {
     const activeClause = includeInactive ? '' : 'AND is_active = true';
 
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `WITH RECURSIVE category_tree AS (
         -- Root categories
         SELECT
@@ -312,7 +313,7 @@ export class CategoryRepository extends CRMBaseRepository {
     newParentId: number | null,
     companyId: number
   ): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -442,7 +443,7 @@ export class CategoryRepository extends CRMBaseRepository {
    * Delete a category and its descendants
    */
   async deleteCategory(categoryId: number, companyId: number): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -547,7 +548,7 @@ export class CategoryRepository extends CRMBaseRepository {
       params = [companyId, categoryId];
     }
 
-    const result = await this.pool.query(query, params);
+    const result = await this.db.query(query, params);
     return result.rows;
   }
 
@@ -555,7 +556,7 @@ export class CategoryRepository extends CRMBaseRepository {
    * Get category path
    */
   async getCategoryPath(categoryId: number, companyId: number): Promise<ProductCategory[]> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `WITH RECURSIVE category_path AS (
         SELECT *
         FROM product_categories
@@ -623,7 +624,7 @@ export class CategoryRepository extends CRMBaseRepository {
       ORDER BY left_node
     `;
 
-    const result = await this.pool.query(query, params);
+    const result = await this.db.query(query, params);
     return result.rows;
   }
 }

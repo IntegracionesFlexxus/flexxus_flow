@@ -12,7 +12,8 @@ try {
   // Si no está en el container, crear instancia temporal
   const logger = container.get<any>(TYPES.Logger);
   const companyService = container.get<any>(TYPES.CompanyService);
-  companyController = new CompanyController(companyService, logger);
+  const featureFlagService = container.get<any>(TYPES.FeatureFlagService);
+  companyController = new CompanyController(companyService, featureFlagService, logger);
 }
 // Todas las rutas requieren autenticación
 router.use(authenticateToken);

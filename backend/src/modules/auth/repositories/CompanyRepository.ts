@@ -46,7 +46,7 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
       false, // is_default
       'active' // status
     ]);
-    return results[0];
+    return results.rows[0];
   }
   async removeUserFromCompany(userId: string, companyId: string): Promise<boolean> {
     const query = `
@@ -56,31 +56,33 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
       RETURNING id
     `;
     const results = await this.db.query(query, [userId, companyId]);
-    return results.length > 0;
+    return results.rows.length > 0;
   }
   async getUserCompanies(userId: string): Promise<UserCompany[]> {
     const query = `
       SELECT uc.*, c.name as company_name, c.plan, c.status as company_status
       FROM user_companies uc
       INNER JOIN companies c ON c.id = uc.company_id
-      WHERE uc.user_id = $1 
-        AND uc.deleted_at IS NULL 
+      WHERE uc.user_id = $1
+        AND uc.deleted_at IS NULL
         AND c.deleted_at IS NULL
       ORDER BY uc.is_default DESC, uc.created_at DESC
     `;
-    return await this.db.query<UserCompany>(query, [userId]);
+    const result = await this.db.query<UserCompany>(query, [userId]);
+    return result.rows;
   }
   async getCompanyUsers(companyId: string): Promise<UserCompany[]> {
     const query = `
       SELECT uc.*, u.email, u.first_name, u.last_name, u.status as user_status
       FROM user_companies uc
       INNER JOIN users u ON u.id = uc.user_id
-      WHERE uc.company_id = $1 
-        AND uc.deleted_at IS NULL 
+      WHERE uc.company_id = $1
+        AND uc.deleted_at IS NULL
         AND u.deleted_at IS NULL
       ORDER BY uc.role ASC, uc.created_at DESC
     `;
-    return await this.db.query<UserCompany>(query, [companyId]);
+    const result = await this.db.query<UserCompany>(query, [companyId]);
+    return result.rows;
   }
   async setDefaultCompany(userId: string, companyId: string): Promise<void> {
     // Transaction to ensure only one default company
@@ -107,7 +109,7 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
       WHERE user_id = $1 AND company_id = $2 AND deleted_at IS NULL
     `;
     const results = await this.db.query<UserCompany>(query, [userId, companyId]);
-    return results.length > 0 ? results[0] : null;
+    return results.rows.length > 0 ? results.rows[0] : null;
   }
 
   /**
@@ -125,7 +127,8 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
     `;
 
     try {
-      return await this.db.query<Company>(query, [ids]);
+      const result = await this.db.query<Company>(query, [ids]);
+      return result.rows;
     } catch (error) {
       this.logger?.error('Error fetching companies by IDs', { error, ids });
       return [];
@@ -153,7 +156,8 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
     `;
 
     try {
-      return await this.db.query(query, [ids]);
+      const result = await this.db.query(query, [ids]);
+      return result.rows;
     } catch (error) {
       this.logger?.error('Error fetching companies basic info by IDs', { error, ids });
       return [];
@@ -175,7 +179,7 @@ export class CompanyRepository extends BaseRepository<Company> implements ICompa
 
     try {
       const results = await this.db.query<{ id: string }>(query, [limit]);
-      return results.map(row => row.id);
+      return results.rows.map(row => row.id);
     } catch (error) {
       this.logger?.error('Error fetching active company IDs', { error });
       return [];

@@ -5,18 +5,19 @@
 
 import { injectable, inject } from 'inversify';
 import { CRMBaseRepository } from './CRMBaseRepository';
-import {
-  Activity,
-  ActivityCreateDTO,
-  ActivityUpdateDTO,
-  ActivityFilter,
-  ActivityWithDetails,
-  ActivityMetrics
-} from '../types/activity.types';
+// TODO: Create missing types file
+// import {
+//   Activity,
+//   ActivityCreateDTO,
+//   ActivityUpdateDTO,
+//   ActivityFilter,
+//   ActivityWithDetails,
+//   ActivityMetrics
+// } from '../types/activity.types';
 import { TYPES } from '@/container/types';
 
 @injectable()
-export class ActivityRepository extends CRMBaseRepository<Activity> {
+export class ActivityRepository extends CRMBaseRepository<any> {
   constructor(
     @inject(TYPES.CRMDatabaseConnection) db: any,
     @inject(TYPES.Logger) logger?: any
@@ -36,7 +37,7 @@ export class ActivityRepository extends CRMBaseRepository<Activity> {
   /**
    * Get activity with all details
    */
-  async getActivityWithDetails(id: number, companyId: number): Promise<ActivityWithDetails | null> {
+  async getActivityWithDetails(id: number, companyId: number): Promise<any | null> {
     const query = `
       SELECT
         a.*,
@@ -66,7 +67,7 @@ export class ActivityRepository extends CRMBaseRepository<Activity> {
   /**
    * Find activities with filters
    */
-  async findWithFilters(companyId: number, filters: ActivityFilter): Promise<Activity[]> {
+  async findWithFilters(companyId: number, filters: any): Promise<any[]> {
     let query = `
       SELECT a.* FROM ${this.getFullTableName()} a
       WHERE a.company_id = $1
@@ -198,7 +199,7 @@ export class ActivityRepository extends CRMBaseRepository<Activity> {
   /**
    * Get overdue activities
    */
-  async getOverdueActivities(companyId: number, assignedTo?: number): Promise<Activity[]> {
+  async getOverdueActivities(companyId: number, assignedTo?: number): Promise<any[]> {
     let query = `
       SELECT * FROM ${this.getFullTableName()}
       WHERE company_id = $1
@@ -227,7 +228,7 @@ export class ActivityRepository extends CRMBaseRepository<Activity> {
   /**
    * Get activities with reminders
    */
-  async getActivitiesWithReminders(companyId: number): Promise<Activity[]> {
+  async getActivitiesWithReminders(companyId: number): Promise<any[]> {
     const query = `
       SELECT * FROM ${this.getFullTableName()}
       WHERE company_id = $1
@@ -311,7 +312,7 @@ export class ActivityRepository extends CRMBaseRepository<Activity> {
   /**
    * Get activity metrics
    */
-  async getActivityMetrics(companyId: number, dateRange?: { start: Date; end: Date }): Promise<ActivityMetrics> {
+  async getActivityMetrics(companyId: number, dateRange?: { start: Date; end: Date }): Promise<any> {
     let dateCondition = '';
     const params: any[] = [companyId];
 
@@ -431,7 +432,7 @@ export class ActivityRepository extends CRMBaseRepository<Activity> {
     companyId: number,
     entityType: 'account' | 'contact' | 'opportunity' | 'lead',
     entityId: number
-  ): Promise<Activity[]> {
+  ): Promise<any[]> {
     const entityColumn = `${entityType}_id`;
 
     const query = `

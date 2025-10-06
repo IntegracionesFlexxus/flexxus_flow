@@ -120,7 +120,7 @@ export class PricingController {
    */
   async calculatePrice(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -176,7 +176,7 @@ export class PricingController {
    */
   async calculateBulkPrices(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -226,7 +226,7 @@ export class PricingController {
    */
   async getPricingRules(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -258,7 +258,7 @@ export class PricingController {
    */
   async getPricingRuleById(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const rule_id = Number(req.params.id);
 
       if (!company_id) {
@@ -290,8 +290,8 @@ export class PricingController {
    */
   async createPricingRule(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -330,7 +330,7 @@ export class PricingController {
    */
   async updatePricingRule(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const rule_id = Number(req.params.id);
 
       if (!company_id) {
@@ -371,7 +371,7 @@ export class PricingController {
    */
   async deletePricingRule(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const rule_id = Number(req.params.id);
 
       if (!company_id) {
@@ -388,7 +388,7 @@ export class PricingController {
         rule_type: 'discount',
         conditions: {},
         actions: {}
-      });
+      } as any);
 
       res.json({
         success: true,
@@ -407,7 +407,7 @@ export class PricingController {
    */
   async applyDiscountCode(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const account_id = req.user?.account_id;
 
       if (!company_id) {
@@ -461,8 +461,8 @@ export class PricingController {
    */
   async createDiscountCode(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -507,7 +507,7 @@ export class PricingController {
    */
   async getCustomerPricing(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const account_id = Number(req.params.accountId);
 
       if (!company_id) {
@@ -540,8 +540,8 @@ export class PricingController {
    */
   async setCustomerPricing(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -580,7 +580,7 @@ export class PricingController {
    */
   async getTieredPricing(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const product_id = Number(req.params.productId);
 
       if (!company_id) {
@@ -607,7 +607,7 @@ export class PricingController {
    */
   async calculateBundlePrice(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const bundle_id = Number(req.params.bundleId);
       const quantity = Number(req.body.quantity) || 1;
 
@@ -644,7 +644,7 @@ export class PricingController {
    */
   async createPromotion(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -683,7 +683,7 @@ export class PricingController {
    */
   async getPriceHistory(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const product_id = Number(req.params.productId);
 
       if (!company_id) {
@@ -718,7 +718,7 @@ export class PricingController {
    */
   async simulatePricing(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -776,7 +776,7 @@ export class PricingController {
    */
   async getPricingAnalytics(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -804,7 +804,7 @@ export class PricingController {
    */
   async optimizePricingRules(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -846,7 +846,7 @@ export class PricingController {
    */
   async clearPricingCache(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });

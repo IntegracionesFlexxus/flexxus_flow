@@ -355,11 +355,12 @@ export class CompanyController {
         return;
       }
 
-      const settings = await this.companyService.getCompanySettings(companyId);
+      // TODO: Implement getCompanySettings in CompanyService
+      // const settings = await this.companyService.getCompanySettings(companyId);
 
-      res.status(200).json({
-        success: true,
-        data: settings
+      res.status(501).json({
+        success: false,
+        message: 'getCompanySettings method not yet implemented'
       });
     } catch (error) {
       this.logger.error('Get company settings error', { 
@@ -503,8 +504,8 @@ export class CompanyController {
       }
 
       // Extract pagination params
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const page = parseInt(req.query.page as string || '1', 10);
+      const limit = parseInt(req.query.limit as string || '20', 10);
       const role = req.query.role as string;
       const isActive = req.query.isActive === 'true' ? true : 
                       req.query.isActive === 'false' ? false : undefined;

@@ -142,8 +142,8 @@ export abstract class BaseRepository<T extends BaseEntity> {
       WHERE id = $1 AND deleted_at IS NULL
     `;
     try {
-      const results = await this.db.query<T>(query, [id], options?.transaction);
-      const result = results.length > 0 ? results[0] : null;
+      const results = await this.db.query<T>(query, [id]);
+      const result = results.rows.length > 0 ? results.rows[0] : null;
       // Cache the result
       if (result) {
         this.setCache(cacheKey, result);
@@ -174,13 +174,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
       LIMIT $1 OFFSET $2
     `;
     try {
-      const results = await this.db.query<T>(query, [limit, offset], options?.transaction);
+      const results = await this.db.query<T>(query, [limit, offset]);
       // Cache the results
-      this.setCache(cacheKey, results);
+      this.setCache(cacheKey, results.rows);
       if (!options?.skipLog) {
-        this.logger?.debug(`${this.tableName}.findAll`, { limit, offset, count: results.length });
+        this.logger?.debug(`${this.tableName}.findAll`, { limit, offset, count: results.rows.length });
       }
-      return results;
+      return results.rows;
     } catch (error) {
       this.logger?.error(`Error in ${this.tableName}.findAll`, { limit, offset, error });
       throw error;
@@ -197,11 +197,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
       WHERE ${field} = $1 AND deleted_at IS NULL
     `;
     try {
-      const results = await this.db.query<T>(query, [value], options?.transaction);
+      const results = await this.db.query<T>(query, [value]);
       if (!options?.skipLog) {
-        this.logger?.debug(`${this.tableName}.findByField`, { field, value, count: results.length });
+        this.logger?.debug(`${this.tableName}.findByField`, { field, value, count: results.rows.length });
       }
-      return results;
+      return results.rows;
     } catch (error) {
       this.logger?.error(`Error in ${this.tableName}.findByField`, { field, value, error });
       throw error;
@@ -259,11 +259,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
       RETURNING *
     `;
     try {
-      const results = await this.db.query<T>(query, finalValues, options?.transaction);
+      const results = await this.db.query<T>(query, finalValues);
       // Invalidate cache
       this.invalidateCache();
       this.logger?.info(`Created in ${this.tableName}`, { id: filteredData.id });
-      return results[0];
+      return results.rows[0];
     } catch (error) {
       this.logger?.error(`Error creating in ${this.tableName}`, { 
         fields: finalFields,
@@ -306,11 +306,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
       RETURNING *
     `;
     try {
-      const results = await this.db.query<T>(query, values, options?.transaction);
+      const results = await this.db.query<T>(query, values);
       // Invalidate cache
       this.invalidateCache(id);
 
-      if (results.length > 0) {
+      if (results.rows.length > 0) {
         this.logger?.info(`[BaseRepository.update] Successfully updated`, {
           tableName: this.tableName,
           id,
@@ -326,7 +326,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         });
       }
 
-      return results.length > 0 ? results[0] : null;
+      return results.rows.length > 0 ? results.rows[0] : null;
     } catch (error) {
       this.logger?.error(`[BaseRepository.update] Error updating`, {
         tableName: this.tableName,
@@ -366,8 +366,8 @@ export abstract class BaseRepository<T extends BaseEntity> {
       RETURNING id
     `;
     try {
-      const results = await this.db.query(query, [id], options?.transaction);
-      const success = results.length > 0;
+      const results = await this.db.query(query, [id]);
+      const success = results.rows.length > 0;
 
       if (success) {
         // Invalidate cache
@@ -409,8 +409,8 @@ export abstract class BaseRepository<T extends BaseEntity> {
       RETURNING id
     `;
     try {
-      const results = await this.db.query(query, [id], options?.transaction);
-      const success = results.length > 0;
+      const results = await this.db.query(query, [id]);
+      const success = results.rows.length > 0;
       if (success) {
         // Invalidate cache
         this.invalidateCache(id);
@@ -434,8 +434,8 @@ export abstract class BaseRepository<T extends BaseEntity> {
       RETURNING id
     `;
     try {
-      const results = await this.db.query(query, [id], options?.transaction);
-      const success = results.length > 0;
+      const results = await this.db.query(query, [id]);
+      const success = results.rows.length > 0;
       if (success) {
         // Invalidate cache
         this.invalidateCache(id);
@@ -465,11 +465,10 @@ export abstract class BaseRepository<T extends BaseEntity> {
     }
     try {
       const results = await this.db.query<{ count: string }>(
-        query, 
-        params || [], 
-        options?.transaction
+        query,
+        params || []
       );
-      const count = parseInt(results[0].count, 10);
+      const count = parseInt(results.rows[0].count, 10);
       if (!options?.skipLog) {
         this.logger?.debug(`${this.tableName}.count`, { whereClause, count });
       }
@@ -492,11 +491,10 @@ export abstract class BaseRepository<T extends BaseEntity> {
     `;
     try {
       const results = await this.db.query<{ exists: boolean }>(
-        query, 
-        [id], 
-        options?.transaction
+        query,
+        [id]
       );
-      return results[0].exists;
+      return results.rows[0].exists;
     } catch (error) {
       this.logger?.error(`Error checking existence in ${this.tableName}`, { id, error });
       throw error;
@@ -534,11 +532,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
       RETURNING *
     `;
     try {
-      const results = await this.db.query<T>(query, values, options?.transaction);
+      const results = await this.db.query<T>(query, values);
       // Invalidate cache
       this.clearCache();
       this.logger?.info(`Batch created in ${this.tableName}`, { count: items.length });
-      return results;
+      return results.rows;
     } catch (error) {
       this.logger?.error(`Error batch creating in ${this.tableName}`, { count: items.length, error });
       throw error;
@@ -577,11 +575,10 @@ export abstract class BaseRepository<T extends BaseEntity> {
       // Get total count
       const countQuery = `SELECT COUNT(*) as count FROM ${this.tableName} WHERE ${whereClause}`;
       const countResult = await this.db.query<{ count: string }>(
-        countQuery, 
-        options.params || [], 
-        queryOptions?.transaction
+        countQuery,
+        options.params || []
       );
-      const total = parseInt(countResult[0].count, 10);
+      const total = parseInt(countResult.rows[0].count, 10);
       // Get paginated data
       const dataQuery = `
         SELECT * FROM ${this.tableName}
@@ -591,16 +588,16 @@ export abstract class BaseRepository<T extends BaseEntity> {
         OFFSET $${(options.params?.length || 0) + 2}
       `;
       const params = [...(options.params || []), limit, offset];
-      const data = await this.db.query<T>(dataQuery, params, queryOptions?.transaction);
+      const data = await this.db.query<T>(dataQuery, params);
       const totalPages = Math.ceil(total / limit);
-      this.logger?.debug(`${this.tableName}.findPaginated`, { 
-        page, 
-        limit, 
-        total, 
-        returned: data.length 
+      this.logger?.debug(`${this.tableName}.findPaginated`, {
+        page,
+        limit,
+        total,
+        returned: data.rows.length
       });
       return {
-        data,
+        data: data.rows,
         total,
         page,
         totalPages,
@@ -622,14 +619,14 @@ export abstract class BaseRepository<T extends BaseEntity> {
     }
     this.validateParams(params);
     try {
-      const results = await this.db.query<R>(query, params, options?.transaction);
+      const results = await this.db.query<R>(query, params);
       if (!options?.skipLog) {
         this.logger?.debug(`Custom query on ${this.tableName}`, { 
           query: query.substring(0, 100), 
-          paramCount: params.length 
+          paramCount: params.length
         });
       }
-      return results;
+      return results.rows;
     } catch (error) {
       this.logger?.error(`Error executing custom query on ${this.tableName}`, { query, error });
       throw error;

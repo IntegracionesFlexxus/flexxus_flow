@@ -3,8 +3,9 @@
  * Siguiendo lineamientos nivel 2: servicio centralizado de configuración
  * Gestión de configuración con hot-reload y validación
  */
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import { EventEmitter } from 'events';
+import { TYPES } from '@/container/types';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chokidar from 'chokidar';
@@ -308,9 +309,14 @@ let configServiceInstance: ConfigService | null = null;
 /**
  * Get or create ConfigService instance
  */
-export function getConfigService(options?: ConfigOptions): ConfigService {
+export function getConfigService(options?: ConfigOptions, logger?: ILoggerService): ConfigService {
   if (!configServiceInstance) {
-    configServiceInstance = new ConfigService(options);
+    // For singleton pattern, we need to provide a logger instance
+    // This should ideally come from the DI container
+    if (!logger) {
+      throw new Error('Logger instance required for ConfigService initialization');
+    }
+    configServiceInstance = new ConfigService(options || {}, logger);
   }
   return configServiceInstance;
 }

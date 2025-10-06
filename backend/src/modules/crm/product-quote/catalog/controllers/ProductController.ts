@@ -361,7 +361,7 @@ export class ProductController {
       }
 
       const updates: InventoryUpdate[] = req.body.updates;
-      await this.productService.updateInventory(updates);
+      await this.productService.updateInventory(updates as any);
 
       res.json({
         success: true,

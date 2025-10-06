@@ -15,8 +15,8 @@ export class PromotionController {
     try {
       const promotionData = {
         ...req.body,
-        company_id: req.user?.company_id || 1,
-        created_by: req.user?.user_id
+        company_id: req.user?.companyId || 1,
+        created_by: req.user?.id
       };
 
       const promotion = await this.promotionService.createPromotion(promotionData);
@@ -45,7 +45,7 @@ export class PromotionController {
       const { id } = req.params;
       const promotionData = {
         ...req.body,
-        updated_by: req.user?.user_id
+        updated_by: req.user?.id
       };
 
       const promotion = await this.promotionService.updatePromotion(

@@ -51,7 +51,7 @@ export class StreamProcessor extends EventEmitter {
   private readonly BUFFER_SIZE_LIMIT = 1000;
 
   constructor(
-    @inject(TYPES.WebSocketService) private websocket: WebSocketService,
+    @inject(TYPES.WebSocketServer) private websocket: WebSocketService,
     @inject(TYPES.DataMartRepository) private dataMart: DataMartRepository,
     @inject(TYPES.Logger) private logger: Logger
   ) {

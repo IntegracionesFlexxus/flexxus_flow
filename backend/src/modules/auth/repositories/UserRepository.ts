@@ -57,7 +57,7 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
       ) as exists
     `;
     const results = await this.db.query<{ exists: boolean }>(query, [email.toLowerCase()]);
-    return results[0].exists;
+    return results.rows[0].exists;
   }
   /**
    * Create a new user
@@ -124,7 +124,7 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
       }
     }
     const results = await this.db.query<{ count: string }>(query, params);
-    return parseInt(results[0].count, 10);
+    return parseInt(results.rows[0].count, 10);
   }
   /**
    * Get users with pagination
@@ -159,7 +159,8 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
       query += ` OFFSET $${paramCount}`;
       params.push(options.offset);
     }
-    return await this.db.query<User>(query, params);
+    const result = await this.db.query<User>(query, params);
+    return result.rows;
   }
   /**
    * Search users by name or email
@@ -178,7 +179,8 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
       LIMIT $2
     `;
     const searchPattern = `%${searchTerm.toLowerCase()}%`;
-    return await this.db.query<User>(query, [searchPattern, limit]);
+    const result = await this.db.query<User>(query, [searchPattern, limit]);
+    return result.rows;
   }
   /**
    * Get recently active users
@@ -191,7 +193,8 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
       ORDER BY last_login_at DESC
       LIMIT $1
     `;
-    return await this.db.query<User>(query, [limit]);
+    const result = await this.db.query<User>(query, [limit]);
+    return result.rows;
   }
   /**
    * Get users created in a date range
@@ -204,7 +207,8 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
         AND created_at <= $2
       ORDER BY created_at DESC
     `;
-    return await this.db.query<User>(query, [startDate, endDate]);
+    const result = await this.db.query<User>(query, [startDate, endDate]);
+    return result.rows;
   }
 
   /**
@@ -222,7 +226,8 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
     `;
 
     try {
-      return await this.db.query<User>(query, [ids]);
+      const result = await this.db.query<User>(query, [ids]);
+      return result.rows;
     } catch (error) {
       this.logger?.error('Error fetching users by IDs', { error, ids });
       return [];
@@ -260,7 +265,8 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
     `;
 
     try {
-      return await this.db.query(query, [validIds]);
+      const result = await this.db.query(query, [validIds]);
+      return result.rows;
     } catch (error) {
       this.logger?.error('Error fetching users basic info by IDs', { error, ids: validIds });
       return [];
@@ -282,7 +288,7 @@ export class UserRepository extends BaseRepository<User> implements IUserReposit
 
     try {
       const results = await this.db.query<{ id: number }>(query, [limit]);
-      return results.map(row => row.id);
+      return results.rows.map(row => row.id);
     } catch (error) {
       this.logger?.error('Error fetching active user IDs', { error });
       return [];

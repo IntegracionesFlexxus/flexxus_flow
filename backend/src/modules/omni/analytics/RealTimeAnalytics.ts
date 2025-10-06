@@ -22,7 +22,7 @@ export class RealTimeAnalytics extends EventEmitter {
   private eventBuffer: IAnalyticsEvent[] = [];
   private bufferSize: number = 1000;
   private flushInterval: number = 60000; // 1 minute
-  private flushTimer?: NodeJS.Timer;
+  private flushTimer?: NodeJS.Timeout;
   private metricsCache: Map<string, IAggregatedMetrics> = new Map();
   private cacheExpiryMs: number = 300000; // 5 minutes
   private lastCacheUpdate: Map<string, number> = new Map();
@@ -356,7 +356,7 @@ export class RealTimeAnalytics extends EventEmitter {
    */
   stopFlushTimer(): void {
     if (this.flushTimer) {
-      clearInterval(this.flushTimer);
+      clearInterval(this.flushTimer as any);
       this.flushTimer = undefined;
     }
   }

@@ -256,7 +256,7 @@ export class AutoResponseService {
       }
     };
 
-    const sentMessage = await this.messageService.sendMessage(messageData, companyId);
+    const sentMessage = await this.messageService.sendMessage(messageData as any, companyId);
 
     this.logger.info('Auto-response sent', {
       responseId: autoResponse.id,

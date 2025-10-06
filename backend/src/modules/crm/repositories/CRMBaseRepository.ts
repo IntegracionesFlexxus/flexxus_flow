@@ -146,10 +146,10 @@ export abstract class CRMBaseRepository<T extends CRMBaseEntity> {
     try {
       const result = await this.db.query(query, values);
       const created = result.rows[0] as T;
-      
+
       // Clear cache for this company
-      this.clearCompanyCache(created.company_id);
-      
+      this.clearCompanyCache(String(created.company_id));
+
       this.logger?.info(`Created ${this.tableName}`, { id: created.id, companyId: created.company_id });
       return created;
     } catch (error) {
@@ -255,7 +255,7 @@ export abstract class CRMBaseRepository<T extends CRMBaseEntity> {
 
     // Build WHERE clause
     const whereConditions = ['company_id = $1'];
-    const params = [companyId];
+    const params: any[] = [companyId];
     let paramIndex = 2;
 
     if (filters) {
@@ -278,13 +278,15 @@ export abstract class CRMBaseRepository<T extends CRMBaseEntity> {
     `;
 
     // Get paginated data
+    const limitParamIndex = paramIndex;
+    const offsetParamIndex = paramIndex + 1;
     params.push(limit, offset);
     const dataQuery = `
       SELECT *
       FROM ${this.getFullTableName()}
       WHERE ${whereClause}
       ORDER BY ${order}
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
     `;
 
     try {

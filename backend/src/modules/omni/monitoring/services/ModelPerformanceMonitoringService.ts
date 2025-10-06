@@ -6,7 +6,7 @@
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { ModelMonitoringRepository, IModelMetrics } from '../repositories/ModelMonitoringRepository';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class ModelPerformanceMonitoringService {

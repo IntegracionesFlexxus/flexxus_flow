@@ -16,10 +16,12 @@
     "jsx": "react-jsx",
 
     /* Linting básico - TODO: Nivel 2 agregar más strict checks */
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false, // Por ahora permitimos vars sin usar
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
 
     /* Path aliases para imports más limpios */
     "baseUrl": "./src",

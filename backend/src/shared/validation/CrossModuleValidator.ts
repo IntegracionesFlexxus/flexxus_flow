@@ -57,7 +57,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         ? [params.sourceValue, params.companyId]
         : [params.sourceValue];
       const result = await targetDb.query<{ exists: boolean }>(query, queryParams);
-      const exists = result[0]?.exists || false;
+      const exists = result.rows[0]?.exists || false;
       // Registrar la validación en la base de datos compartida
       await this.logValidation({
         sourceTable: params.sourceTable,
@@ -217,7 +217,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         plan_id: string;
         max_users: number;
       }>(companyQuery, [companyId]);
-      if (companyResult.length === 0) {
+      if (companyResult.rows.length === 0) {
         return {
           isValid: false,
           message: 'Company not found',
@@ -225,7 +225,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
           timestamp: new Date()
         };
       }
-      const maxUsers = companyResult[0].max_users || 5; // Default a 5 usuarios
+      const maxUsers = companyResult.rows[0].max_users || 5; // Default a 5 usuarios
       // Contar usuarios actuales
       const userCountQuery = `
         SELECT COUNT(*) as count
@@ -236,7 +236,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         userCountQuery,
         [companyId]
       );
-      const currentUsers = parseInt(countResult[0].count, 10);
+      const currentUsers = parseInt(countResult.rows[0].count, 10);
       return {
         isValid: currentUsers < maxUsers,
         message: currentUsers >= maxUsers
@@ -275,7 +275,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         query,
         [companyId, featureKey]
       );
-      const isEnabled = result.length > 0 && result[0].is_enabled;
+      const isEnabled = result.rows.length > 0 && result.rows[0].is_enabled;
       return {
         isValid: isEnabled,
         message: isEnabled 
@@ -305,7 +305,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         WHERE id = $1 AND company_id = $2 AND status = 'active'
       `;
       const userResult = await this.sharedDb.query(userQuery, [userId, companyId]);
-      if (userResult.length === 0) {
+      if (userResult.rows.length === 0) {
         return {
           isValid: false,
           message: 'User not found or inactive',
@@ -319,7 +319,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         WHERE id = $1 AND (company_id = $2 OR company_id IS NULL) AND is_active = true
       `;
       const roleResult = await this.sharedDb.query(roleQuery, [roleId, companyId]);
-      if (roleResult.length === 0) {
+      if (roleResult.rows.length === 0) {
         return {
           isValid: false,
           message: 'Role not found or inactive',
@@ -349,7 +349,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
       WHERE u.company_id = $1 AND c.id IS NULL
     `;
     const result = await this.sharedDb.query<{ count: string }>(query, [companyId]);
-    const orphanedCount = parseInt(result[0].count, 10);
+    const orphanedCount = parseInt(result.rows[0].count, 10);
     return {
       isValid: orphanedCount === 0,
       message: orphanedCount > 0 
@@ -372,7 +372,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
         AND expires_at < CURRENT_TIMESTAMP
     `;
     const result = await this.sharedDb.query<{ count: string }>(query, [companyId]);
-    const expiredCount = parseInt(result[0].count, 10);
+    const expiredCount = parseInt(result.rows[0].count, 10);
     return {
       isValid: expiredCount === 0,
       message: expiredCount > 0 
@@ -394,7 +394,7 @@ export class CrossModuleValidator implements ICrossModuleValidator {
       WHERE r.company_id = $1 AND rp.id IS NULL
     `;
     const result = await this.sharedDb.query<{ count: string }>(query, [companyId]);
-    const rolesCount = parseInt(result[0].count, 10);
+    const rolesCount = parseInt(result.rows[0].count, 10);
     return {
       isValid: rolesCount === 0,
       message: rolesCount > 0 

@@ -7,7 +7,7 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { DriftDetectionRepository, IDriftDetection } from '../repositories/DriftDetectionRepository';
 import { DriftType, DriftSeverity } from '../../types/monitoring.types';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class DataDriftDetectionService {

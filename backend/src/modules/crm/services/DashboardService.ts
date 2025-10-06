@@ -28,7 +28,7 @@ export class DashboardService {
     @inject(TYPES.CRMKpiRepository) private kpiRepository: KpiRepository,
     @inject(TYPES.CRMReportRepository) private reportRepository: ReportRepository,
     @inject(TYPES.CRMAnalyticsService) private analyticsService: AnalyticsService,
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async createDashboard(dashboard: DashboardConfiguration): Promise<DashboardConfiguration> {

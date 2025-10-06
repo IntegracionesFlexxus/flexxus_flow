@@ -11,8 +11,10 @@ import { IAutoResponse } from './AutoResponseService';
 
 @injectable()
 export class AutoResponseRepository extends BaseOmniRepository<IAutoResponse> {
-  constructor(@inject(TYPES.OmniConnection) pool: Pool) {
-    super(pool, 'auto_responses');
+  protected tableName = 'auto_responses';
+
+  constructor() {
+    super();
   }
 
   /**

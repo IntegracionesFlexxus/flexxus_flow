@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
 import { IActivityService } from '../interfaces/IActivityService';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 
 @injectable()
 export class ActivityController {
@@ -84,7 +84,7 @@ export class ActivityController {
       const activity = await this.activityService.getActivityById(activityId, companyId);
 
       if (!activity) {
-        throw new AppError('Activity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Activity not found', 404);
       }
 
       res.json({
@@ -114,7 +114,7 @@ export class ActivityController {
       );
 
       if (!activity) {
-        throw new AppError('Activity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Activity not found', 404);
       }
 
       res.json({
@@ -140,7 +140,7 @@ export class ActivityController {
       const deleted = await this.activityService.deleteActivity(activityId, companyId, userId);
 
       if (!deleted) {
-        throw new AppError('Activity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Activity not found', 404);
       }
 
       res.json({
@@ -283,11 +283,11 @@ export class ActivityController {
       const { activityIds, status } = req.body;
 
       if (!activityIds || !Array.isArray(activityIds) || activityIds.length === 0) {
-        throw new AppError('Activity IDs are required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Activity IDs are required', 400);
       }
 
       if (!status) {
-        throw new AppError('Status is required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Status is required', 400);
       }
 
       const updatedCount = await this.activityService.bulkUpdateStatus(
@@ -319,7 +319,7 @@ export class ActivityController {
 
       const validEntityTypes = ['account', 'contact', 'opportunity', 'lead'];
       if (!validEntityTypes.includes(entityType)) {
-        throw new AppError('Invalid entity type', 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, 'Invalid entity type', 400);
       }
 
       const activities = await this.activityService.getEntityTimeline(

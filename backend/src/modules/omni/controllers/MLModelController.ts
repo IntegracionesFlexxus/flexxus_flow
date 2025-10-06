@@ -22,7 +22,7 @@ export class MLModelController {
    */
   async createModel(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const userId = req.user?.id;
 
       const modelData: CreateMLModelDTO = req.body;
@@ -47,7 +47,7 @@ export class MLModelController {
    */
   async getModel(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const model = await this.mlModelService.getModel(id, tenantId);
@@ -70,7 +70,7 @@ export class MLModelController {
    */
   async listModels(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { status, model_type } = req.query;
 
       const filters: any = {};
@@ -98,7 +98,7 @@ export class MLModelController {
    */
   async updateModel(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
       const updateData: UpdateMLModelDTO = req.body;
 
@@ -122,7 +122,7 @@ export class MLModelController {
    */
   async deleteModel(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.mlModelService.deleteModel(id, tenantId);
@@ -145,7 +145,7 @@ export class MLModelController {
    */
   async trainModel(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.mlModelService.trainModel(id, tenantId);
@@ -168,7 +168,7 @@ export class MLModelController {
    */
   async deployModel(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.mlModelService.deployModel(id, tenantId);
@@ -191,7 +191,7 @@ export class MLModelController {
    */
   async getModelStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const statistics = await this.mlModelService.getModelStatistics(id, tenantId);

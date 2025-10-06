@@ -94,7 +94,7 @@ export class WebSocketServer implements IWebSocketServer {
         password: environment.redis.password
       });
       const subClient = pubClient.duplicate();
-      const adapter = createAdapter(pubClient, subClient);
+      const adapter = createAdapter(pubClient as any, subClient as any);
       this.io!.adapter(adapter);
       this.logger.info('Redis adapter configured for WebSocket scaling');
     } catch (error) {

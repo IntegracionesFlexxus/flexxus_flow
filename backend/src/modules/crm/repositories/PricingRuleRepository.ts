@@ -8,9 +8,9 @@
  */
 
 import { injectable, inject } from 'inversify';
-import { Pool } from 'pg';
 import { TYPES } from '@/container/types';
 import { Logger } from 'winston';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
 import { CRMBaseRepository } from './CRMBaseRepository';
 
 export interface PricingRule {
@@ -114,12 +114,12 @@ export type DiscountType = 'percentage' | 'fixed_amount' | 'buy_x_get_y' | 'free
 export type DiscountAppliesTo = 'order' | 'products' | 'categories' | 'shipping';
 
 @injectable()
-export class PricingRuleRepository extends CRMBaseRepository {
+export class PricingRuleRepository extends CRMBaseRepository<PricingRule> {
   constructor(
-    @inject(TYPES.DatabasePool) pool: Pool,
+    @inject(TYPES.CRMDatabaseConnection) db: IDatabaseConnection,
     @inject(TYPES.Logger) logger: Logger
   ) {
-    super(pool, logger);
+    super('pricing_rules', db, logger);
   }
 
   /**
@@ -158,7 +158,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       userId || rule.updated_by
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -202,7 +202,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       RETURNING *
     `;
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -222,7 +222,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       ORDER BY priority DESC, rule_id
     `;
 
-    const result = await this.pool.query(query, [
+    const result = await this.db.query(query, [
       context.customer_id, // Assuming company_id is derived from customer
       currentDate
     ]);
@@ -328,7 +328,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
    * Update rule priority
    */
   async updateRulePriority(ruleId: number, priority: number): Promise<void> {
-    await this.pool.query(
+    await this.db.query(
       `UPDATE pricing_rules SET priority = $1 WHERE rule_id = $2`,
       [priority, ruleId]
     );
@@ -366,7 +366,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       userId
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -398,7 +398,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       item.notes
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -446,7 +446,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       ORDER BY priority DESC, price_list_id
     `;
 
-    const result = await this.pool.query(query, params);
+    const result = await this.db.query(query, params);
     return result.rows;
   }
 
@@ -490,7 +490,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       userId
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -503,7 +503,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
     customerId?: number
   ): Promise<{ valid: boolean; code?: DiscountCode; reason?: string }> {
     // Get the discount code
-    const codeResult = await this.pool.query(
+    const codeResult = await this.db.query(
       `SELECT * FROM discount_codes
        WHERE code = $1 AND company_id = $2 AND is_active = true`,
       [code, companyId]
@@ -532,7 +532,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
 
     // Check customer usage limit
     if (customerId && discountCode.usage_limit_per_customer) {
-      const usageResult = await this.pool.query(
+      const usageResult = await this.db.query(
         `SELECT COUNT(*) as count
          FROM discount_code_usage
          WHERE code_id = $1 AND customer_id = $2`,
@@ -557,7 +557,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
     discountAmount: number,
     orderAmount: number
   ): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -627,7 +627,7 @@ export class PricingRuleRepository extends CRMBaseRepository {
       ORDER BY country_code, state_province
     `;
 
-    const result = await this.pool.query(query, params);
+    const result = await this.db.query(query, params);
     return result.rows;
   }
 }

@@ -10,7 +10,7 @@ import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
 import { IRoleService } from '@/modules/auth/interfaces/IRoleService';
 import { IPermissionRepository } from '@/modules/auth/interfaces/IPermissionRepository';
 import { RoleRepository } from '@/modules/auth/repositories/RoleRepository';
-import { RoleService } from '@/modules/auth/services/RoleService';
+import { RoleService } from '@/modules/roles/services/RoleService';
 import { RoleController } from '@/modules/auth/controllers/RoleController';
 
 /**

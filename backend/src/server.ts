@@ -9,10 +9,10 @@ import winston from 'winston';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 import { initializeCRMModule, shutdownCRMModule } from '@/modules/crm';
 
-/**
 // Logger instance
 const logger = LoggerFactory.create({ file: __filename });
 
+/**
  * Server Class
  * Patrón: Application Server
  * SOLID: Single Responsibility - Solo maneja el servidor HTTP

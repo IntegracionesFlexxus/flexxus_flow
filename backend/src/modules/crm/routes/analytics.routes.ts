@@ -9,9 +9,9 @@ import { authenticateToken, requirePermission } from '@/shared/middleware/auth';
 export function createAnalyticsRoutes(container: Container): Router {
   const router = Router();
 
-  const analyticsController = container.get<AnalyticsController>(TYPES.AnalyticsController);
-  const reportController = container.get<ReportController>(TYPES.ReportController);
-  const exportController = container.get<ExportController>(TYPES.ExportController);
+  const analyticsController = container.get<AnalyticsController>(TYPES.CRMAnalyticsController);
+  const reportController = container.get<ReportController>(TYPES.CRMReportController);
+  const exportController = container.get<ExportController>(TYPES.CRMExportController);
 
   // Apply auth middleware to all routes
   router.use(authenticateToken);
@@ -159,6 +159,9 @@ export function createAnalyticsRoutes(container: Container): Router {
   // ============= Export Routes =============
 
   // Export management
+  // NOTE: Following methods are commented out - they don't exist in ReportController
+  // Uncomment when ExportController methods are implemented
+  /*
   router.get('/exports',
     exportController.getExports.bind(exportController)
   );
@@ -167,20 +170,8 @@ export function createAnalyticsRoutes(container: Container): Router {
     exportController.getUserExports.bind(exportController)
   );
 
-  router.get('/exports/statistics',
-    exportController.getExportStatistics.bind(exportController)
-  );
-
   router.get('/exports/:exportId',
     exportController.getExport.bind(exportController)
-  );
-
-  router.get('/exports/:exportId/status',
-    exportController.getExportStatus.bind(exportController)
-  );
-
-  router.get('/exports/:exportId/download',
-    exportController.downloadExport.bind(exportController)
   );
 
   router.post('/exports',
@@ -191,12 +182,25 @@ export function createAnalyticsRoutes(container: Container): Router {
     exportController.createBulkExport.bind(exportController)
   );
 
-  router.post('/exports/:exportId/cancel',
-    exportController.cancelExport.bind(exportController)
-  );
-
   router.post('/exports/:exportId/retry',
     exportController.retryExport.bind(exportController)
+  );
+  */
+
+  router.get('/exports/statistics',
+    exportController.getExportStatistics.bind(exportController)
+  );
+
+  router.get('/exports/:exportId/status',
+    exportController.getExportStatus.bind(exportController)
+  );
+
+  router.get('/exports/:exportId/download',
+    exportController.downloadExport.bind(exportController)
+  );
+
+  router.post('/exports/:exportId/cancel',
+    exportController.cancelExport.bind(exportController)
   );
 
   // Admin only

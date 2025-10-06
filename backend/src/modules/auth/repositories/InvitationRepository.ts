@@ -32,7 +32,7 @@ export class InvitationRepository implements IInvitationRepository {
    * Crear nueva invitación
    */
   async create(invitationData: InvitationData): Promise<any> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
     try {
       const id = uuidv4();
       const token = invitationData.token || this.generateToken();
@@ -117,7 +117,7 @@ export class InvitationRepository implements IInvitationRepository {
    * Actualizar invitación
    */
   async update(invitationId: string, updates: InvitationUpdateData): Promise<any | null> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
     try {
       const updateFields = [];
       const values = [];
@@ -378,14 +378,14 @@ export class InvitationRepository implements IInvitationRepository {
     const result = await this.db.query(query, values);
     const stats = result.rows[0];
     return {
-      total: parseInt(stats.total) || 0,
-      pending: parseInt(stats.pending) || 0,
-      accepted: parseInt(stats.accepted) || 0,
-      expired: parseInt(stats.expired) || 0,
-      cancelled: parseInt(stats.cancelled) || 0,
-      rejected: parseInt(stats.rejected) || 0,
+      total: parseInt(stats.total, 10) || 0,
+      pending: parseInt(stats.pending, 10) || 0,
+      accepted: parseInt(stats.accepted, 10) || 0,
+      expired: parseInt(stats.expired, 10) || 0,
+      cancelled: parseInt(stats.cancelled, 10) || 0,
+      rejected: parseInt(stats.rejected, 10) || 0,
       acceptanceRate: parseFloat(stats.acceptance_rate) || 0,
-      averageAcceptanceTime: stats.average_acceptance_time ? 
+      averageAcceptanceTime: stats.average_acceptance_time ?
         parseFloat(stats.average_acceptance_time) : undefined
     };
   }

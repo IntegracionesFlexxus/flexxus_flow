@@ -5,7 +5,7 @@
  */
 
 import { Container, interfaces } from 'inversify';
-import { TYPES, SERVICE_IDENTIFIER } from '../../../container/types';
+import { TYPES, SERVICE_IDENTIFIER } from '@/container/types';
 import { BaseService } from '@/core/base/BaseService';
 import { Logger } from 'winston';
 

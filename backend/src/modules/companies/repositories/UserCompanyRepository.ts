@@ -105,7 +105,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         ORDER BY uc.is_default DESC, c.name ASC
       `;
       const result = await this.db.query<any>(query, [userId]);
-      return result.map(row => ({
+      return result.rows.map(row => ({
         companyId: row.company_id,
         name: row.name,
         role: row.role,
@@ -141,10 +141,10 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       LIMIT 1
     `;
     const result = await this.db.query<any>(query, [userId]);
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return null;
     }
-    const row = result[0];
+    const row = result.rows[0];
     return {
       companyId: row.company_id,
       name: row.name,
@@ -258,7 +258,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       params.push(options.offset);
     }
     const result = await this.db.query<IUserQueryResult>(query, params);
-    return result.map(row => ({
+    return result.rows.map(row => ({
       userId: row.user_id,
       email: row.email,
       firstName: row.first_name,
@@ -316,7 +316,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       paramCount++;
     }
     const result = await this.db.query<{ count: string }>(query, params);
-    return parseInt(result[0]?.count || '0', 10);
+    return parseInt(result.rows[0]?.count || '0', 10);
   }
   /**
    * Add a user to a company with a specific role
@@ -509,7 +509,7 @@ export class UserCompanyRepository implements IUserCompanyRepository {
                ) as exists
     `;
     const result = await this.db.query<{ exists: boolean }>(query, [userId, companyId]);
-    return result[0].exists;
+    return result.rows[0].exists;
   }
   /**
    * Get the full relationship details between a user and company
@@ -532,10 +532,10 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         AND uc.company_id = $2 
     `;
     const result = await this.db.query<any>(query, [userId, companyId]);
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return null;
     }
-    const row = result[0];
+    const row = result.rows[0];
     return {
       userId: row.user_id,
       companyId: row.company_id,
@@ -574,11 +574,11 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       this.logger?.debug('[UserCompanyRepository.getUserRoleInCompany] Query result', {
         userId,
         companyId,
-        resultCount: result.length,
-        result: result.length > 0 ? result[0] : null
+        resultCount: result.rows.length,
+        result: result.rows.length > 0 ? result.rows[0] : null
       });
 
-      if (result.length === 0) {
+      if (result.rows.length === 0) {
         this.logger?.info('[UserCompanyRepository.getUserRoleInCompany] No active role found', {
           userId,
           companyId,
@@ -588,8 +588,8 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       }
 
       const roleData = {
-        roleId: result[0].role_id,
-        role: result[0].role
+        roleId: result.rows[0].role_id,
+        role: result.rows[0].role
       };
 
       this.logger?.info('[UserCompanyRepository.getUserRoleInCompany] Role found', {

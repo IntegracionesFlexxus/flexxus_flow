@@ -88,7 +88,7 @@ export class MLModelManager extends EventEmitter {
   async updateModelStatus(tenantId: string, modelId: string, status: IMLModel['status'], metrics?: Record<string, number>): Promise<void> {
     try {
       let query = 'UPDATE ml_models SET status = $1, updated_at = NOW()';
-      const params = [status];
+      const params: any[] = [status];
 
       if (metrics) {
         query += ', metrics = $' + (params.length + 1);
@@ -149,12 +149,12 @@ export class MLModelManager extends EventEmitter {
 
       if (filters?.limit) {
         query += ` LIMIT $${++paramCount}`;
-        params.push(filters.limit);
+        params.push(String(filters.limit));
       }
 
       if (filters?.offset) {
         query += ` OFFSET $${++paramCount}`;
-        params.push(filters.offset);
+        params.push(String(filters.offset));
       }
 
       const result = await this.databaseService.executeQuery('omni_db', query, params);
@@ -309,14 +309,14 @@ export class MLModelManager extends EventEmitter {
   async updateTrainingJobProgress(tenantId: string, jobId: string, progress: number, logs?: string): Promise<void> {
     try {
       let query = 'UPDATE ml_training_jobs SET progress_percentage = $1';
-      const params = [progress];
+      const params: any[] = [progress];
 
       if (logs) {
         query += ', logs = $2 WHERE id = $3 AND tenant_id = $4';
-        params.push(logs, jobId, tenantId);
+        params.push(logs, Number(jobId), tenantId);
       } else {
         query += ' WHERE id = $2 AND tenant_id = $3';
-        params.push(jobId, tenantId);
+        params.push(Number(jobId), tenantId);
       }
 
       await this.databaseService.executeQuery('omni_db', query, params);

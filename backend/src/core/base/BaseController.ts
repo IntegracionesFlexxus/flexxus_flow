@@ -7,7 +7,7 @@ import { injectable, inject, optional } from 'inversify';
 import { Request, Response, NextFunction } from 'express';
 import { Logger } from 'winston';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 
 export interface ControllerOptions {
   enableLogging?: boolean;
@@ -124,17 +124,17 @@ export abstract class BaseController {
     // Check required parameters
     for (const param of required) {
       if (!params[param]) {
-        throw new AppError(`Missing required parameter: ${param}`, 400);
+        throw new AppError(ErrorCode.MISSING_REQUIRED_FIELD, `Missing required parameter: ${param}`, 400);
       }
     }
 
     // Check for unknown parameters
     const allowedParams = [...required, ...optional];
     const providedParams = Object.keys(params);
-    
+
     for (const param of providedParams) {
       if (!allowedParams.includes(param)) {
-        throw new AppError(`Unknown parameter: ${param}`, 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, `Unknown parameter: ${param}`, 400);
       }
     }
   }
@@ -143,8 +143,8 @@ export abstract class BaseController {
    * Parse pagination parameters from request
    */
   protected getPagination(req: Request): { page: number; limit: number; offset: number } {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
+    const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string || '10', 10)));
     const offset = (page - 1) * limit;
 
     return { page, limit, offset };
@@ -158,11 +158,11 @@ export abstract class BaseController {
     const sortOrder = ((req.query.sortOrder as string)?.toUpperCase() || 'DESC') as 'ASC' | 'DESC';
 
     if (!allowedFields.includes(sortBy)) {
-      throw new AppError(`Invalid sort field: ${sortBy}`, 400);
+      throw new AppError(ErrorCode.INVALID_INPUT, `Invalid sort field: ${sortBy}`, 400);
     }
 
     if (!['ASC', 'DESC'].includes(sortOrder)) {
-      throw new AppError('Sort order must be ASC or DESC', 400);
+      throw new AppError(ErrorCode.INVALID_INPUT, 'Sort order must be ASC or DESC', 400);
     }
 
     return { sortBy, sortOrder };
@@ -196,7 +196,7 @@ export abstract class BaseController {
   protected getUserId(req: Request): string {
     const user = this.getUser(req);
     if (!user || !user.id) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
     }
     return user.id;
   }
@@ -207,7 +207,7 @@ export abstract class BaseController {
   protected getCompanyId(req: Request): string {
     const user = this.getUser(req);
     if (!user || !user.companyId) {
-      throw new AppError('Company not found', 400);
+      throw new AppError(ErrorCode.COMPANY_NOT_FOUND, 'Company not found', 400);
     }
     return user.companyId;
   }
@@ -242,7 +242,7 @@ export abstract class BaseController {
   protected validateUUID(id: string, fieldName: string = 'id'): void {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
-      throw new AppError(`Invalid ${fieldName} format`, 400);
+      throw new AppError(ErrorCode.INVALID_INPUT, `Invalid ${fieldName} format`, 400);
     }
   }
 
@@ -252,7 +252,7 @@ export abstract class BaseController {
   protected validateEmail(email: string): void {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new AppError('Invalid email format', 400);
+      throw new AppError(ErrorCode.INVALID_INPUT, 'Invalid email format', 400);
     }
   }
 
@@ -283,5 +283,52 @@ export abstract class BaseController {
    */
   protected getUserAgent(req: Request): string {
     return req.headers['user-agent'] || 'unknown';
+  }
+
+  /**
+   * Shorthand methods for common responses
+   */
+  protected success(res: Response, data: any = null, message: string = 'Success', statusCode: number = 200): Response {
+    return this.sendSuccess(res, data, message, statusCode);
+  }
+
+  protected error(res: Response, message: string = 'Internal Server Error', statusCode: number = 500): Response {
+    return res.status(statusCode).json({
+      success: false,
+      message,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  protected unauthorized(res: Response, message: string = 'Unauthorized'): Response {
+    return res.status(401).json({
+      success: false,
+      message,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  protected forbidden(res: Response, message: string = 'Forbidden'): Response {
+    return res.status(403).json({
+      success: false,
+      message,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  protected notFound(res: Response, message: string = 'Not Found'): Response {
+    return res.status(404).json({
+      success: false,
+      message,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  protected badRequest(res: Response, message: string = 'Bad Request'): Response {
+    return res.status(400).json({
+      success: false,
+      message,
+      timestamp: new Date().toISOString()
+    });
   }
 }

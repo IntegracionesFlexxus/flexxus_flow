@@ -21,7 +21,7 @@ import { PaginatedResponse } from '../types/crm.types';
 import { OpportunityRepository } from '../repositories/OpportunityRepository';
 import { ActivityRepository } from '../repositories/ActivityRepository';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { EventEmitter } from 'events';
 import { CrossDatabaseService } from '@/shared/services/cross-database/CrossDatabaseService';
 
@@ -61,7 +61,7 @@ export class OpportunityService implements IOpportunityService {
       }
 
       // Create opportunity
-      const opportunity = await this.opportunityRepository.create(data, userId);
+      const opportunity = await this.opportunityRepository.create(data as any, userId);
 
       // Emit event
       this.eventEmitter.emit('opportunity:created', {
@@ -101,13 +101,13 @@ export class OpportunityService implements IOpportunityService {
     userId: number
   ): Promise<Opportunity | null> {
     try {
-      const existingOpportunity = await this.opportunityRepository.findById(id, companyId);
+      const existingOpportunity = await this.opportunityRepository.findById(id, String(companyId));
       if (!existingOpportunity) {
         return null;
       }
 
       // Update opportunity
-      const updated = await this.opportunityRepository.update(id, companyId, data, userId);
+      const updated = await this.opportunityRepository.update(id, String(companyId), data, userId);
 
       if (updated) {
         // Check for significant changes
@@ -201,9 +201,9 @@ export class OpportunityService implements IOpportunityService {
     userId: number
   ): Promise<boolean> {
     try {
-      const opportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const opportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       const result = await this.opportunityRepository.updateStage(
@@ -235,13 +235,13 @@ export class OpportunityService implements IOpportunityService {
    */
   async markAsWon(opportunityId: number, companyId: number, userId: number): Promise<Opportunity> {
     try {
-      const opportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const opportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       if (opportunity.status === 'won') {
-        throw new AppError('Opportunity is already won', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Opportunity is already won', 400);
       }
 
       const result = await this.opportunityRepository.markAsWon(opportunityId, companyId, userId);
@@ -267,7 +267,7 @@ export class OpportunityService implements IOpportunityService {
         });
       }
 
-      const updatedOpportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const updatedOpportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       return updatedOpportunity!;
     } catch (error) {
       this.logger?.error('Error marking opportunity as won', { error, opportunityId });
@@ -285,13 +285,13 @@ export class OpportunityService implements IOpportunityService {
     userId: number
   ): Promise<Opportunity> {
     try {
-      const opportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const opportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       if (opportunity.status === 'lost') {
-        throw new AppError('Opportunity is already lost', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Opportunity is already lost', 400);
       }
 
       const result = await this.opportunityRepository.markAsLost(
@@ -323,7 +323,7 @@ export class OpportunityService implements IOpportunityService {
         });
       }
 
-      const updatedOpportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const updatedOpportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       return updatedOpportunity!;
     } catch (error) {
       this.logger?.error('Error marking opportunity as lost', { error, opportunityId, lostReason });
@@ -412,16 +412,16 @@ export class OpportunityService implements IOpportunityService {
    */
   async deleteOpportunity(opportunityId: number, companyId: number, userId: number): Promise<boolean> {
     try {
-      const opportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const opportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       if (opportunity.status === 'won') {
-        throw new AppError('Cannot delete a won opportunity', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Cannot delete a won opportunity', 400);
       }
 
-      const deleted = await this.opportunityRepository.delete(opportunityId, companyId);
+      const deleted = await this.opportunityRepository.delete(opportunityId, String(companyId));
 
       if (deleted) {
         this.eventEmitter.emit('opportunity:deleted', {
@@ -443,9 +443,9 @@ export class OpportunityService implements IOpportunityService {
    */
   async cloneOpportunity(opportunityId: number, companyId: number, userId: number): Promise<Opportunity> {
     try {
-      const original = await this.opportunityRepository.findById(opportunityId, companyId);
+      const original = await this.opportunityRepository.findById(opportunityId, String(companyId));
       if (!original) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       const cloneData: OpportunityCreateDTO = {
@@ -487,9 +487,9 @@ export class OpportunityService implements IOpportunityService {
    */
   async calculateWeightedValue(opportunityId: number, companyId: number): Promise<number> {
     try {
-      const opportunity = await this.opportunityRepository.findById(opportunityId, companyId);
+      const opportunity = await this.opportunityRepository.findById(opportunityId, String(companyId));
       if (!opportunity) {
-        throw new AppError('Opportunity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Opportunity not found', 404);
       }
 
       const amount = opportunity.amount || 0;
@@ -600,7 +600,7 @@ export class OpportunityService implements IOpportunityService {
       return results;
     } catch (error) {
       this.logger?.error('Error in bulk create opportunities', error);
-      throw new AppError('Failed to bulk create opportunities', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to bulk create opportunities', 500);
     }
   }
 
@@ -658,7 +658,7 @@ export class OpportunityService implements IOpportunityService {
       return { success, failed: errors.length, errors };
     } catch (error) {
       this.logger?.error('Error in bulk update opportunities', error);
-      throw new AppError('Failed to bulk update opportunities', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to bulk update opportunities', 500);
     }
   }
 
@@ -706,7 +706,7 @@ export class OpportunityService implements IOpportunityService {
       return { success, failed };
     } catch (error) {
       this.logger?.error('Error in bulk delete opportunities', error);
-      throw new AppError('Failed to bulk delete opportunities', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to bulk delete opportunities', 500);
     }
   }
 }

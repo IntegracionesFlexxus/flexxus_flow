@@ -113,7 +113,7 @@ export class CalendarIntegrationRepository extends CRMBaseRepository<CalendarInt
       updates.token_expires_at = expiresAt;
     }
 
-    await this.update(integrationId, updates);
+    await this.update(integrationId, '1', updates);
     this.logger?.debug(`Updated tokens for integration ${integrationId}`);
   }
 
@@ -142,7 +142,7 @@ export class CalendarIntegrationRepository extends CRMBaseRepository<CalendarInt
       updates.sync_errors = JSON.stringify(errors);
     }
 
-    await this.update(integrationId, updates);
+    await this.update(integrationId, '1', updates);
     this.logger?.debug(`Updated sync status for integration ${integrationId}: ${status}`);
   }
 
@@ -211,8 +211,8 @@ export class CalendarIntegrationRepository extends CRMBaseRepository<CalendarInt
   /**
    * Check if tokens are expired
    */
-  async areTokensExpired(integrationId: number): Promise<boolean> {
-    const integration = await this.findById(integrationId);
+  async areTokensExpired(integrationId: number, companyId: string): Promise<boolean> {
+    const integration = await this.findById(integrationId, companyId);
     if (!integration || !integration.token_expires_at) {
       return false;
     }

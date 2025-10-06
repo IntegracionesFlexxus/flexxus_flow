@@ -12,7 +12,10 @@
     "install:all": "npm install && npm run backend:install && npm run frontend:install"
   },
   "devDependencies": {
-    "husky": "^8.0.3",
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "husky": "^8.0.3"
+  },
+  "dependencies": {
+    "bullmq": "^5.59.0"
   }
 }

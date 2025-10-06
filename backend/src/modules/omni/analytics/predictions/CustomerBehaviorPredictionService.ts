@@ -9,7 +9,7 @@ import { CustomerPredictionRepository, ICustomerPrediction } from './CustomerPre
 import { FeatureStoreService } from '../../ml/services/FeatureStoreService';
 import { PredictionService } from '../../ml/services/PredictionService';
 import { BehaviorPredictionType } from '../../types/prediction.types';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class CustomerBehaviorPredictionService {
@@ -37,10 +37,10 @@ export class CustomerBehaviorPredictionService {
   ): Promise<ICustomerPrediction> {
     try {
       // Extract features from feature store
-      const features = await this.featureStoreService.getFeatures(
-        tenantId,
-        'customer',
-        customerId
+      const featureId = `customer_${customerId}`;
+      const features = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
       // Use ML model or fallback to heuristic
@@ -50,13 +50,13 @@ export class CustomerBehaviorPredictionService {
       if (deploymentId) {
         const mlPrediction = await this.predictionService.predict(
           deploymentId,
-          features.feature_values,
+          features as any,
           tenantId
         );
 
         predictionValue = {
-          churn_probability: mlPrediction.prediction_value,
-          risk_level: this.calculateRiskLevel(mlPrediction.prediction_value as number)
+          churn_probability: (mlPrediction as any).value || 0,
+          risk_level: this.calculateRiskLevel((mlPrediction as any).value || 0)
         };
         confidenceScore = mlPrediction.confidence_score || 0.8;
       } else {
@@ -97,10 +97,10 @@ export class CustomerBehaviorPredictionService {
     deploymentId?: string
   ): Promise<ICustomerPrediction> {
     try {
-      const features = await this.featureStoreService.getFeatures(
-        tenantId,
-        'customer',
-        customerId
+      const featureId = `customer_${customerId}`;
+      const features = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
       let predictionValue: Record<string, any>;
@@ -109,14 +109,14 @@ export class CustomerBehaviorPredictionService {
       if (deploymentId) {
         const mlPrediction = await this.predictionService.predict(
           deploymentId,
-          features.feature_values,
+          features as any,
           tenantId
         );
 
-        predictionValue = mlPrediction.prediction_value as Record<string, any>;
+        predictionValue = (mlPrediction as any).value || {};
         confidenceScore = mlPrediction.confidence_score || 0.75;
       } else {
-        predictionValue = this.calculateNextPurchaseHeuristic(features.feature_values);
+        predictionValue = this.calculateNextPurchaseHeuristic(features as any);
         confidenceScore = 0.55;
       }
 
@@ -151,10 +151,10 @@ export class CustomerBehaviorPredictionService {
     deploymentId?: string
   ): Promise<ICustomerPrediction> {
     try {
-      const features = await this.featureStoreService.getFeatures(
-        tenantId,
-        'customer',
-        customerId
+      const featureId = `customer_${customerId}`;
+      const features = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
       let predictionValue: Record<string, any>;
@@ -163,17 +163,17 @@ export class CustomerBehaviorPredictionService {
       if (deploymentId) {
         const mlPrediction = await this.predictionService.predict(
           deploymentId,
-          features.feature_values,
+          features as any,
           tenantId
         );
 
         predictionValue = {
-          engagement_score: mlPrediction.prediction_value,
-          engagement_level: this.calculateEngagementLevel(mlPrediction.prediction_value as number)
+          engagement_score: (mlPrediction as any).value || 0,
+          engagement_level: this.calculateEngagementLevel((mlPrediction as any).value || 0)
         };
         confidenceScore = mlPrediction.confidence_score || 0.8;
       } else {
-        predictionValue = this.calculateEngagementHeuristic(features.feature_values);
+        predictionValue = this.calculateEngagementHeuristic(features as any);
         confidenceScore = 0.65;
       }
 
@@ -208,10 +208,10 @@ export class CustomerBehaviorPredictionService {
     deploymentId?: string
   ): Promise<ICustomerPrediction> {
     try {
-      const features = await this.featureStoreService.getFeatures(
-        tenantId,
-        'customer',
-        customerId
+      const featureId = `customer_${customerId}`;
+      const features = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
       let predictionValue: Record<string, any>;
@@ -220,7 +220,7 @@ export class CustomerBehaviorPredictionService {
       if (deploymentId) {
         const mlPrediction = await this.predictionService.predict(
           deploymentId,
-          features.feature_values,
+          features as any,
           tenantId
         );
 

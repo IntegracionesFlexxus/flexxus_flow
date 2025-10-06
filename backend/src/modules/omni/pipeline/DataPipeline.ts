@@ -29,7 +29,7 @@ export class DataPipeline extends EventEmitter {
   constructor(
     @inject(TYPES.AnalyticsConnection) private analyticsPool: Pool,
     @inject(TYPES.OmniConnection) private omniPool: Pool,
-    @inject(TYPES.RedisConnection) private redis: any
+    @inject(TYPES.RedisClient) private redis: any
   ) {
     super();
     this.logger = LoggerFactory.create({ file: __filename });

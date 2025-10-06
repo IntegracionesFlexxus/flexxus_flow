@@ -143,10 +143,10 @@ export class DatabaseEncryption implements IDatabaseEncryption {
       const result = await connection.query<any>(`
         SELECT * FROM encryption_config WHERE database_name = $1
       `, [database]);
-      if (result.length === 0) {
+      if (result.rows.length === 0) {
         return null;
       }
-      const config = result[0];
+      const config = result.rows[0];
       return {
         database: config.database_name,
         algorithm: config.algorithm,
@@ -188,7 +188,7 @@ export class DatabaseEncryption implements IDatabaseEncryption {
           WHERE ${column} IS NOT NULL 
           LIMIT ${batchSize} OFFSET ${offset}
         `, []);
-        if (rows.length === 0) {
+        if (rows.rows.length === 0) {
           hasMore = false;
           break;
         }
@@ -257,7 +257,7 @@ export class DatabaseEncryption implements IDatabaseEncryption {
           WHERE ${column} IS NOT NULL 
           LIMIT ${batchSize} OFFSET ${offset}
         `, []);
-        if (rows.length === 0) {
+        if (rows.rows.length === 0) {
           hasMore = false;
           break;
         }
@@ -315,7 +315,7 @@ export class DatabaseEncryption implements IDatabaseEncryption {
         SELECT * FROM column_encryption_registry 
         WHERE table_name = $1
       `, [table]);
-      return result.map((row: any) => ({
+      return result.rows.map((row: any) => ({
         table: row.table_name,
         column: row.column_name,
         isEncrypted: row.is_encrypted,
@@ -497,8 +497,8 @@ export class DatabaseEncryption implements IDatabaseEncryption {
         'SELECT key_id FROM encryption_config WHERE database_name = $1',
         [database]
       );
-      if (result.length > 0) {
-        return result[0].key_id;
+      if (result.rows.length > 0) {
+        return result.rows[0].key_id;
       }
     }
     // Crear nueva clave si no existe

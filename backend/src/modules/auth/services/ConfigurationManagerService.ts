@@ -8,7 +8,7 @@ import { Logger } from 'winston';
 import { EventEmitter } from 'events';
 import { TYPES } from '@/container/types';
 import { ICacheService } from '@/shared/interfaces/ICacheService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { CompanySettingsService, CompanySettingsResponse } from '@/modules/auth/services/CompanySettingsService';
 import { UserPreferencesService, UserPreferencesResponse } from '@/modules/auth/services/UserPreferencesService';
 import { AdvancedCompanySettingsService, AdvancedCompanySettingsResponse } from '@/modules/auth/services/AdvancedCompanySettingsService';
@@ -242,7 +242,7 @@ export class ConfigurationManagerService extends EventEmitter {
       if (options.validateBeforeSync) {
         const validation = await this.validateConfigurationData(sourceSnapshot.configurations);
         if (!validation.valid) {
-          throw new AppError('Source configuration validation failed', 400, 'INVALID_SOURCE_CONFIG', {
+          throw new AppError(ErrorCode.VALIDATION_ERROR, 'Source configuration validation failed', 400, true, {
             errors: validation.errors
           });
         }
@@ -321,7 +321,7 @@ export class ConfigurationManagerService extends EventEmitter {
     try {
       const template = await this.getConfigurationTemplate(templateId);
       if (!template) {
-        throw new AppError('Configuration template not found', 404, 'TEMPLATE_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Configuration template not found', 404);
       }
       this.logger.info('Applying configuration template', {
         companyId,
@@ -436,7 +436,7 @@ export class ConfigurationManagerService extends EventEmitter {
       const backupKey = `config_backup:${backupId}`;
       const backupData = await this.cacheService.get(backupKey);
       if (!backupData) {
-        throw new AppError('Backup not found or expired', 404, 'BACKUP_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Backup not found or expired', 404);
       }
       this.logger.info('Starting configuration restoration', {
         backupId,

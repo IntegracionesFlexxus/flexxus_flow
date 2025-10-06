@@ -6,9 +6,9 @@
 
 import { injectable, inject } from 'inversify';
 import { Logger } from 'winston';
-import { TYPES } from '../../../container/types';
+import { TYPES } from '@/container/types';
 import { EventBus } from '@/shared/services/EventBus';
-import { ValidationService } from '@/shared/services/ValidationService';
+import { ValidatorService } from '@/shared/services/ValidationService';
 import { AuditService } from '@/shared/services/AuditService';
 import { CacheService } from '@/shared/services/CacheService';
 import { environment } from '@/config/environment';
@@ -71,7 +71,7 @@ export abstract class BaseService<TEntity = any> {
   constructor(
     @inject(TYPES.Logger) protected logger: Logger,
     @inject(TYPES.EventBus) protected eventBus: EventBus,
-    @inject(TYPES.ValidationService) protected validationService: ValidationService,
+    @inject(TYPES.ValidationService) protected validationService: ValidatorService,
     @inject(TYPES.AuditService) protected auditService: AuditService,
     @inject(TYPES.CacheService) protected cacheService: CacheService
   ) {
@@ -167,31 +167,32 @@ export abstract class BaseService<TEntity = any> {
 
     } catch (error) {
       // Log operation failure
+      const err = error as Error & { code?: string; details?: any };
       const duration = Date.now() - startTime;
       this.logger.error(`Operation failed: ${operationId}`, {
-        error: error.message,
-        stack: error.stack,
+        error: err.message,
+        stack: err.stack,
         duration,
         context: this.context
       });
 
       // Audit if enabled
       if (mergedOptions.enableAudit) {
-        await this.auditOperation(operation, 'failure', { error: error.message });
+        await this.auditOperation(operation, 'failure', { error: err.message });
       }
 
       // Emit event if enabled
       if (mergedOptions.enableEvents) {
-        await this.emitEvent(`${operation}.failure`, { error: error.message });
+        await this.emitEvent(`${operation}.failure`, { error: err.message });
       }
 
       return {
         success: false,
         error: {
-          code: error.code || 'OPERATION_ERROR',
-          message: error.message,
-          details: error.details,
-          stack: environment.isDevelopment ? error.stack : undefined
+          code: err.code || 'OPERATION_ERROR',
+          message: err.message,
+          details: err.details,
+          stack: environment.isDevelopment ? err.stack : undefined
         },
         metadata: {
           operation: operationId,
@@ -263,7 +264,7 @@ export abstract class BaseService<TEntity = any> {
 
     for (const pattern of patterns) {
       const cachePattern = this.buildCacheKey(pattern);
-      await this.cacheService.invalidate(cachePattern);
+      await this.cacheService.delete(cachePattern);
       this.logger.debug(`Cache invalidated: ${cachePattern}`);
     }
   }
@@ -297,7 +298,7 @@ export abstract class BaseService<TEntity = any> {
       ...options
     };
 
-    await this.eventBus.emit(event.name, event);
+    await this.eventBus.publish(event as any);
 
     this.logger.debug(`Event emitted: ${event.name}`, {
       context: this.context
@@ -316,17 +317,15 @@ export abstract class BaseService<TEntity = any> {
       return;
     }
 
-    await this.auditService.audit({
-      type: 'service_operation',
+    await this.auditService.logActivity({
       action: `${this.serviceName}.${operation}`,
-      severity: status === 'failure' ? 'high' : 'low',
-      context: {
-        userId: this.context.userId,
-        companyId: this.context.companyId,
-        sessionId: this.context.sessionId,
-        requestId: this.context.requestId
-      },
-      details: {
+      entityType: 'service_operation',
+      entityId: this.context.requestId || 'unknown',
+      userId: this.context.userId,
+      companyId: this.context.companyId,
+      sessionId: this.context.sessionId,
+      description: status === 'failure' ? 'Operation failed' : 'Operation completed',
+      metadata: {
         ...details,
         status,
         service: this.serviceName,
@@ -383,10 +382,11 @@ export abstract class BaseService<TEntity = any> {
       try {
         return await operation();
       } catch (error) {
-        lastError = error;
+        const err = error as Error;
+        lastError = err;
 
         this.logger.warn(`Operation failed, attempt ${attempt}/${maxRetries}`, {
-          error: error.message,
+          error: err.message,
           service: this.serviceName
         });
 

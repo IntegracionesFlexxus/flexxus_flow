@@ -55,7 +55,7 @@ export class QuoteRepository {
       `;
 
       const quoteValues = [
-        data.quote_number,
+        data.quote_name,
         data.customer_id,
         data.opportunity_id,
         data.status || 'draft',

@@ -48,21 +48,11 @@ export const authenticateToken = async (
 
   const startTime = Date.now();
 
-  console.log('\n========================================');
-  console.log('🔐 [Backend Auth] authenticateToken middleware called');
-  console.log('📍 [Backend Auth] Path:', req.path);
-  console.log('📋 [Backend Auth] Method:', req.method);
-  console.log('🎯 [Backend Auth] Headers:', {
-    authorization: req.headers.authorization ? 'Present' : 'Missing',
-    'x-company-id': req.headers['x-company-id']
-  });
-
   try {
     // DEVELOPMENT ONLY: Bypass auth for testing
     if (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') {
       const authHeader = req.headers.authorization;
       if (!authHeader || authHeader === 'Bearer test-token' || authHeader === 'Bearer test-token-123') {
-        console.log('⚠️  [DEV AUTH BYPASS] Authentication bypassed for development');
         req.user = {
           id: '1',
           email: 'dev@test.com',
@@ -80,9 +70,6 @@ export const authenticateToken = async (
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      console.log('❌ [Backend Auth] No token provided');
-      console.log('========================================\n');
-      
       logger.warn('Authentication failed - no token provided', {
         path: req.path,
         method: req.method,
@@ -98,12 +85,8 @@ export const authenticateToken = async (
       return;
     }
 
-    console.log('🔍 [Backend Auth] Token found, verifying...');
-    console.log('🔑 [Backend Auth] Token (first 50 chars):', token.substring(0, 50) + '...');
-    
     // Verify JWT token
     const payload = await jwtService.verifyAccessToken(token);
-    console.log('✅ [Backend Auth] Token verified, payload:', payload);
 
     // Validate session
     const tokenHash = jwtService.hashToken(token);
@@ -134,10 +117,6 @@ export const authenticateToken = async (
       role: payload.role,
       sessionId: payload.sessionId
     };
-    
-    console.log('👤 [Backend Auth] User context set:', req.user);
-    console.log('✅ [Backend Auth] Authentication successful');
-    console.log('========================================\n');
 
     // Set database context for RLS (Row Level Security)
     try {

@@ -3,14 +3,21 @@
  * Data access layer for contact role management
  */
 
-import { injectable } from 'inversify';
+import { injectable, inject, optional } from 'inversify';
 import { CRMBaseRepository } from './CRMBaseRepository';
-import { ContactRole } from '../types/contact.types';
+import { TYPES } from '@/container/types';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
+import { Logger } from 'winston';
+// TODO: Create missing types file
+// import { ContactRole } from '../types/contact.types';
 
 @injectable()
-export class ContactRoleRepository extends CRMBaseRepository<ContactRole> {
-  constructor() {
-    super('contact_roles');
+export class ContactRoleRepository extends CRMBaseRepository<any> {
+  constructor(
+    @inject(TYPES.SharedConnection) db: IDatabaseConnection,
+    @inject(TYPES.Logger) @optional() logger?: Logger
+  ) {
+    super('contact_roles', db, logger);
     this.schema = 'public'; // Sprint 17 uses public schema
 
     this.allowedFields = new Set([
@@ -27,7 +34,7 @@ export class ContactRoleRepository extends CRMBaseRepository<ContactRole> {
   async getContactRoles(
     companyId: number,
     contactId: number
-  ): Promise<ContactRole[]> {
+  ): Promise<any[]> {
     const query = `
       SELECT
         cr.*,
@@ -51,7 +58,7 @@ export class ContactRoleRepository extends CRMBaseRepository<ContactRole> {
   async getAccountContactRoles(
     companyId: number,
     accountId: number
-  ): Promise<ContactRole[]> {
+  ): Promise<any[]> {
     const query = `
       SELECT
         cr.*,

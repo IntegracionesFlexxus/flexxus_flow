@@ -83,7 +83,7 @@ export class LeadManagementController {
       const { companyId } = req.user as any;
 
       // Get lead with current score from database
-      const lead = await this.leadRepo.findById(parseInt(leadId));
+      const lead = await this.leadRepo.findById(parseInt(leadId), companyId);
 
       if (!lead) {
         res.status(404).json({

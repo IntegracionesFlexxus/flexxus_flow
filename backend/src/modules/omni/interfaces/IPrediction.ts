@@ -26,6 +26,7 @@ export interface CreatePredictionDTO {
 export interface PredictionResponse {
   prediction_id: string;
   prediction_result: Record<string, any>;
+  prediction_value?: number; // Shorthand for simple numeric predictions
   confidence_score?: number;
   processing_time_ms: number;
   model_version: string;

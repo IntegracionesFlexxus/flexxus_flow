@@ -68,7 +68,7 @@ export class QuoteLineItemRepository {
       data.description || null,
       data.quantity,
       data.unit_of_measure || 'unit',
-      data.list_price || data.unit_price,
+      data.unit_price || data.unit_price,
       data.unit_price,
       data.discount_percentage || 0,
       discountAmount,

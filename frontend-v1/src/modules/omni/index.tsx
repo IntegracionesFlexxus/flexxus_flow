@@ -1,18 +1,24 @@
 import { Routes, Route } from 'react-router-dom'
-import OmniDashboard from './pages/OmniDashboard'
+import { lazy } from 'react'
 
-// Módulo Omnicanalidad - MVP Nivel 1
-// TODO: En Nivel 2 implementar funcionalidad completa de mensajería
+// Lazy load de páginas
+const OmniDashboard = lazy(() => import('./pages/OmniDashboard'))
+const ConversationsPage = lazy(() => import('./pages/ConversationsPage'))
+const ChannelsPage = lazy(() => import('./pages/ChannelsPage'))
+const TemplatesPage = lazy(() => import('./pages/TemplatesPage'))
+const AutomationsPage = lazy(() => import('./pages/AutomationsPage'))
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
+
+// Módulo Omnicanalidad
 export function OmniModule() {
   return (
     <Routes>
       <Route index element={<OmniDashboard />} />
-      {/* TODO: Nivel 2 - Agregar más rutas
       <Route path="conversations" element={<ConversationsPage />} />
-      <Route path="conversations/:id" element={<ConversationDetail />} />
       <Route path="channels" element={<ChannelsPage />} />
       <Route path="templates" element={<TemplatesPage />} />
-      */}
+      <Route path="automations" element={<AutomationsPage />} />
+      <Route path="analytics" element={<AnalyticsPage />} />
     </Routes>
   )
 }

@@ -1,12 +1,13 @@
-/**
+import { io, Socket } from 'socket.io-client';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
+
 // Logger instance
 const logger = LoggerFactory.create({ file: __filename });
 
+/**
  * WebSocket Client Example
  * Sprint 4 - Ejemplo de cliente para conectar al servidor WebSocket
  */
-import { io, Socket } from 'socket.io-client';
-import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 /**
  * Ejemplo de configuración y uso del cliente WebSocket
@@ -97,7 +98,7 @@ export class WebSocketClientExample {
     });
     // Reconexión
     this.socket.on('reconnect', (attemptNumber) => {
-      logger.info('Reconnected after', attemptNumber, 'attempts');
+      logger.info(`Reconnected after ${attemptNumber} attempts`);
     });
     // Intento de reconexión
     this.socket.on('reconnect_attempt', (attemptNumber) => {

@@ -4,7 +4,6 @@
  * Implementación con principios SOLID y Clean Code
  */
 
-console.log('🎭 RoleManagement: File loading started');
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -65,7 +64,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 
 // Components
 import { DataTable } from '@/components/ui/DataTable';
@@ -74,7 +73,7 @@ import { RoleDialog } from '@modules/roles/components/RoleDialog';
 import { RolePermissionsDialog } from '@modules/roles/components/RolePermissionsDialog';
 
 // Services
-import { roleService } from '@/modules/users/services/roleService';
+import { roleService } from '@/modules/roles/services/roleService';
 
 // Hooks
 import { useAuthStore } from '@/shared/store/authStore';
@@ -96,11 +95,16 @@ interface RoleWithStats extends Role {
  * - O: Abierto para extensión con nuevos tipos de roles
  * - D: Depende de abstracciones (services)
  */
-console.log('🎭 RoleManagement: All imports completed');
 
 export const RoleManagement: React.FC = () => {
-  console.log('🎭 RoleManagement: Component initializing');
-  
+
+  // Auth Guard - Check authentication before rendering
+  const { isAuthenticated, token, user, currentCompany } = useAuthStore();
+
+  if (!isAuthenticated || !token) {
+    return <Navigate to="/auth/login" replace state={{ from: '/roles' }} />;
+  }
+
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<RoleWithStats | null>(null);
@@ -119,7 +123,6 @@ export const RoleManagement: React.FC = () => {
   // Hooks
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, currentCompany } = useAuthStore();
   const { addNotification } = useUIStore();
 
   // ==================== Data Fetching ====================
@@ -137,13 +140,12 @@ export const RoleManagement: React.FC = () => {
       if (filterType === 'system') {
         rolesList = await roleService.getSystemRoles();
       } else if (filterType === 'custom') {
-        rolesList = await roleService.getCompanyRoles(currentCompany.id);
+        // Get company roles and filter out system roles (since getCompanyRoles includes both)
+        const allCompanyRoles = await roleService.getCompanyRoles(currentCompany.id);
+        rolesList = allCompanyRoles.filter(role => !role.isSystemRole && !role.isSystem);
       } else {
-        const [system, custom] = await Promise.all([
-          roleService.getSystemRoles(),
-          roleService.getCompanyRoles(currentCompany.id)
-        ]);
-        rolesList = [...system, ...custom];
+        // 'all' filter - getCompanyRoles already includes system roles, so use it directly
+        rolesList = await roleService.getCompanyRoles(currentCompany.id);
       }
 
       // Get stats for each role
@@ -196,17 +198,17 @@ export const RoleManagement: React.FC = () => {
   });
 
   /**
-   * Clone role mutation
+   * Toggle role active status mutation
    */
-  const cloneRoleMutation = useMutation({
-    mutationFn: ({ roleId, name }: { roleId: string; name: string }) =>
-      roleService.cloneRole(roleId, name, currentCompany?.id),
-    onSuccess: () => {
+  const toggleRoleStatusMutation = useMutation({
+    mutationFn: ({ roleId, isActive }: { roleId: string; isActive: boolean }) =>
+      roleService.updateRole(roleId, { isActive }),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['roles-with-stats'] });
       addNotification({
         type: 'success',
-        title: 'Rol clonado',
-        message: 'El rol ha sido clonado correctamente',
+        title: variables.isActive ? 'Rol activado' : 'Rol inactivado',
+        message: `El rol ha sido ${variables.isActive ? 'activado' : 'inactivado'} correctamente`,
         autoClose: true
       });
       handleCloseDialog();
@@ -214,40 +216,8 @@ export const RoleManagement: React.FC = () => {
     onError: (error: any) => {
       addNotification({
         type: 'error',
-        title: 'Error al clonar',
-        message: error.message || 'No se pudo clonar el rol',
-        autoClose: false
-      });
-    }
-  });
-
-  /**
-   * Export roles mutation
-   */
-  const exportRolesMutation = useMutation({
-    mutationFn: () => roleService.exportRoles(currentCompany!.id),
-    onSuccess: (data) => {
-      // Create download link
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `roles_${currentCompany?.name}_${new Date().toISOString()}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      
-      addNotification({
-        type: 'success',
-        title: 'Exportación exitosa',
-        message: 'Los roles han sido exportados correctamente',
-        autoClose: true
-      });
-    },
-    onError: (error: any) => {
-      addNotification({
-        type: 'error',
-        title: 'Error al exportar',
-        message: error.message || 'No se pudieron exportar los roles',
+        title: 'Error al cambiar estado',
+        message: error.message || 'No se pudo cambiar el estado del rol',
         autoClose: false
       });
     }
@@ -340,46 +310,18 @@ export const RoleManagement: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleCloneRole = () => {
-    setDialogState(prev => ({ ...prev, clone: true }));
-    handleMenuClose();
-  };
-
   const handleViewPermissions = () => {
     setDialogState(prev => ({ ...prev, permissions: true }));
     handleMenuClose();
   };
 
-  /**
-   * Handle file import
-   */
-  const handleImportRoles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !currentCompany?.id) return;
-
-    try {
-      const result = await roleService.importRoles(currentCompany.id, file);
-      
-      queryClient.invalidateQueries({ queryKey: ['roles-with-stats'] });
-      
-      addNotification({
-        type: 'success',
-        title: 'Importación exitosa',
-        message: `Se importaron ${result.imported} roles. ${result.skipped} fueron omitidos.`,
-        autoClose: true
-      });
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Error al importar',
-        message: error.message || 'No se pudieron importar los roles',
-        autoClose: false
-      });
-    }
-
-    // Reset input
-    event.target.value = '';
-  }, [currentCompany, queryClient, addNotification]);
+  const handleToggleRoleStatus = (role: RoleWithStats) => {
+    toggleRoleStatusMutation.mutate({
+      roleId: role.id,
+      isActive: !role.isActive
+    });
+    handleMenuClose();
+  };
 
   // ==================== Render Functions ====================
 
@@ -647,31 +589,8 @@ export const RoleManagement: React.FC = () => {
             />
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={5}>
             <Stack direction="row" spacing={1} justifyContent="flex-end">
-              <Button
-                variant="outlined"
-                startIcon={<Download size={18} />}
-                onClick={() => exportRolesMutation.mutate()}
-                disabled={exportRolesMutation.isPending}
-              >
-                Exportar
-              </Button>
-              
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<Upload size={18} />}
-              >
-                Importar
-                <input
-                  type="file"
-                  accept=".json"
-                  hidden
-                  onChange={handleImportRoles}
-                />
-              </Button>
-              
               <Button
                 variant="contained"
                 startIcon={<Plus size={18} />}
@@ -742,16 +661,16 @@ export const RoleManagement: React.FC = () => {
               </ListItemIcon>
               <ListItemText>Editar rol</ListItemText>
             </MenuItem>
-            
-            <MenuItem onClick={handleCloneRole}>
+
+            <MenuItem onClick={() => selectedRole && handleToggleRoleStatus(selectedRole)}>
               <ListItemIcon>
-                <Copy size={18} />
+                {selectedRole?.isActive ? <Lock size={18} /> : <Unlock size={18} />}
               </ListItemIcon>
-              <ListItemText>Clonar rol</ListItemText>
+              <ListItemText>{selectedRole?.isActive ? 'Inactivar' : 'Activar'}</ListItemText>
             </MenuItem>
-            
+
             <Divider />
-            
+
             <MenuItem onClick={handleDeleteRole}>
               <ListItemIcon>
                 <Trash2 size={18} />

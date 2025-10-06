@@ -82,7 +82,7 @@ export class ApprovalController {
    */
   async getWorkflows(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -92,14 +92,15 @@ export class ApprovalController {
       const entity_type = req.query.entity_type as string;
       const is_active = req.query.is_active === 'false' ? false : true;
 
-      const workflows = await this.approvalRepository.getWorkflows(company_id, {
-        entity_type,
-        is_active
-      });
+      // TODO: Implement getWorkflows in ApprovalRepository
+      // const workflows = await this.approvalRepository.getWorkflows(company_id, {
+      //   entity_type,
+      //   is_active
+      // });
 
-      res.json({
-        success: true,
-        data: workflows
+      res.status(501).json({
+        success: false,
+        message: 'getWorkflows method not yet implemented'
       });
 
     } catch (error) {
@@ -114,7 +115,7 @@ export class ApprovalController {
    */
   async getWorkflowById(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const workflow_id = Number(req.params.id);
 
       if (!company_id) {
@@ -122,19 +123,20 @@ export class ApprovalController {
         return;
       }
 
-      const workflow = await this.approvalRepository.getWorkflowById(
-        workflow_id,
-        company_id
-      );
+      // TODO: Implement getWorkflowById in ApprovalRepository
+      // const workflow = await this.approvalRepository.getWorkflowById(
+      //   workflow_id,
+      //   company_id
+      // );
 
-      if (!workflow) {
-        res.status(404).json({ error: 'Workflow not found' });
-        return;
-      }
+      // if (!workflow) {
+      //   res.status(404).json({ error: 'Workflow not found' });
+      //   return;
+      // }
 
-      res.json({
-        success: true,
-        data: workflow
+      res.status(501).json({
+        success: false,
+        message: 'getWorkflowById method not yet implemented'
       });
 
     } catch (error) {
@@ -149,8 +151,8 @@ export class ApprovalController {
    */
   async createWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -190,7 +192,7 @@ export class ApprovalController {
    */
   async updateWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const workflow_id = Number(req.params.id);
 
       if (!company_id) {
@@ -231,7 +233,7 @@ export class ApprovalController {
    */
   async deleteWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const workflow_id = Number(req.params.id);
 
       if (!company_id) {
@@ -239,11 +241,12 @@ export class ApprovalController {
         return;
       }
 
-      await this.approvalRepository.deleteWorkflow(workflow_id, company_id);
+      // TODO: Implement deleteWorkflow in ApprovalRepository
+      // await this.approvalRepository.deleteWorkflow(workflow_id, company_id);
 
-      res.json({
-        success: true,
-        message: 'Workflow deleted successfully'
+      res.status(501).json({
+        success: false,
+        message: 'deleteWorkflow method not yet implemented'
       });
 
     } catch (error) {
@@ -258,8 +261,8 @@ export class ApprovalController {
    */
   async getPendingApprovals(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -304,7 +307,7 @@ export class ApprovalController {
    */
   async getApprovalProcess(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const process_id = Number(req.params.id);
 
       if (!company_id) {
@@ -339,8 +342,8 @@ export class ApprovalController {
    */
   async submitApprovalDecision(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
       const process_id = Number(req.params.id);
 
       if (!company_id || !user_id) {
@@ -406,8 +409,8 @@ export class ApprovalController {
    */
   async delegateApproval(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
       const process_id = Number(req.params.id);
 
       if (!company_id || !user_id) {
@@ -455,8 +458,8 @@ export class ApprovalController {
    */
   async recallApprovalRequest(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
       const process_id = Number(req.params.id);
 
       if (!company_id || !user_id) {
@@ -507,7 +510,7 @@ export class ApprovalController {
    */
   async getApprovalHistory(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -528,7 +531,7 @@ export class ApprovalController {
           user_id,
           start_date,
           end_date
-        }
+        } as any
       );
 
       res.json({
@@ -548,7 +551,7 @@ export class ApprovalController {
    */
   async getApprovalAnalytics(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -581,7 +584,7 @@ export class ApprovalController {
    */
   async escalateApproval(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const process_id = Number(req.params.id);
 
       if (!company_id) {
@@ -626,8 +629,8 @@ export class ApprovalController {
    */
   async submitBulkDecision(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });

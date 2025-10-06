@@ -123,8 +123,8 @@ export class TerritoryManagementService {
       await client.query('BEGIN');
 
       // Update territory
-      const updates = [];
-      const values = [territoryId, companyId];
+      const updates: string[] = [];
+      const values: any[] = [territoryId, companyId];
       let paramCounter = 3;
 
       if (data.territory_name !== undefined) {
@@ -133,7 +133,7 @@ export class TerritoryManagementService {
       }
       if (data.parent_territory_id !== undefined) {
         updates.push(`parent_territory_id = $${paramCounter++}`);
-        values.push(data.parent_territory_id);
+        values.push(Number(data.parent_territory_id));
       }
       if (data.coverage_rules !== undefined) {
         updates.push(`coverage_rules = $${paramCounter++}`);
@@ -149,7 +149,7 @@ export class TerritoryManagementService {
       }
       if (data.is_active !== undefined) {
         updates.push(`is_active = $${paramCounter++}`);
-        values.push(data.is_active);
+        values.push(data.is_active ? 1 : 0);
       }
 
       updates.push('updated_at = CURRENT_TIMESTAMP');
@@ -679,17 +679,17 @@ export class TerritoryManagementService {
     // Build WHERE clause based on rules
     if (rules.countries && rules.countries.length > 0) {
       whereConditions.push(`country IN (${rules.countries.map(() => `$${paramCounter++}`).join(',')})`);
-      params.push(...rules.countries);
+      params.push(...rules.countries.map(Number));
     }
 
     if (rules.industries && rules.industries.length > 0) {
       whereConditions.push(`industry IN (${rules.industries.map(() => `$${paramCounter++}`).join(',')})`);
-      params.push(...rules.industries);
+      params.push(...rules.industries.map(Number));
     }
 
     if (rules.account_tiers && rules.account_tiers.length > 0) {
       whereConditions.push(`account_tier IN (${rules.account_tiers.map(() => `$${paramCounter++}`).join(',')})`);
-      params.push(...rules.account_tiers);
+      params.push(...rules.account_tiers.map(Number));
     }
 
     if (rules.revenue_range) {

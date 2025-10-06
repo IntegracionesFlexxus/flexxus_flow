@@ -1,10 +1,3 @@
-/**
-// Logger instance
-const logger = LoggerFactory.create({ file: __filename });
-
- * Event Bus Usage Example
- * Sprint 4 - Ejemplo de uso del sistema de eventos mejorado
- */
 import { Container } from 'inversify';
 import { TYPES } from '@container/types';
 import { EnhancedEventBus } from '@/shared/events/EnhancedEventBus';
@@ -14,6 +7,14 @@ import { EventReplayManager } from '@/shared/events/EventReplayManager';
 import { DomainEvents, DomainEvent } from '@/shared/events/EventBus';
 import { Logger } from 'winston';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
+
+// Logger instance
+const logger = LoggerFactory.create({ file: __filename });
+
+/**
+ * Event Bus Usage Example
+ * Sprint 4 - Ejemplo de uso del sistema de eventos mejorado
+ */
 
 /**
  * Ejemplo de configuración e inicialización

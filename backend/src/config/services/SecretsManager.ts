@@ -8,6 +8,7 @@
  */
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
+import { environment } from '@/config/environment';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';

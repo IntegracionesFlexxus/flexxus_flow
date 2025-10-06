@@ -16,7 +16,7 @@ import { PaginatedResponse } from '../types/crm.types';
 import { ContactRepository } from '../repositories/ContactRepository';
 import { ActivityRepository } from '../repositories/ActivityRepository';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { EventEmitter } from 'events';
 import { CrossDatabaseService } from '@/shared/services/cross-database/CrossDatabaseService';
 
@@ -39,7 +39,7 @@ export class ContactService implements IContactService {
       if (data.email) {
         const existingContact = await this.contactRepository.findByEmail(data.email, data.company_id);
         if (existingContact) {
-          throw new AppError('A contact with this email already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'A contact with this email already exists', 409);
         }
       }
 
@@ -89,7 +89,7 @@ export class ContactService implements IContactService {
     userId: number
   ): Promise<Contact | null> {
     try {
-      const existingContact = await this.contactRepository.findById(id, companyId);
+      const existingContact = await this.contactRepository.findById(id, String(companyId));
       if (!existingContact) {
         return null;
       }
@@ -98,7 +98,7 @@ export class ContactService implements IContactService {
       if (data.email && data.email !== existingContact.email) {
         const duplicate = await this.contactRepository.findByEmail(data.email, companyId);
         if (duplicate && duplicate.id !== id) {
-          throw new AppError('A contact with this email already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'A contact with this email already exists', 409);
         }
       }
 
@@ -108,7 +108,7 @@ export class ContactService implements IContactService {
       }
 
       // Update contact
-      const updated = await this.contactRepository.update(id, companyId, data, userId);
+      const updated = await this.contactRepository.update(id, String(companyId), data, userId);
 
       if (updated) {
         this.eventEmitter.emit('contact:updated', {
@@ -197,9 +197,9 @@ export class ContactService implements IContactService {
    */
   async setPrimaryContact(contactId: number, accountId: number, companyId: number, userId: number): Promise<boolean> {
     try {
-      const contact = await this.contactRepository.findById(contactId, companyId);
+      const contact = await this.contactRepository.findById(contactId, String(companyId));
       if (!contact || contact.account_id !== accountId) {
-        throw new AppError('Contact not found or does not belong to account', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Contact not found or does not belong to account', 404);
       }
 
       const result = await this.contactRepository.setPrimaryContact(contactId, accountId, companyId);
@@ -237,12 +237,12 @@ export class ContactService implements IContactService {
    */
   async deleteContact(contactId: number, companyId: number, userId: number): Promise<boolean> {
     try {
-      const contact = await this.contactRepository.findById(contactId, companyId);
+      const contact = await this.contactRepository.findById(contactId, String(companyId));
       if (!contact) {
-        throw new AppError('Contact not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Contact not found', 404);
       }
 
-      const deleted = await this.contactRepository.delete(contactId, companyId);
+      const deleted = await this.contactRepository.delete(contactId, String(companyId));
 
       if (deleted) {
         this.eventEmitter.emit('contact:deleted', {
@@ -281,16 +281,16 @@ export class ContactService implements IContactService {
     userId: number
   ): Promise<Contact> {
     try {
-      const primaryContact = await this.contactRepository.findById(primaryContactId, companyId);
+      const primaryContact = await this.contactRepository.findById(primaryContactId, String(companyId));
       if (!primaryContact) {
-        throw new AppError('Primary contact not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Primary contact not found', 404);
       }
 
       // Verify duplicates exist
       for (const duplicateId of duplicateContactIds) {
-        const duplicate = await this.contactRepository.findById(duplicateId, companyId);
+        const duplicate = await this.contactRepository.findById(duplicateId, String(companyId));
         if (!duplicate) {
-          throw new AppError(`Duplicate contact ${duplicateId} not found`, 404);
+          throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, `Duplicate contact ${duplicateId} not found`, 404);
         }
       }
 
@@ -301,7 +301,7 @@ export class ContactService implements IContactService {
         });
 
         for (const activity of activities) {
-          await this.activityRepository.update(activity.id!, companyId, {
+          await this.activityRepository.update(activity.id!, String(companyId), {
             contact_id: primaryContactId
           }, userId);
         }
@@ -309,7 +309,7 @@ export class ContactService implements IContactService {
 
       // Delete duplicates
       for (const duplicateId of duplicateContactIds) {
-        await this.contactRepository.delete(duplicateId, companyId);
+        await this.contactRepository.delete(duplicateId, String(companyId));
       }
 
       this.eventEmitter.emit('contacts:merged', {
@@ -319,7 +319,7 @@ export class ContactService implements IContactService {
         timestamp: new Date()
       });
 
-      const updatedContact = await this.contactRepository.findById(primaryContactId, companyId);
+      const updatedContact = await this.contactRepository.findById(primaryContactId, String(companyId));
       return updatedContact!;
     } catch (error) {
       this.logger?.error('Error merging contacts', { error, primaryContactId, duplicateContactIds });

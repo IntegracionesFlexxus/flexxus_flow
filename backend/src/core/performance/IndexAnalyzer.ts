@@ -110,7 +110,7 @@ export class IndexAnalyzer implements IIndexAnalyzer {
                  s.indexrelid, i.indisunique, i.indisprimary
         ORDER BY pg_relation_size(s.indexrelid) DESC
       `, []);
-      return unusedIndexes.map(idx => ({
+      return unusedIndexes.rows.map(idx => ({
         tableName: idx.tablename,
         indexName: idx.indexname,
         columns: idx.columns,
@@ -161,7 +161,7 @@ export class IndexAnalyzer implements IIndexAnalyzer {
         ORDER BY total_size DESC
       `, []);
       const result: IndexDuplicate[] = [];
-      for (const dup of duplicates) {
+      for (const dup of duplicates.rows) {
         const indexes: IndexInfo[] = dup.duplicate_indexes.map((name: string) => ({
           tableName: dup.table_name,
           indexName: name,
@@ -235,7 +235,7 @@ export class IndexAnalyzer implements IIndexAnalyzer {
         FROM pg_stat_user_indexes
         WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
       `, []);
-      for (const stat of indexStats) {
+      for (const stat of indexStats.rows) {
         efficiencyMap.set(stat.indexrelname, stat.efficiency);
       }
       return efficiencyMap;
@@ -296,7 +296,7 @@ export class IndexAnalyzer implements IIndexAnalyzer {
       `;
       const indexes = await connection.query<any>(query, []);
       const efficiencyMap = await this.calculateIndexEfficiency('shared');
-      return indexes.map(idx => ({
+      return indexes.rows.map(idx => ({
         tableName: idx.table_name,
         indexName: idx.index_name,
         columns: idx.columns,
@@ -342,7 +342,7 @@ export class IndexAnalyzer implements IIndexAnalyzer {
             WHERE c.relname = tc.table_name AND a.attname = kcu.column_name
           )
       `, []);
-      for (const fk of fkWithoutIndex) {
+      for (const fk of fkWithoutIndex.rows) {
         missingIndexes.push({
           table: fk.table_name,
           columns: [fk.column_name],
@@ -368,7 +368,7 @@ export class IndexAnalyzer implements IIndexAnalyzer {
           )
           AND pg_relation_size(t.oid) > 1000000
       `, []);
-      for (const table of tablesWithoutPK) {
+      for (const table of tablesWithoutPK.rows) {
         missingIndexes.push({
           table: table.table_name,
           columns: ['id'],

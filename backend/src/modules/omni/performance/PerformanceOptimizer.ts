@@ -45,7 +45,7 @@ export class PerformanceOptimizer extends EventEmitter {
   private metricsHistory: IPerformanceMetrics[] = [];
   private resourcePools: Map<string, IResourcePool> = new Map();
   private optimizationRules: IOptimizationRule[] = [];
-  private monitoringInterval?: NodeJS.Timer;
+  private monitoringInterval?: NodeJS.Timeout;
   private isMonitoring = false;
 
   private readonly DEFAULT_RULES: IOptimizationRule[] = [
@@ -138,7 +138,7 @@ export class PerformanceOptimizer extends EventEmitter {
    */
   stopMonitoring(): void {
     if (this.monitoringInterval) {
-      clearInterval(this.monitoringInterval);
+      clearInterval(this.monitoringInterval as any);
       this.monitoringInterval = undefined;
     }
 

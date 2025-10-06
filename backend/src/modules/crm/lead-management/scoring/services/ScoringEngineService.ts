@@ -32,15 +32,15 @@ export class ScoringEngineService {
 
   constructor(
     @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
-    @inject(TYPES.DatabasePool) private db: Pool,
+    @inject(TYPES.CrmConnection) private db: Pool,
     @inject(TYPES.EventEmitter) private eventBus: EventEmitter
   ) {}
 
   /**
    * Calculate comprehensive lead score
    */
-  async calculateLeadScore(leadId: number): Promise<IScoringResult> {
-    const lead = await this.leadRepo.findById(leadId);
+  async calculateLeadScore(leadId: number, companyId?: number): Promise<IScoringResult> {
+    const lead = await this.leadRepo.findById(leadId, companyId ? String(companyId) : '1');
     if (!lead) throw new Error('Lead not found');
 
     // Calculate individual score components
@@ -182,7 +182,7 @@ export class ScoringEngineService {
     else if (updateCount >= 2) score += 10;
 
     // Check lead status progression
-    const lead = await this.leadRepo.findById(leadId);
+    const lead = await this.leadRepo.findById(leadId, '1');
     const statusScores: Record<string, number> = {
       'new': 5,
       'contacted': 15,
@@ -396,7 +396,7 @@ export class ScoringEngineService {
     await this.db.query(query, [leadId]);
 
     // Update lead with latest score
-    await this.leadRepo.update(leadId, { score: scores.total_score });
+    await this.leadRepo.update(leadId, '1', { score: scores.total_score });
   }
 
   /**

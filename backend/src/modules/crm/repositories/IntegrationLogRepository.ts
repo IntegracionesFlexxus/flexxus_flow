@@ -26,7 +26,7 @@ export interface IntegrationLog {
 @injectable()
 export class IntegrationLogRepository {
   constructor(
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async create(log: IntegrationLog): Promise<IntegrationLog> {

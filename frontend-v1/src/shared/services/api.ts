@@ -7,10 +7,9 @@ import axios, {
 import { getAuthState, getUIState } from '@/shared/store'
 
 // Configuración principal de Axios - MVP con interceptors básicos
-// TODO: En Nivel 2 agregar retry logic, cache y rate limiting
 
 // Obtener URL base de variables de entorno o usar default
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1' // TODO: Mover a .env en producción
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
 
 // Crear instancia de axios
 const api: AxiosInstance = axios.create({
@@ -29,31 +28,25 @@ api.interceptors.request.use(
     // Obtener token del store
     const token = getAuthState().token
     const currentCompany = getAuthState().currentCompany
-    
+
     // Agregar token si existe
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    
+
     // Agregar company ID si existe (multi-tenant)
     if (currentCompany && config.headers) {
       config.headers['X-Company-ID'] = currentCompany.id
     }
-    
+
     // Agregar timestamp para debugging en desarrollo
     if (import.meta.env.DEV) {
       config.headers['X-Request-Time'] = new Date().toISOString()
     }
-    
-    // Log en desarrollo
-    if (import.meta.env.DEV) {
-      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`)
-    }
-    
+
     return config
   },
   (error) => {
-    console.error('❌ Request Error:', error)
     return Promise.reject(error)
   }
 )
@@ -61,12 +54,6 @@ api.interceptors.request.use(
 // Response interceptor - Manejo de errores y notificaciones
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Log en desarrollo
-    if (import.meta.env.DEV) {
-      console.log(`✅ API Response: ${response.config.url}`, response.data)
-    }
-    
-    // Siempre retornar response completo, el unwrapping se hace en los servicios
     return response
   },
   async (error) => {
@@ -76,16 +63,6 @@ api.interceptors.response.use(
     // Ignorar errores de solicitudes canceladas
     if (error.code === 'ERR_CANCELED' || error.message === 'canceled') {
       return Promise.reject(error)
-    }
-    
-    // Log detallado del error (solo si no es cancelado)
-    if (import.meta.env.DEV) {
-      console.error('❌ Response Error:', {
-        url: error.config?.url,
-        status: error.response?.status,
-        message: error.response?.data?.message || error.message,
-        data: error.response?.data
-      })
     }
     
     // Manejar diferentes códigos de error
@@ -339,11 +316,3 @@ export const apiService = {
 }
 
 export default api
-
-// TODO: En Nivel 2 agregar:
-// - Retry logic con exponential backoff
-// - Cache de respuestas
-// - Rate limiting client-side
-// - Request/Response transformers
-// - Cancelación de requests
-// - Mock interceptor para desarrollo

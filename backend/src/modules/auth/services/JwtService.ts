@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'winston';
 import { IJwtService } from '@/modules/auth/interfaces/IJwtService';
 import { environment } from '@/config/environment';
-import { AppError } from '@shared/errors/AppError';
+import { AppError, ErrorCode } from '@shared/errors/AppError';
 import { TYPES } from '@/container/types';
 export interface JwtPayload {
   sessionId: string;
@@ -81,7 +81,7 @@ export class JwtService implements IJwtService {
       return token;
     } catch (error) {
       this.logger?.error('Failed to generate access token', { error: error.message });
-      throw new AppError('Failed to generate access token', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to generate access token', 500);
     }
   }
   /**
@@ -102,7 +102,7 @@ export class JwtService implements IJwtService {
       });
       return token;
     } catch (error) {
-      throw new AppError('Failed to generate refresh token', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to generate refresh token', 500);
     }
   }
   /**
@@ -139,12 +139,12 @@ export class JwtService implements IJwtService {
     } catch (error) {
       this.logger?.warn('Access token verification failed', { error: error.message });
       if (error instanceof jwt.TokenExpiredError) {
-        throw new AppError('Access token expired', 401);
+        throw new AppError(ErrorCode.TOKEN_EXPIRED, 'Access token expired', 401);
       }
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new AppError('Invalid access token', 401);
+        throw new AppError(ErrorCode.TOKEN_INVALID, 'Invalid access token', 401);
       }
-      throw new AppError('Token verification failed', 401);
+      throw new AppError(ErrorCode.TOKEN_INVALID, 'Token verification failed', 401);
     }
   }
   /**
@@ -160,12 +160,12 @@ export class JwtService implements IJwtService {
       return decoded;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new AppError('Refresh token expired', 401);
+        throw new AppError(ErrorCode.TOKEN_EXPIRED, 'Refresh token expired', 401);
       }
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new AppError('Invalid refresh token', 401);
+        throw new AppError(ErrorCode.TOKEN_INVALID, 'Invalid refresh token', 401);
       }
-      throw new AppError('Token verification failed', 401);
+      throw new AppError(ErrorCode.TOKEN_INVALID, 'Token verification failed', 401);
     }
   }
   /**
@@ -331,15 +331,15 @@ export class JwtService implements IJwtService {
         algorithms: ['HS256']
       }) as any;
       if (decoded.purpose !== purpose) {
-        throw new AppError('Invalid token purpose', 401);
+        throw new AppError(ErrorCode.TOKEN_INVALID, 'Invalid token purpose', 401);
       }
       return decoded.data;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new AppError(`${purpose} token expired`, 401);
+        throw new AppError(ErrorCode.TOKEN_EXPIRED, `${purpose} token expired`, 401);
       }
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new AppError(`Invalid ${purpose} token`, 401);
+        throw new AppError(ErrorCode.TOKEN_INVALID, `Invalid ${purpose} token`, 401);
       }
       throw error;
     }

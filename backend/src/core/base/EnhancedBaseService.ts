@@ -214,10 +214,10 @@ export abstract class EnhancedBaseService<T extends BaseEntity> extends BaseServ
         RETURNING *
       `;
       const results = await this.repository['db'].query<T>(query, [id]);
-      if (results.length === 0) {
+      if (results.rows.length === 0) {
         throw new Error(`Entity with id ${id} not found or not deleted`);
       }
-      const restored = results[0];
+      const restored = results.rows[0];
       // Post-restore hooks
       await this.afterRestore(restored);
       // Invalidate cache
@@ -298,7 +298,7 @@ export abstract class EnhancedBaseService<T extends BaseEntity> extends BaseServ
       const entities = await this.repository['db'].query<T>(query, values);
       // Update each entity
       let updatedCount = 0;
-      for (const entity of entities) {
+      for (const entity of entities.rows) {
         try {
           await this.validateUpdateData(data, entity);
           const processedData = await this.beforeUpdate(data, entity);
@@ -342,7 +342,7 @@ export abstract class EnhancedBaseService<T extends BaseEntity> extends BaseServ
       const entities = await this.repository['db'].query<{ id: string }>(query, values);
       // Delete each entity
       let deletedCount = 0;
-      for (const entity of entities) {
+      for (const entity of entities.rows) {
         const deleted = await this.repository.softDelete(entity.id);
         if (deleted) {
           deletedCount++;
@@ -420,7 +420,7 @@ export abstract class EnhancedBaseService<T extends BaseEntity> extends BaseServ
         query += ` AND ${whereClause}`;
       }
       const results = await this.repository['db'].query<any>(query, values);
-      return results.map(r => r[field]);
+      return results.rows.map(r => r[field]);
     });
   }
   // Hook methods to be overridden by child classes

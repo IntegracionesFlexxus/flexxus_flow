@@ -10,7 +10,8 @@ import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 import { EventEmitter } from 'events';
 
 // Import AI services
-import { SentimentAnalysisService, SummarizationService } from '../services';
+import { SentimentAnalysisService } from '../../ai/services/SentimentAnalysisService';
+import { SummarizationService } from '../../ai/services/SummarizationService';
 
 // Import performance services
 import { SmartCacheService } from '../../cache/SmartCacheService';
@@ -46,7 +47,7 @@ export class RealTimeAIProcessor extends EventEmitter {
   private logger: any;
   private processingQueue: IProcessingJob[] = [];
   private isProcessing = false;
-  private processingInterval?: NodeJS.Timer;
+  private processingInterval?: NodeJS.Timeout;
   private metrics: IProcessingMetrics;
   private maxConcurrentJobs = 5;
   private currentJobs = 0;
@@ -106,7 +107,7 @@ export class RealTimeAIProcessor extends EventEmitter {
       this.isProcessing = false;
 
       if (this.processingInterval) {
-        clearInterval(this.processingInterval);
+        clearInterval(this.processingInterval as any);
         this.processingInterval = undefined;
       }
 

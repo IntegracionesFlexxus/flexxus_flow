@@ -134,7 +134,7 @@ export class CustomerRepository extends BaseOmniRepository<ICustomer> {
     if (search.tags && search.tags.length > 0) {
       paramCount++;
       conditions.push(`tags && $${paramCount}`);
-      params.push(search.tags);
+      params.push(search.tags as any); // PostgreSQL array parameter
     }
 
     // Build query

@@ -17,7 +17,7 @@ export class DecisionRuleController {
 
   async createRule(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { rule_name, rule_type, conditions, actions, ml_model_id, confidence_threshold, priority } = req.body;
 
       if (!rule_name || !rule_type || !conditions || !actions) {
@@ -45,7 +45,7 @@ export class DecisionRuleController {
 
   async getRule(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const rule = await this.ruleService.getRule(id, tenantId);
@@ -58,7 +58,7 @@ export class DecisionRuleController {
 
   async listRules(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const activeOnly = req.query.active_only !== 'false';
 
       const rules = await this.ruleService.listRules(tenantId, activeOnly);
@@ -71,7 +71,7 @@ export class DecisionRuleController {
 
   async updateRule(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
       const updateData = req.body;
 
@@ -85,7 +85,7 @@ export class DecisionRuleController {
 
   async deleteRule(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.ruleService.deleteRule(id, tenantId);
@@ -98,7 +98,7 @@ export class DecisionRuleController {
 
   async activateRule(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.ruleService.activateRule(id, tenantId);
@@ -111,7 +111,7 @@ export class DecisionRuleController {
 
   async deactivateRule(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.ruleService.deactivateRule(id, tenantId);
@@ -124,7 +124,7 @@ export class DecisionRuleController {
 
   async evaluateRules(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { context } = req.body;
 
       if (!context) {

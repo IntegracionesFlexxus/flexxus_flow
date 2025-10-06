@@ -256,8 +256,8 @@ container.bind(TYPES.PasswordResetRepository).toDynamicValue((context) => {
   );
 }).inSingletonScope();
 // Services
-container.bind<IAuthUserService>(TYPES.AuthUserService).to(AuthUserService);
-container.bind<IUserService>(TYPES.UserService).to(UserService);
+container.bind<IAuthUserService>(TYPES.AuthUserService).to(AuthUserService as any);
+container.bind<IUserService>(TYPES.UserService).to(UserService as any);
 container.bind<ICompanyService>(TYPES.CompanyService).to(CompanyService);
 container.bind<IAuthService>(TYPES.AuthService).to(AuthService);
 container.bind(TYPES.AuthenticationService).toDynamicValue((context) => {
@@ -291,7 +291,7 @@ container.bind<CompanyController>(TYPES.CompanyController).to(CompanyController)
 // ========== Feature Flag Module Bindings ==========
 // Repository and Service (Core)
 container.bind<IFeatureFlagRepository>(TYPES.FeatureFlagRepository).to(FeatureFlagRepository).inSingletonScope();
-container.bind<IFeatureFlagService>(TYPES.FeatureFlagService).to(EnhancedFeatureFlagService).inSingletonScope();
+container.bind<IFeatureFlagService>(TYPES.FeatureFlagService).to(EnhancedFeatureFlagService as any).inSingletonScope();
 // Controller
 container.bind<FeatureFlagController>(TYPES.FeatureFlagController).to(FeatureFlagController).inSingletonScope();
 // Rule Evaluators
@@ -414,4 +414,64 @@ export async function closeDatabaseConnections(): Promise<void> {
     }
   }
 }
-export { container };
+export { container, TYPES };
+
+/**
+ * Initialize container and database connections
+ */
+export async function initializeContainer(): Promise<void> {
+  const logger = container.get<winston.Logger>(TYPES.Logger);
+
+  logger.info('Initializing container and database connections...');
+
+  // Test database connections
+  const connections = [
+    TYPES.SharedConnection,
+    TYPES.OmniConnection,
+    TYPES.CrmConnection,
+    TYPES.WorkflowConnection,
+    TYPES.AnalyticsConnection
+  ];
+
+  for (const connType of connections) {
+    try {
+      const db = container.get<IDatabaseConnection>(connType);
+      await db.query('SELECT 1');
+      logger.info(`Database connection verified: ${connType.toString()}`);
+    } catch (error) {
+      logger.error(`Failed to verify database connection ${connType.toString()}:`, error);
+      throw error;
+    }
+  }
+
+  logger.info('Container initialized successfully');
+}
+
+/**
+ * Shutdown container and close all connections
+ */
+export async function shutdownContainer(): Promise<void> {
+  const logger = container.get<winston.Logger>(TYPES.Logger);
+
+  logger.info('Shutting down container and closing database connections...');
+
+  const connections = [
+    TYPES.SharedConnection,
+    TYPES.OmniConnection,
+    TYPES.CrmConnection,
+    TYPES.WorkflowConnection,
+    TYPES.AnalyticsConnection
+  ];
+
+  for (const connType of connections) {
+    try {
+      const db = container.get<IDatabaseConnection>(connType);
+      await db.close();
+      logger.info(`Database connection closed: ${connType.toString()}`);
+    } catch (error) {
+      logger.error(`Failed to close database connection ${connType.toString()}:`, error);
+    }
+  }
+
+  logger.info('Container shutdown complete');
+}

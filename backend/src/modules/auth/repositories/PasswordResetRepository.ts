@@ -79,13 +79,13 @@ export class PasswordResetRepository implements IPasswordResetRepository {
       LIMIT 1
     `;
     const result = await this.db.query<{ user_id: string; email: string }>(query, [hashedToken]);
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       this.logger?.warn('Invalid or expired password reset token');
       return null;
     }
     return {
-      userId: result[0].user_id,
-      email: result[0].email
+      userId: result.rows[0].user_id,
+      email: result.rows[0].email
     };
   }
   /**
@@ -102,7 +102,7 @@ export class PasswordResetRepository implements IPasswordResetRepository {
       ) as is_valid
     `;
     const result = await this.db.query<{ is_valid: boolean }>(query, [hashedToken]);
-    return result[0].is_valid;
+    return result.rows[0].is_valid;
   }
   /**
    * Mark a token as used after successful password reset
@@ -184,9 +184,9 @@ export class PasswordResetRepository implements IPasswordResetRepository {
     `;
     const result = await this.db.query<any>(query);
     return {
-      totalActive: parseInt(result[0].active || '0', 10),
-      totalExpired: parseInt(result[0].expired || '0', 10),
-      totalUsed: parseInt(result[0].used || '0', 10)
+      totalActive: parseInt(result.rows[0].active || '0', 10),
+      totalExpired: parseInt(result.rows[0].expired || '0', 10),
+      totalUsed: parseInt(result.rows[0].used || '0', 10)
     };
   }
   /**

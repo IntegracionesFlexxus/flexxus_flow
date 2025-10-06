@@ -14,8 +14,8 @@ export class ReportController {
    */
   async createReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
 
       const reportData = {
         ...req.body,
@@ -42,7 +42,7 @@ export class ReportController {
    */
   async getReports(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { type } = req.query;
 
       const reports = type
@@ -66,10 +66,10 @@ export class ReportController {
    */
   async getReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { reportId } = req.params;
 
-      const report = await this.reportService.getReport(parseInt(reportId), companyId);
+      const report = await this.reportService.getReport(parseInt(reportId, 10), companyId);
 
       if (!report) {
         res.status(404).json({
@@ -96,11 +96,11 @@ export class ReportController {
    */
   async updateReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { reportId } = req.params;
 
       const report = await this.reportService.updateReport(
-        parseInt(reportId),
+        parseInt(reportId, 10),
         companyId,
         req.body
       );
@@ -130,11 +130,11 @@ export class ReportController {
    */
   async deleteReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { reportId } = req.params;
 
       const deleted = await this.reportService.deleteReport(
-        parseInt(reportId),
+        parseInt(reportId, 10),
         companyId
       );
 
@@ -163,12 +163,12 @@ export class ReportController {
    */
   async executeReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { reportId } = req.params;
       const { filters, format = 'json' } = req.body;
 
       const data = await this.reportService.executeReport(
-        parseInt(reportId),
+        parseInt(reportId, 10),
         companyId,
         filters,
         format as 'json' | 'csv' | 'excel' | 'pdf'
@@ -211,12 +211,12 @@ export class ReportController {
    */
   async scheduleReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { reportId } = req.params;
       const schedule = req.body;
 
       const report = await this.reportService.scheduleReport(
-        parseInt(reportId),
+        parseInt(reportId, 10),
         companyId,
         schedule
       );
@@ -246,13 +246,13 @@ export class ReportController {
    */
   async exportReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
       const { reportId } = req.params;
       const { format = 'csv' } = req.query;
 
       const exportInfo = await this.reportService.generateReportExport(
-        parseInt(reportId),
+        parseInt(reportId, 10),
         companyId,
         userId,
         format as 'csv' | 'excel' | 'pdf'
@@ -275,7 +275,7 @@ export class ReportController {
    */
   async cloneReport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { reportId } = req.params;
       const { name } = req.body;
 
@@ -288,7 +288,7 @@ export class ReportController {
       }
 
       const clonedReport = await this.reportService.cloneReport(
-        parseInt(reportId),
+        parseInt(reportId, 10),
         companyId,
         name
       );
@@ -312,7 +312,7 @@ export class ReportController {
     try {
       const { reportId } = req.params;
 
-      const metrics = await this.reportService.getReportMetrics(parseInt(reportId));
+      const metrics = await this.reportService.getReportMetrics(parseInt(reportId, 10));
 
       res.json({
         success: true,

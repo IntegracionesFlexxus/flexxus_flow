@@ -20,7 +20,7 @@ import { ContactRepository } from '../repositories/ContactRepository';
 import { OpportunityRepository } from '../repositories/OpportunityRepository';
 import { ActivityRepository } from '../repositories/ActivityRepository';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { EventEmitter } from 'events';
 import { CrossDatabaseService } from '@/shared/services/cross-database/CrossDatabaseService';
 
@@ -45,7 +45,7 @@ export class AccountService implements IAccountService {
       if (data.cuit) {
         const existingAccount = await this.accountRepository.findByCUIT(data.cuit, data.company_id);
         if (existingAccount) {
-          throw new AppError('An account with this CUIT already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'An account with this CUIT already exists', 409);
         }
       }
 
@@ -70,7 +70,7 @@ export class AccountService implements IAccountService {
       }
 
       // Create account
-      const account = await this.accountRepository.create(data, userId);
+      const account = await this.accountRepository.create(data as any, userId);
 
       // Emit event
       this.eventEmitter.emit('account:created', {
@@ -119,7 +119,7 @@ export class AccountService implements IAccountService {
       if (data.cuit && data.cuit !== existingAccount.cuit) {
         const duplicate = await this.accountRepository.findByCUIT(data.cuit, companyId);
         if (duplicate && duplicate.id !== id) {
-          throw new AppError('An account with this CUIT already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'An account with this CUIT already exists', 409);
         }
       }
 
@@ -244,17 +244,18 @@ export class AccountService implements IAccountService {
     try {
       const account = await this.accountRepository.findById(accountId, companyId);
       if (!account) {
-        throw new AppError('Account not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Account not found', 404);
       }
 
       // Check for related data
       const [contacts, opportunities] = await Promise.all([
-        this.contactRepository.findByAccount(accountId, companyId),
-        this.opportunityRepository.findWithFilters(companyId, { account_id: accountId })
+        this.contactRepository.findByAccount(accountId, Number(companyId)),
+        this.opportunityRepository.findWithFilters(Number(companyId), { account_id: accountId })
       ]);
 
       if (contacts.length > 0 || opportunities.length > 0) {
         throw new AppError(
+          ErrorCode.BUSINESS_RULE_VIOLATION,
           'Cannot delete account with related contacts or opportunities',
           400
         );
@@ -302,21 +303,21 @@ export class AccountService implements IAccountService {
     try {
       const primaryAccount = await this.accountRepository.findById(primaryAccountId, companyId);
       if (!primaryAccount) {
-        throw new AppError('Primary account not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Primary account not found', 404);
       }
 
       // Verify all duplicate accounts exist
       for (const duplicateId of duplicateAccountIds) {
         const duplicate = await this.accountRepository.findById(duplicateId, companyId);
         if (!duplicate) {
-          throw new AppError(`Duplicate account ${duplicateId} not found`, 404);
+          throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, `Duplicate account ${duplicateId} not found`, 404);
         }
       }
 
       // Transfer related data from duplicates to primary
       for (const duplicateId of duplicateAccountIds) {
         // Transfer contacts
-        const contacts = await this.contactRepository.findByAccount(duplicateId, companyId);
+        const contacts = await this.contactRepository.findByAccount(duplicateId, Number(companyId));
         for (const contact of contacts) {
           await this.contactRepository.update(contact.id!, companyId, {
             account_id: primaryAccountId
@@ -324,7 +325,7 @@ export class AccountService implements IAccountService {
         }
 
         // Transfer opportunities
-        const opportunities = await this.opportunityRepository.findWithFilters(companyId, {
+        const opportunities = await this.opportunityRepository.findWithFilters(Number(companyId), {
           account_id: duplicateId
         });
         for (const opportunity of opportunities) {
@@ -334,7 +335,7 @@ export class AccountService implements IAccountService {
         }
 
         // Transfer activities
-        const activities = await this.activityRepository.findWithFilters(companyId, {
+        const activities = await this.activityRepository.findWithFilters(Number(companyId), {
           account_id: duplicateId
         });
         for (const activity of activities) {
@@ -390,7 +391,7 @@ export class AccountService implements IAccountService {
     try {
       const account = await this.accountRepository.findById(accountId, companyId);
       if (!account) {
-        throw new AppError('Account not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Account not found', 404);
       }
 
       const updated = await this.accountRepository.update(
@@ -401,7 +402,7 @@ export class AccountService implements IAccountService {
       );
 
       if (!updated) {
-        throw new AppError('Failed to update account rating', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to update account rating', 500);
       }
 
       // Log rating change

@@ -71,16 +71,16 @@ export class DataMartRepository {
       const byChannel = await this.getMetricsByChannel(companyId, startDate, endDate, channels);
 
       return {
-        conversationCount: parseInt(row.conversation_count) || 0,
-        messageCount: parseInt(row.message_count) || 0,
-        avgResponseTimeSeconds: parseInt(row.avg_response_time_seconds) || 0,
-        avgResolutionTimeMinutes: parseInt(row.avg_resolution_time_minutes) || 0,
-        firstResponseTimeSeconds: parseInt(row.first_response_time_seconds) || 0,
+        conversationCount: parseInt(row.conversation_count, 10) || 0,
+        messageCount: parseInt(row.message_count, 10) || 0,
+        avgResponseTimeSeconds: parseInt(row.avg_response_time_seconds, 10) || 0,
+        avgResolutionTimeMinutes: parseInt(row.avg_resolution_time_minutes, 10) || 0,
+        firstResponseTimeSeconds: parseInt(row.first_response_time_seconds, 10) || 0,
         csat: parseFloat(row.csat) || 0,
-        messagesSent: parseInt(row.messages_sent) || 0,
-        messagesReceived: parseInt(row.messages_received) || 0,
-        mediaMessages: parseInt(row.media_messages) || 0,
-        escalationCount: parseInt(row.escalation_count) || 0,
+        messagesSent: parseInt(row.messages_sent, 10) || 0,
+        messagesReceived: parseInt(row.messages_received, 10) || 0,
+        mediaMessages: parseInt(row.media_messages, 10) || 0,
+        escalationCount: parseInt(row.escalation_count, 10) || 0,
         byChannel,
         trend: { direction: 'stable', changePercentage: 0, changeAbsolute: 0, previousValue: 0, currentValue: 0 }
       };
@@ -133,14 +133,14 @@ export class DataMartRepository {
         campaignName: `Campaign ${row.campaign_id}`, // TODO: Get from campaigns table
         campaignType: row.campaign_type,
         channel: row.channel,
-        sentCount: parseInt(row.sent_count) || 0,
-        deliveredCount: parseInt(row.delivered_count) || 0,
-        bouncedCount: parseInt(row.bounced_count) || 0,
-        openedCount: parseInt(row.opened_count) || 0,
-        clickedCount: parseInt(row.clicked_count) || 0,
-        repliedCount: parseInt(row.replied_count) || 0,
-        convertedCount: parseInt(row.converted_count) || 0,
-        unsubscribedCount: parseInt(row.unsubscribed_count) || 0,
+        sentCount: parseInt(row.sent_count, 10) || 0,
+        deliveredCount: parseInt(row.delivered_count, 10) || 0,
+        bouncedCount: parseInt(row.bounced_count, 10) || 0,
+        openedCount: parseInt(row.opened_count, 10) || 0,
+        clickedCount: parseInt(row.clicked_count, 10) || 0,
+        repliedCount: parseInt(row.replied_count, 10) || 0,
+        convertedCount: parseInt(row.converted_count, 10) || 0,
+        unsubscribedCount: parseInt(row.unsubscribed_count, 10) || 0,
         openRate: parseFloat(row.open_rate) || 0,
         clickRate: parseFloat(row.click_rate) || 0,
         conversionRate: parseFloat(row.conversion_rate) || 0,
@@ -199,18 +199,18 @@ export class DataMartRepository {
 
       return {
         customerId: row.customer_id,
-        totalInteractions: parseInt(row.total_interactions) || 0,
+        totalInteractions: parseInt(row.total_interactions, 10) || 0,
         channelInteractions: row.channel_interactions || {},
         lastInteractionDate: row.last_interaction_date,
-        daysSinceLastInteraction: parseInt(row.days_since_last_interaction) || 0,
+        daysSinceLastInteraction: parseInt(row.days_since_last_interaction, 10) || 0,
         lifetimeValue: parseFloat(row.lifetime_value) || 0,
-        totalPurchases: parseInt(row.total_purchases) || 0,
+        totalPurchases: parseInt(row.total_purchases, 10) || 0,
         averageOrderValue: parseFloat(row.average_order_value) || 0,
         totalSpent: parseFloat(row.total_spent) || 0,
-        engagementScore: parseInt(row.engagement_score) || 0,
+        engagementScore: parseInt(row.engagement_score, 10) || 0,
         satisfactionScore: parseFloat(row.satisfaction_score) || 0,
-        churnRiskScore: parseInt(row.churn_risk_score) || 0,
-        leadScore: parseInt(row.lead_score) || 0,
+        churnRiskScore: parseInt(row.churn_risk_score, 10) || 0,
+        leadScore: parseInt(row.lead_score, 10) || 0,
         segmentIds: row.segment_ids || [],
         tags: row.tags || [],
         preferredChannel: row.preferred_channel || '',
@@ -259,9 +259,9 @@ export class DataMartRepository {
 
       return {
         channel: row.channel,
-        conversationCount: parseInt(row.conversation_count) || 0,
-        messageCount: parseInt(row.message_count) || 0,
-        avgResponseTimeSeconds: parseInt(row.avg_response_time_seconds) || 0,
+        conversationCount: parseInt(row.conversation_count, 10) || 0,
+        messageCount: parseInt(row.message_count, 10) || 0,
+        avgResponseTimeSeconds: parseInt(row.avg_response_time_seconds, 10) || 0,
         csat: parseFloat(row.csat) || 0,
         percentage: 0 // Will be calculated in service layer
       };
@@ -375,15 +375,15 @@ export class DataMartRepository {
 
       const result = await this.db.query(query, queryParams);
 
-      const total = result.rows.reduce((sum, row) => sum + parseInt(row.conversation_count), 0);
+      const total = result.rows.reduce((sum, row) => sum + parseInt(row.conversation_count, 10), 0);
 
       return result.rows.map(row => ({
         channel: row.channel,
-        conversationCount: parseInt(row.conversation_count) || 0,
-        messageCount: parseInt(row.message_count) || 0,
-        avgResponseTimeSeconds: parseInt(row.avg_response_time_seconds) || 0,
+        conversationCount: parseInt(row.conversation_count, 10) || 0,
+        messageCount: parseInt(row.message_count, 10) || 0,
+        avgResponseTimeSeconds: parseInt(row.avg_response_time_seconds, 10) || 0,
         csat: parseFloat(row.csat) || 0,
-        percentage: total > 0 ? (parseInt(row.conversation_count) / total) * 100 : 0
+        percentage: total > 0 ? (parseInt(row.conversation_count, 10) / total) * 100 : 0
       }));
     } catch (error) {
       this.logger.error('Error getting metrics by channel', { error, companyId });

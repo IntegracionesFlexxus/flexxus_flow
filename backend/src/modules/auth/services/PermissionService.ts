@@ -12,7 +12,7 @@ import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
 import { IUserRepository } from '@/shared/interfaces/repositories/IUserRepository';
 import { IAuditRepository } from '@/shared/interfaces/repositories/IAuditRepository';
 import { CacheService } from '@/shared/services/cache/CacheService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 
 export interface Permission {
   id: string;
@@ -377,13 +377,13 @@ export class PermissionService {
       // Validate permission exists
       const permission = await this.permissionRepository.findById(permissionId);
       if (!permission) {
-        throw new AppError('Permission not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Permission not found', 404);
       }
 
       // Check if already granted
       const existing = await this.permissionRepository.findUserPermission(userId, permissionId, companyId);
       if (existing) {
-        throw new AppError('Permission already granted', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Permission already granted', 400);
       }
 
       // Grant permission
@@ -438,7 +438,7 @@ export class PermissionService {
     try {
       const permission = await this.permissionRepository.findById(permissionId);
       if (!permission) {
-        throw new AppError('Permission not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Permission not found', 404);
       }
 
       // Revoke permission
@@ -539,7 +539,7 @@ export class PermissionService {
       // Validate unique name
       const existing = await this.permissionRepository.findByName(data.name);
       if (existing) {
-        throw new AppError('Permission name already exists', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Permission name already exists', 400);
       }
 
       // Create permission

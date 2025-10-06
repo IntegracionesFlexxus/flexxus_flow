@@ -30,10 +30,12 @@ export const TYPES = {
   DatabasePool: Symbol.for('DatabasePool'),
   DatabaseConnection: Symbol.for('DatabaseConnection'),
   // Configuration Services
+  Config: Symbol.for('Config'),
   ConfigService: Symbol.for('ConfigService'),
   DatabaseConfig: Symbol.for('DatabaseConfig'),
   ServerConfig: Symbol.for('ServerConfig'),
   EnvironmentService: Symbol.for('EnvironmentService'),
+  ErrorHandlerService: Symbol.for('ErrorHandlerService'),
   // Authentication & Authorization Services
   AuthService: Symbol.for('AuthService'),
   AuthenticationService: Symbol.for('AuthenticationService'),
@@ -67,6 +69,12 @@ export const TYPES = {
   UserController: Symbol.for('UserController'),
   UserValidator: Symbol.for('UserValidator'),
   UserFactory: Symbol.for('UserFactory'),
+  InvitationService: Symbol.for('InvitationService'),
+  InvitationRepository: Symbol.for('InvitationRepository'),
+  InvitationController: Symbol.for('InvitationController'),
+  OnboardingService: Symbol.for('OnboardingService'),
+  ReportService: Symbol.for('ReportService'),
+  ReportController: Symbol.for('ReportController'),
   // Role Domain Services
   RoleRepository: Symbol.for('RoleRepository'),
   RoleController: Symbol.for('RoleController'),
@@ -298,9 +306,11 @@ export const TYPES = {
   QuoteService: Symbol.for('QuoteService'),
   PricingService: Symbol.for('PricingService'),
   DynamicPricingEngine: Symbol.for('DynamicPricingEngine'), // Sprint 20
+  ApprovalController: Symbol.for('ApprovalController'), // Sprint 19
   ApprovalService: Symbol.for('ApprovalService'),
   ApprovalRepository: Symbol.for('ApprovalRepository'), // Sprint 20
   ApprovalWorkflowService: Symbol.for('ApprovalWorkflowService'), // Sprint 20
+  DocumentController: Symbol.for('DocumentController'), // Sprint 19
   // Product & Quote - Additional Repositories (Sprint 20)
   ProductCategoryRepository: Symbol.for('ProductCategoryRepository'),
   QuoteLineItemRepository: Symbol.for('QuoteLineItemRepository'),
@@ -362,6 +372,8 @@ export const TYPES = {
   // Email & Notification Services
   EmailService: Symbol.for('EmailService'),
   NotificationService: Symbol.for('NotificationService'),
+  NotificationController: Symbol.for('NotificationController'),
+  NotificationRepository: Symbol.for('NotificationRepository'),
   SmsService: Symbol.for('SmsService'),
   PushNotificationService: Symbol.for('PushNotificationService'),
   // Cache Services

@@ -98,7 +98,7 @@ export class PartitionManager implements IPartitionManager {
           OR pg_total_relation_size(schemaname||'.'||tablename) > 1073741824
         ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
       `, []);
-      for (const table of largeTables) {
+      for (const table of largeTables.rows) {
         // Check if table has date/timestamp columns (good for range partitioning)
         const hasDateColumn = await this.checkDateColumns(connection, table.tablename);
         // Check if table has categorical columns (good for list partitioning)
@@ -151,7 +151,7 @@ export class PartitionManager implements IPartitionManager {
         WHERE p.relname = $1
         ORDER BY c.relname
       `, [table]);
-      const partitionInfo: PartitionInfo[] = partitions.map(p => ({
+      const partitionInfo: PartitionInfo[] = partitions.rows.map(p => ({
         name: p.partition_name,
         parent: p.parent_table,
         rows: parseInt(p.row_count),
@@ -190,7 +190,7 @@ export class PartitionManager implements IPartitionManager {
           AND c.relname LIKE '%' || $2 || '%'
         ORDER BY c.relname
       `, [table, cutoffDate.toISOString().slice(0, 7).replace('-', '_')]);
-      for (const partition of oldPartitions) {
+      for (const partition of oldPartitions.rows) {
         try {
           // Drop the partition
           await connection.query(`DROP TABLE IF EXISTS ${partition.partition_name}`, []);
@@ -286,9 +286,9 @@ export class PartitionManager implements IPartitionManager {
       WHERE c.relname = $1
     `, [table]);
     return {
-      name: result[0]?.relname,
-      isPartitioned: result[0]?.partstrat !== null,
-      partitionStrategy: result[0]?.partstrat
+      name: result.rows[0]?.relname,
+      isPartitioned: result.rows[0]?.partstrat !== null,
+      partitionStrategy: result.rows[0]?.partstrat
     };
   }
   /**
@@ -373,7 +373,7 @@ export class PartitionManager implements IPartitionManager {
       FROM ${config.tableName}_old
       LIMIT 10
     `, []);
-    for (const row of values) {
+    for (const row of values.rows) {
       const partitionName = `${config.tableName}_${String(row.value).toLowerCase().replace(/\W/g, '_')}`;
       await connection.query(`
         CREATE TABLE ${partitionName} PARTITION OF ${config.tableName}
@@ -489,7 +489,7 @@ export class PartitionManager implements IPartitionManager {
       WHERE table_name = $1
         AND data_type IN ('timestamp', 'date', 'timestamptz')
     `, [table]);
-    return columns.length > 0;
+    return columns.rows.length > 0;
   }
   /**
    * Check for categorical columns
@@ -508,7 +508,7 @@ export class PartitionManager implements IPartitionManager {
       GROUP BY column_name
       HAVING COUNT(DISTINCT column_name) < 100
     `, [table]);
-    return columns.length > 0;
+    return columns.rows.length > 0;
   }
   /**
    * Check table patterns
@@ -523,7 +523,7 @@ export class PartitionManager implements IPartitionManager {
         WHERE tablename LIKE '%${pattern}%'
           AND schemaname NOT IN ('pg_catalog', 'information_schema')
       `, []);
-      tables.push(...result.map((r: any) => r.tablename));
+      tables.push(...result.rows.map((r: any) => r.tablename));
     }
     return tables;
   }

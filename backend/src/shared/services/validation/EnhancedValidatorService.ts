@@ -59,7 +59,7 @@ export class EnhancedValidatorService extends ValidatorService {
     });
     // Postal code validation
     this.customValidators.set('postalCode', (value: string, locale: string = 'any') => {
-      return validator.isPostalCode(value, locale);
+      return validator.isPostalCode(value, locale as any);
     });
     // VAT number validation
     this.customValidators.set('vat', (value: string, countryCode: string) => {

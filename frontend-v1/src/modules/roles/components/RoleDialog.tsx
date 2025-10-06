@@ -71,7 +71,7 @@ import * as yup from 'yup';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 // Services
-import { roleService } from '@/modules/users/services/roleService';
+import { roleService } from '@/modules/roles/services/roleService';
 
 // Hooks
 import { useUIStore } from '@/shared/store/uiStore';

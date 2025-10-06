@@ -8,7 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { Logger } from 'winston';
-import { BaseController } from '@/shared/controllers/BaseController';
+import { BaseController } from '@/core/base/BaseController';
 import { asyncHandler } from '@/shared/middleware/errorHandler';
 import { NotificationService } from '@/modules/notifications/services/NotificationService';
 import { INotificationRepository, NotificationFilter } from '@/modules/notifications/interfaces/INotificationRepository';

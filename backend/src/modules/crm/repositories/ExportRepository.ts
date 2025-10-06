@@ -26,7 +26,7 @@ export interface DataExport {
 @injectable()
 export class ExportRepository {
   constructor(
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async create(exportData: DataExport): Promise<DataExport> {

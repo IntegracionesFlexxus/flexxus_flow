@@ -9,7 +9,7 @@ import { TYPES } from '@/container/types';
 import { DocumentAIService } from '../cognitive/services/DocumentAIService';
 import { VoiceAnalyticsService } from '../cognitive/services/VoiceAnalyticsService';
 import { KnowledgeGraphService } from '../cognitive/services/KnowledgeGraphService';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class CognitiveController {
@@ -31,7 +31,7 @@ export class CognitiveController {
   async processDocument(req: Request, res: Response): Promise<void> {
     try {
       const { document_id, document_type, document_content, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !document_id || !document_type || !document_content) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -56,7 +56,7 @@ export class CognitiveController {
   async getDocumentAnalysis(req: Request, res: Response): Promise<void> {
     try {
       const { documentId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -75,7 +75,7 @@ export class CognitiveController {
   async analyzeVoice(req: Request, res: Response): Promise<void> {
     try {
       const { interaction_id, transcript, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !interaction_id || !transcript) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -93,7 +93,7 @@ export class CognitiveController {
   async getVoiceAnalysis(req: Request, res: Response): Promise<void> {
     try {
       const { interactionId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -112,7 +112,7 @@ export class CognitiveController {
   async createEntity(req: Request, res: Response): Promise<void> {
     try {
       const { entity_type, entity_name, properties, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !entity_type || !entity_name || !properties) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -136,7 +136,7 @@ export class CognitiveController {
   async createRelationship(req: Request, res: Response): Promise<void> {
     try {
       const { source_entity_id, target_entity_id, relationship_type, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !source_entity_id || !target_entity_id || !relationship_type) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -161,7 +161,7 @@ export class CognitiveController {
     try {
       const { entityId } = req.params;
       const { relationship_type } = req.query;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -183,7 +183,7 @@ export class CognitiveController {
   async searchEntities(req: Request, res: Response): Promise<void> {
     try {
       const { q } = req.query;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !q) {
         res.status(400).json({ error: 'Missing search query' });

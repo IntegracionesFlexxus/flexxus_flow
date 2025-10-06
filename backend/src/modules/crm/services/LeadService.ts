@@ -20,7 +20,7 @@ import { ContactRepository } from '../repositories/ContactRepository';
 import { OpportunityRepository } from '../repositories/OpportunityRepository';
 import { ActivityRepository } from '../repositories/ActivityRepository';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { EventEmitter } from 'events';
 import { CrossDatabaseService } from '@/shared/services/cross-database/CrossDatabaseService';
 
@@ -46,12 +46,12 @@ export class LeadService implements ILeadService {
       if (data.email) {
         const existingLead = await this.leadRepository.findByEmail(data.email, data.company_id);
         if (existingLead) {
-          throw new AppError('A lead with this email already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'A lead with this email already exists', 409);
         }
       }
 
       // Create lead
-      const lead = await this.leadRepository.create(data, userId);
+      const lead = await this.leadRepository.create(data as any, userId);
 
       // Calculate initial score
       if (lead.id) {
@@ -99,7 +99,7 @@ export class LeadService implements ILeadService {
   ): Promise<Lead | null> {
     try {
       // Check if lead exists
-      const existingLead = await this.leadRepository.findById(id, companyId);
+      const existingLead = await this.leadRepository.findById(id, String(companyId));
       if (!existingLead) {
         return null;
       }
@@ -108,12 +108,12 @@ export class LeadService implements ILeadService {
       if (data.email && data.email !== existingLead.email) {
         const duplicate = await this.leadRepository.findByEmail(data.email, companyId);
         if (duplicate && duplicate.id !== id) {
-          throw new AppError('A lead with this email already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'A lead with this email already exists', 409);
         }
       }
 
       // Update lead
-      const updated = await this.leadRepository.update(id, companyId, data, userId);
+      const updated = await this.leadRepository.update(id, String(companyId), data, userId);
 
       // Update score if BANT fields changed
       if (data.budget !== undefined ||
@@ -203,25 +203,25 @@ export class LeadService implements ILeadService {
    */
   async qualifyLead(leadId: number, companyId: number, userId: number): Promise<Lead> {
     try {
-      const lead = await this.leadRepository.findById(leadId, companyId);
+      const lead = await this.leadRepository.findById(leadId, String(companyId));
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       if (lead.status === 'converted') {
-        throw new AppError('Lead is already converted', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Lead is already converted', 400);
       }
 
       // Update status to qualified
       const updated = await this.leadRepository.update(
         leadId,
-        companyId,
+        String(companyId),
         { status: 'qualified' },
         userId
       );
 
       if (!updated) {
-        throw new AppError('Failed to qualify lead', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to qualify lead', 500);
       }
 
       // Create follow-up activity
@@ -267,11 +267,11 @@ export class LeadService implements ILeadService {
     try {
       const lead = await this.leadRepository.getLeadWithDetails(leadId, companyId);
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       if (lead.status === 'converted') {
-        throw new AppError('Lead is already converted', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Lead is already converted', 400);
       }
 
       // Start transaction
@@ -297,9 +297,9 @@ export class LeadService implements ILeadService {
           description: lead.notes
         }, userId);
       } else if (conversionData.existingAccountId) {
-        account = await this.accountRepository.findById(conversionData.existingAccountId, companyId);
+        account = await this.accountRepository.findById(conversionData.existingAccountId, String(companyId));
         if (!account) {
-          throw new AppError('Specified account not found', 404);
+          throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Specified account not found', 404);
         }
       }
 
@@ -334,7 +334,7 @@ export class LeadService implements ILeadService {
           lead_source_id: lead.source_id,
           owner_id: lead.assigned_to || userId,
           description: lead.need_description
-        }, userId);
+        } as any, userId);
       }
 
       // Update lead as converted
@@ -353,7 +353,7 @@ export class LeadService implements ILeadService {
       });
 
       for (const activity of activities) {
-        await this.activityRepository.update(activity.id!, companyId, {
+        await this.activityRepository.update(activity.id!, String(companyId), {
           lead_id: undefined,
           account_id: account.id,
           contact_id: contact.id,
@@ -387,9 +387,9 @@ export class LeadService implements ILeadService {
    */
   async updateLeadScore(leadId: number, companyId: number): Promise<number> {
     try {
-      const lead = await this.leadRepository.findById(leadId, companyId);
+      const lead = await this.leadRepository.findById(leadId, String(companyId));
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       const score = await this.leadRepository.updateLeadScore(leadId);
@@ -416,7 +416,7 @@ export class LeadService implements ILeadService {
    */
   async bulkUpdateScores(companyId: number): Promise<number> {
     try {
-      const leads = await this.leadRepository.findAll(companyId);
+      const leads = await this.leadRepository.findAll(String(companyId));
       let updatedCount = 0;
 
       for (const lead of leads) {
@@ -443,20 +443,20 @@ export class LeadService implements ILeadService {
    */
   async assignLead(leadId: number, companyId: number, assignedTo: number, userId: number): Promise<Lead> {
     try {
-      const lead = await this.leadRepository.findById(leadId, companyId);
+      const lead = await this.leadRepository.findById(leadId, String(companyId));
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       const updated = await this.leadRepository.update(
         leadId,
-        companyId,
+        String(companyId),
         { assigned_to: assignedTo },
         userId
       );
 
       if (!updated) {
-        throw new AppError('Failed to assign lead', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to assign lead', 500);
       }
 
       // Create notification activity
@@ -523,16 +523,16 @@ export class LeadService implements ILeadService {
    */
   async deleteLead(leadId: number, companyId: number, userId: number): Promise<boolean> {
     try {
-      const lead = await this.leadRepository.findById(leadId, companyId);
+      const lead = await this.leadRepository.findById(leadId, String(companyId));
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       if (lead.status === 'converted') {
-        throw new AppError('Cannot delete a converted lead', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Cannot delete a converted lead', 400);
       }
 
-      const deleted = await this.leadRepository.delete(leadId, companyId);
+      const deleted = await this.leadRepository.delete(leadId, String(companyId));
 
       if (deleted) {
         // Emit event
@@ -558,7 +558,7 @@ export class LeadService implements ILeadService {
       // This would typically be implemented in the repository with optimized queries
       // For now, returning a placeholder structure
 
-      const leads = await this.leadRepository.findAll(companyId);
+      const leads = await this.leadRepository.findAll(String(companyId));
       const total = leads.length;
 
       const byStatus = {
@@ -614,16 +614,16 @@ export class LeadService implements ILeadService {
     userId: number
   ): Promise<Lead> {
     try {
-      const primaryLead = await this.leadRepository.findById(primaryLeadId, companyId);
+      const primaryLead = await this.leadRepository.findById(primaryLeadId, String(companyId));
       if (!primaryLead) {
-        throw new AppError('Primary lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Primary lead not found', 404);
       }
 
       // Verify all duplicate leads exist and belong to company
       for (const duplicateId of duplicateLeadIds) {
-        const duplicate = await this.leadRepository.findById(duplicateId, companyId);
+        const duplicate = await this.leadRepository.findById(duplicateId, String(companyId));
         if (!duplicate) {
-          throw new AppError(`Duplicate lead ${duplicateId} not found`, 404);
+          throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, `Duplicate lead ${duplicateId} not found`, 404);
         }
       }
 
@@ -634,7 +634,7 @@ export class LeadService implements ILeadService {
         });
 
         for (const activity of activities) {
-          await this.activityRepository.update(activity.id!, companyId, {
+          await this.activityRepository.update(activity.id!, String(companyId), {
             lead_id: primaryLeadId
           }, userId);
         }
@@ -642,7 +642,7 @@ export class LeadService implements ILeadService {
 
       // Delete duplicate leads
       for (const duplicateId of duplicateLeadIds) {
-        await this.leadRepository.delete(duplicateId, companyId);
+        await this.leadRepository.delete(duplicateId, String(companyId));
       }
 
       // Update primary lead score
@@ -658,7 +658,7 @@ export class LeadService implements ILeadService {
         timestamp: new Date()
       });
 
-      const updatedLead = await this.leadRepository.findById(primaryLeadId, companyId);
+      const updatedLead = await this.leadRepository.findById(primaryLeadId, String(companyId));
       return updatedLead!;
     } catch (error) {
       this.logger?.error('Error merging leads', { error, primaryLeadId, duplicateLeadIds });

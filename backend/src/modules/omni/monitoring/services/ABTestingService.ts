@@ -7,7 +7,7 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { ABTestRepository, IABTest, IABTestResult } from '../repositories/ABTestRepository';
 import { TestStatus, TestVariant } from '../../types/monitoring.types';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class ABTestingService {

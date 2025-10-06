@@ -25,7 +25,7 @@ export class NLPController {
    */
   async classifyIntent(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { text } = req.body;
 
       if (!text) {
@@ -56,7 +56,7 @@ export class NLPController {
    */
   async addContext(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { conversation_id, context_type, context_data, options } = req.body;
 
       if (!conversation_id || !context_type || !context_data) {
@@ -93,7 +93,7 @@ export class NLPController {
    */
   async getConversationContext(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { conversationId } = req.params;
 
       const contexts = await this.conversationContextService.getConversationContext(
@@ -120,7 +120,7 @@ export class NLPController {
    */
   async getContextSummary(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { conversationId } = req.params;
 
       const summary = await this.conversationContextService.getContextSummary(
@@ -146,7 +146,7 @@ export class NLPController {
    */
   async clearContext(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { conversationId } = req.params;
 
       await this.conversationContextService.clearConversationContext(

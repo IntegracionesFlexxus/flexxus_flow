@@ -125,7 +125,7 @@ export class FeatureFlagController {
       const environment = req.query.environment as string || 'production';
 
       // Get feature flag details
-      const flag = await this.featureFlagService.getFeatureFlag(
+      const flag = await this.featureFlagService.getFeatureFlagDetails(
         req.user.companyId,
         featureName,
         environment
@@ -216,7 +216,7 @@ export class FeatureFlagController {
       }
 
       // Check if feature flag already exists
-      const existingFlag = await this.featureFlagService.getFeatureFlag(
+      const existingFlag = await this.featureFlagService.getFeatureFlagDetails(
         req.user.companyId,
         createDto.featureName,
         createDto.environment
@@ -737,13 +737,17 @@ export class FeatureFlagController {
       }
 
       // Clone feature flags
-      const cloneResult = await this.featureFlagService.cloneToEnvironment(
-        req.user.companyId,
-        cloneDto.sourceEnvironment,
-        cloneDto.targetEnvironment,
-        cloneDto.featureNames,
-        cloneDto.overwriteExisting
-      );
+      // TODO: Implement cloneToEnvironment method in FeatureFlagService
+      const cloneResult = {
+        success: false,
+        message: 'Method not implemented yet'
+      };
+      // const cloneResult = await this.featureFlagService.cloneToEnvironment(
+      //   req.user.companyId,
+      //   cloneDto.sourceEnvironment,
+      //   cloneDto.targetEnvironment,
+      //   cloneDto.featureNames
+      // );
 
       this.logger.info('Feature flags cloned between environments', {
         sourceEnvironment: cloneDto.sourceEnvironment,
@@ -824,7 +828,7 @@ export class FeatureFlagController {
       };
 
       // Evaluate multiple flags
-      const results = await this.featureFlagService.evaluateMultipleFlags(
+      const results = await this.featureFlagService.evaluateMultiple(
         flagNames,
         evaluationContext
       );

@@ -2,14 +2,14 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { IDocumentGenerationService } from '../interfaces/IDocumentGenerationService';
 import { Pool } from 'pg';
-import { AppError } from '../../../../../shared/errors/AppError';
+import { AppError, ErrorCode } from '../../../../../shared/errors/AppError';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
 @injectable()
 export class DocumentGenerationService implements IDocumentGenerationService {
   constructor(
-    @inject(TYPES.DatabasePool)
+    @inject(TYPES.CrmConnection)
     private pool: Pool
   ) {}
 
@@ -18,7 +18,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
       // Obtener datos de la cotización
       const quoteData = await this.getQuoteData(quoteId);
       if (!quoteData) {
-        throw new AppError('Quote not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Quote not found', 404);
       }
 
       // Obtener template
@@ -47,7 +47,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
       return buffer;
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to generate quote PDF: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to generate quote PDF: ${error.message}`, 500);
     }
   }
 
@@ -55,7 +55,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
     try {
       const invoiceData = await this.getInvoiceData(invoiceId);
       if (!invoiceData) {
-        throw new AppError('Invoice not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Invoice not found', 404);
       }
 
       const template = templateId
@@ -78,7 +78,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
       return buffer;
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to generate invoice PDF: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to generate invoice PDF: ${error.message}`, 500);
     }
   }
 
@@ -118,7 +118,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
     });
 
     if (fields.length === 0) {
-      throw new AppError('No fields to update', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'No fields to update', 400);
     }
 
     values.push(id);
@@ -131,7 +131,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
     `, values);
 
     if (result.rows.length === 0) {
-      throw new AppError('Template not found', 404);
+      throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Template not found', 404);
     }
 
     return result.rows[0];
@@ -144,7 +144,7 @@ export class DocumentGenerationService implements IDocumentGenerationService {
     );
 
     if (result.rows.length === 0) {
-      throw new AppError('Template not found', 404);
+      throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Template not found', 404);
     }
 
     return result.rows[0];

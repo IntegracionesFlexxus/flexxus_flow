@@ -9,7 +9,7 @@ import { analyticsValidators } from '../validators/analytics.validators';
 
 export function createReportRoutes(): Router {
   const router = Router();
-  const controller = container.get(TYPES.AnalyticsReportController);
+  const controller = container.get(TYPES.OmniAnalyticsReportController);
 
   // Report CRUD
   router.post(

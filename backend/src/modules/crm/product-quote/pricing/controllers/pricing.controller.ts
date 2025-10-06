@@ -22,7 +22,7 @@ export class PricingController {
         });
       }
 
-      const result = await this.pricingService.calculateItemPrice(
+      const result = await this.pricingService.calculatePrice(
         productId,
         quantity,
         customerId,
@@ -163,7 +163,7 @@ export class PricingController {
 
       const results = await Promise.all(
         items.map(item =>
-          this.pricingService.calculateItemPrice(
+          this.pricingService.calculatePrice(
             item.productId,
             item.quantity,
             customerId

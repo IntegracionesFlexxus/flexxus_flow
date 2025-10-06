@@ -4,9 +4,10 @@
  */
 
 import { injectable, inject } from 'inversify';
-import { Pool, PoolClient } from 'pg';
+import { PoolClient } from 'pg';
 import { TYPES } from '@/container/types';
 import { Logger } from 'winston';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
 import { CRMBaseRepository } from './CRMBaseRepository';
 
 export interface DocumentTemplate {
@@ -116,12 +117,12 @@ export type VariableType = 'text' | 'number' | 'date' | 'currency' | 'boolean' |
 export type DataSource = 'entity' | 'custom' | 'computed';
 
 @injectable()
-export class DocumentTemplateRepository extends CRMBaseRepository {
+export class DocumentTemplateRepository extends CRMBaseRepository<DocumentTemplate> {
   constructor(
-    @inject(TYPES.DatabasePool) pool: Pool,
+    @inject(TYPES.CRMDatabaseConnection) db: IDatabaseConnection,
     @inject(TYPES.Logger) logger: Logger
   ) {
-    super(pool, logger);
+    super('document_templates', db, logger);
   }
 
   /**
@@ -167,7 +168,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
       userId || template.updated_by
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -215,7 +216,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
       RETURNING *
     `;
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -237,7 +238,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
       ORDER BY is_default DESC, template_name
     `;
 
-    const result = await this.pool.query(query, [type, companyId]);
+    const result = await this.db.query(query, [type, companyId]);
     return result.rows;
   }
 
@@ -245,7 +246,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
    * Get template by ID
    */
   async getTemplateById(templateId: number, companyId: number): Promise<DocumentTemplate | null> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM document_templates
        WHERE template_id = $1 AND company_id = $2`,
       [templateId, companyId]
@@ -261,7 +262,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
     type: TemplateType,
     companyId: number
   ): Promise<DocumentTemplate | null> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM document_templates
        WHERE template_type = $1
          AND company_id = $2
@@ -282,7 +283,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
     newName: string,
     userId?: number
   ): Promise<DocumentTemplate> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -330,7 +331,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
    * Get template variables
    */
   async getTemplateVariables(templateId: number): Promise<TemplateVariable[]> {
-    const template = await this.pool.query(
+    const template = await this.db.query(
       `SELECT variables FROM document_templates WHERE template_id = $1`,
       [templateId]
     );
@@ -383,7 +384,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
     document: GeneratedDocument,
     client?: PoolClient
   ): Promise<GeneratedDocument> {
-    const queryClient = client || await this.pool.connect();
+    const queryClient = client || await this.db.getClient();
 
     try {
       if (!client) await queryClient.query('BEGIN');
@@ -505,7 +506,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
 
     const additionalUpdate = statusFields[status] ? `, ${statusFields[status]}` : '';
 
-    await this.pool.query(
+    await this.db.query(
       `UPDATE generated_documents
        SET status = $1 ${additionalUpdate}
        WHERE document_id = $2`,
@@ -525,7 +526,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
     userId?: number,
     client?: PoolClient
   ): Promise<void> {
-    const queryClient = client || this.pool;
+    const queryClient = client || this.db;
 
     await queryClient.query(
       `INSERT INTO document_analytics (
@@ -540,7 +541,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
    * Get document by ID
    */
   async getDocumentById(documentId: number, companyId: number): Promise<GeneratedDocument | null> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM generated_documents
        WHERE document_id = $1 AND company_id = $2`,
       [documentId, companyId]
@@ -600,7 +601,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const result = await this.pool.query(query, params);
+    const result = await this.db.query(query, params);
     return result.rows;
   }
 
@@ -639,7 +640,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
       JSON.stringify(variable.metadata || {})
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -647,7 +648,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
    * Get variables by company
    */
   async getVariablesByCompany(companyId: number): Promise<DocumentVariable[]> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM document_variables
        WHERE company_id = $1 AND is_active = true
        ORDER BY variable_name`,
@@ -669,7 +670,7 @@ export class DocumentTemplateRepository extends CRMBaseRepository {
       session_id?: string;
     }
   ): Promise<void> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');

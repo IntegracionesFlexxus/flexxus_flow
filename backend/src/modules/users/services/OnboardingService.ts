@@ -10,7 +10,7 @@ import { IUserRepository } from '@/shared/interfaces/repositories/IUserRepositor
 import { ICompanyRepository } from '@/shared/interfaces/repositories/ICompanyRepository';
 import { EmailService } from '@/modules/users/services/EmailService';
 import { AuditService } from '@/modules/users/services/AuditService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { environment } from '@/config/environment';
 // Types and DTOs
 export interface OnboardingStep {
@@ -266,15 +266,15 @@ export class OnboardingService {
         request.companyId
       );
       if (!progress) {
-        throw new AppError('Onboarding not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Onboarding not found', 404);
       }
       if (progress.status === 'completed') {
-        throw new AppError('Onboarding already completed', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Onboarding already completed', 400);
       }
       // Find and update step
       const stepIndex = progress.steps.findIndex(s => s.id === request.stepId);
       if (stepIndex === -1) {
-        throw new AppError('Step not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Step not found', 404);
       }
       const step = progress.steps[stepIndex];
       // Validate step data
@@ -347,14 +347,14 @@ export class OnboardingService {
     try {
       const progress = await this.getOnboardingProgress(userId, companyId);
       if (!progress) {
-        throw new AppError('Onboarding not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Onboarding not found', 404);
       }
       const step = progress.steps.find(s => s.id === stepId);
       if (!step) {
-        throw new AppError('Step not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Step not found', 404);
       }
       if (step.required) {
-        throw new AppError('Cannot skip required step', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Cannot skip required step', 400);
       }
       step.completed = true;
       step.completedAt = new Date();
@@ -486,18 +486,18 @@ export class OnboardingService {
   private async validateStepData(step: OnboardingStep, data: any): Promise<void> {
     // Implement validation logic based on step requirements
     if (!data) {
-      throw new AppError('Step data is required', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Step data is required', 400);
     }
     // Step-specific validations would go here
     switch (step.id) {
       case 'personal-info':
         if (!data.firstName || !data.lastName) {
-          throw new AppError('First name and last name are required', 400);
+          throw new AppError(ErrorCode.VALIDATION_ERROR, 'First name and last name are required', 400);
         }
         break;
       case 'company-setup':
         if (!data.companyName) {
-          throw new AppError('Company name is required', 400);
+          throw new AppError(ErrorCode.VALIDATION_ERROR, 'Company name is required', 400);
         }
         break;
       // Add more validations as needed

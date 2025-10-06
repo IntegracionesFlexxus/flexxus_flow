@@ -94,7 +94,7 @@ export class UserAuthRepository implements IUserAuthRepository {
       WHERE id = $1 AND deleted_at IS NULL
     `;
     const result = await this.db.query<{ password_hash: string }>(query, [userId]);
-    return result.length > 0 ? result[0].password_hash : null;
+    return result.rows.length > 0 ? result.rows[0].password_hash : null;
   }
   /**
    * Enable two-factor authentication
@@ -136,7 +136,7 @@ export class UserAuthRepository implements IUserAuthRepository {
         AND two_factor_enabled = true
     `;
     const result = await this.db.query<{ two_factor_secret: string }>(query, [userId]);
-    return result.length > 0 ? result[0].two_factor_secret : null;
+    return result.rows.length > 0 ? result.rows[0].two_factor_secret : null;
   }
   /**
    * Update failed login attempts counter
@@ -212,7 +212,7 @@ export class UserAuthRepository implements IUserAuthRepository {
       ) as is_locked
     `;
     const result = await this.db.query<{ is_locked: boolean }>(query, [userId]);
-    return result[0].is_locked;
+    return result.rows[0].is_locked;
   }
   /**
    * Get authentication details for a user
@@ -237,10 +237,10 @@ export class UserAuthRepository implements IUserAuthRepository {
       WHERE id = $1 AND deleted_at IS NULL
     `;
     const result = await this.db.query<any>(query, [userId]);
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return null;
     }
-    const row = result[0];
+    const row = result.rows[0];
     return {
       email: row.email,
       passwordHash: row.password_hash,

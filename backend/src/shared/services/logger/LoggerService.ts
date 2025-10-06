@@ -93,7 +93,7 @@ export class LoggerService implements ILoggerService {
           return JSON.stringify({
             timestamp,
             level,
-            message: this.sanitizeString(message),
+            message: this.sanitizeString(String(message)),
             ...sanitizedMeta,
             context: this.sanitize(contextData)
           });

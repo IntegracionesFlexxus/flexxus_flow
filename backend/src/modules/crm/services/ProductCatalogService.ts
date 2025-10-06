@@ -165,7 +165,7 @@ export class ProductCatalogService {
       const product = await this.productRepository.create({
         ...productData,
         company_id: companyId
-      });
+      } as any);
 
       // Create variations if provided
       if (productData.variations && productData.variations.length > 0) {

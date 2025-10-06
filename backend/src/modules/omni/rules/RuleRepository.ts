@@ -11,8 +11,10 @@ import { IRule } from './interfaces/IRule';
 
 @injectable()
 export class RuleRepository extends BaseOmniRepository<IRule> {
-  constructor(@inject(TYPES.OmniConnection) pool: Pool) {
-    super(pool, 'automation_rules');
+  protected tableName = 'automation_rules';
+
+  constructor() {
+    super();
   }
 
   /**

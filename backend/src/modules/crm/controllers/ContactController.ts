@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
 import { IContactService } from '../interfaces/IContactService';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { ContactRoleManagementService } from '../services/ContactRoleManagementService';
 
 @injectable()
@@ -86,7 +86,7 @@ export class ContactController {
       const contact = await this.contactService.getContactById(contactId, companyId);
 
       if (!contact) {
-        throw new AppError('Contact not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Contact not found', 404);
       }
 
       res.json({
@@ -111,7 +111,7 @@ export class ContactController {
       const contact = await this.contactService.updateContact(contactId, companyId, req.body, userId);
 
       if (!contact) {
-        throw new AppError('Contact not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Contact not found', 404);
       }
 
       res.json({
@@ -137,7 +137,7 @@ export class ContactController {
       const deleted = await this.contactService.deleteContact(contactId, companyId, userId);
 
       if (!deleted) {
-        throw new AppError('Contact not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Contact not found', 404);
       }
 
       res.json({
@@ -181,7 +181,7 @@ export class ContactController {
       const { accountId } = req.body;
 
       if (!accountId) {
-        throw new AppError('Account ID is required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Account ID is required', 400);
       }
 
       const result = await this.contactService.setPrimaryContact(
@@ -231,7 +231,7 @@ export class ContactController {
       const { email } = req.query;
 
       if (!email) {
-        throw new AppError('Email is required to find duplicates', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Email is required to find duplicates', 400);
       }
 
       const duplicates = await this.contactService.findDuplicates(email as string, companyId);
@@ -256,7 +256,7 @@ export class ContactController {
       const { primaryContactId, duplicateContactIds } = req.body;
 
       if (!primaryContactId || !duplicateContactIds || !Array.isArray(duplicateContactIds)) {
-        throw new AppError('Primary contact ID and duplicate contact IDs are required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Primary contact ID and duplicate contact IDs are required', 400);
       }
 
       const contact = await this.contactService.mergeContacts(
@@ -385,9 +385,14 @@ export class ContactController {
       const companyId = (req as any).user.companyId;
       const userId = (req as any).user.id;
 
+      const { accountId, committeeName, committeeType, decisionStage, opportunityId } = req.body;
       const committee = await this.roleService.createBuyingCommittee(
         companyId,
-        { ...req.body, created_by: userId }
+        accountId,
+        committeeName,
+        committeeType,
+        decisionStage,
+        opportunityId
       );
 
       res.status(201).json({
@@ -433,10 +438,15 @@ export class ContactController {
       const userId = (req as any).user.id;
       const committeeId = parseInt(req.params.committeeId);
 
-      const member = await this.roleService.addMemberToCommittee(
+      const { contactId, roleInCommittee, votingPower, stance, isChampion } = req.body;
+      const member = await this.roleService.addMemberToBuyingCommittee(
         companyId,
         committeeId,
-        { ...req.body, added_by: userId }
+        contactId,
+        roleInCommittee,
+        votingPower,
+        stance,
+        isChampion
       );
 
       res.status(201).json({
@@ -583,7 +593,7 @@ export class ContactController {
       const { roleId, isPrimary, influenceScore } = req.body;
 
       if (!roleId) {
-        throw new AppError('Role ID is required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Role ID is required', 400);
       }
 
       const assignment = await this.roleService.assignRoleToContact(

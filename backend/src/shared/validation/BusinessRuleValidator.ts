@@ -52,7 +52,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
         plan_name: string;
         current_users: string;
       }>(planQuery, [companyId]);
-      if (result.length === 0) {
+      if (result.rows.length === 0) {
         return {
           isValid: false,
           message: 'Company not found',
@@ -60,7 +60,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
           timestamp: new Date()
         };
       }
-      const { max_users, plan_name, current_users } = result[0];
+      const { max_users, plan_name, current_users } = result.rows[0];
       const currentCount = parseInt(current_users, 10);
       const maxCount = max_users || 5;
       const isValid = currentCount < maxCount;
@@ -121,7 +121,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
         company_id: string;
         current_roles: string[];
       }>(userQuery, [userId, companyId]);
-      if (userResult.length === 0) {
+      if (userResult.rows.length === 0) {
         return {
           isValid: false,
           message: 'User not found in company',
@@ -129,7 +129,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
           timestamp: new Date()
         };
       }
-      const user = userResult[0];
+      const user = userResult.rows[0];
       if (user.status !== 'active') {
         return {
           isValid: false,
@@ -161,7 +161,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
         company_id: string | null;
         permission_count: string;
       }>(roleQuery, [roleId, companyId]);
-      if (roleResult.length === 0) {
+      if (roleResult.rows.length === 0) {
         return {
           isValid: false,
           message: 'Role not found or not available for company',
@@ -169,7 +169,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
           timestamp: new Date()
         };
       }
-      const role = roleResult[0];
+      const role = roleResult.rows[0];
       if (!role.is_active) {
         return {
           isValid: false,
@@ -282,7 +282,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
         plan_allows: boolean;
         rules: any;
       }>(query, [companyId, featureKey]);
-      if (result.length === 0) {
+      if (result.rows.length === 0) {
         return {
           isValid: false,
           message: `Feature ${featureKey} not found`,
@@ -290,7 +290,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
           timestamp: new Date()
         };
       }
-      const feature = result[0];
+      const feature = result.rows[0];
       const isValid = feature.is_enabled && feature.plan_allows;
       // Evaluar reglas adicionales si existen
       let additionalValidation = true;
@@ -357,7 +357,7 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
         query,
         [userId, resource, action]
       );
-      const hasPermission = result[0]?.has_permission || false;
+      const hasPermission = result.rows[0]?.has_permission || false;
       return {
         isValid: hasPermission,
         message: hasPermission
@@ -419,6 +419,6 @@ export class BusinessRuleValidator implements IBusinessRuleValidator {
       WHERE company_id = $1 AND status = 'active'
     `;
     const result = await this.sharedDb.query<{ count: string }>(query, [companyId]);
-    return parseInt(result[0].count, 10);
+    return parseInt(result.rows[0].count, 10);
   }
 }

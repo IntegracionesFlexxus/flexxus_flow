@@ -108,6 +108,9 @@ export class AuditService {
    */
   async logActivity(request: AuditLogRequest): Promise<AuditLogResponse> {
     try {
+      console.log('🟡 [AuditService.logActivity] START');
+      console.log('🟡 [AuditService.logActivity] request:', JSON.stringify(request, null, 2));
+
       // Enriquecer con timestamp
       const auditData = {
         ...request,
@@ -116,8 +119,13 @@ export class AuditService {
         metadata: this.sanitizeMetadata(request.metadata)
       };
 
+      console.log('🟡 [AuditService.logActivity] auditData:', JSON.stringify(auditData, null, 2));
+      console.log('🟡 [AuditService.logActivity] companyId type:', typeof auditData.companyId);
+
       // Persistir el evento de auditoría
+      console.log('🟡 [AuditService.logActivity] Creating audit log...');
       const auditLog = await this.auditRepository.create(auditData);
+      console.log('🟡 [AuditService.logActivity] auditLog created:', JSON.stringify(auditLog, null, 2));
 
       // Log estructurado para observabilidad
       this.logger.info('Evento de auditoría registrado', {
@@ -129,10 +137,17 @@ export class AuditService {
         companyId: request.companyId
       });
 
-      return this.mapToResponse(auditLog);
+      const response = this.mapToResponse(auditLog);
+      console.log('🟡 [AuditService.logActivity] response:', JSON.stringify(response, null, 2));
+
+      return response;
     } catch (error) {
+      console.error('🔴 [AuditService.logActivity] ERROR:', error);
+      console.error('🔴 [AuditService.logActivity] ERROR message:', error instanceof Error ? error.message : 'Unknown');
+      console.error('🔴 [AuditService.logActivity] ERROR stack:', error instanceof Error ? error.stack : 'No stack');
+
       this.logger.error('Error al registrar evento de auditoría', {
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown',
         request: {
           ...request,
           metadata: request.metadata ? 'presente' : 'ausente'

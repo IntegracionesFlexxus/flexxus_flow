@@ -45,8 +45,8 @@ export class DatabaseConnection implements IDatabaseConnection {
       database: config.database,
       user: config.user,
       password: config.password,
-      max: config.max || config.poolMax || 20,
-      min: config.min || config.poolMin || 5,
+      max: config.max || 20,
+      min: config.min || 5,
       connectionTimeoutMillis: config.connectionTimeoutMillis || 5000,
       idleTimeoutMillis: config.idleTimeoutMillis || 30000
     };
@@ -73,23 +73,27 @@ export class DatabaseConnection implements IDatabaseConnection {
     });
     this.setupEventHandlers();
   }
-  async query<T>(text: string, params?: any[]): Promise<T[]> {
+  async query<T = any>(text: string, params?: any[]): Promise<import('pg').QueryResult<T>> {
     const client = await this.pool.connect();
     try {
       const start = Date.now();
-      const result = await client.query(text, params);
+      const result = await client.query<T>(text, params);
       const duration = Date.now() - start;
       // Log queries en desarrollo
       if (environment.isDevelopment) {
         this.logger.debug(`Query executed in ${duration}ms: ${text.substring(0, 100)}`);
       }
-      return result.rows;
+      return result;
     } catch (error) {
       this.logger.error('Database query error:', error);
       throw error;
     } finally {
       client.release();
     }
+  }
+
+  async getClient(): Promise<PoolClient> {
+    return this.pool.connect();
   }
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();

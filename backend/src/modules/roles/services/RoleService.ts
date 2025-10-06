@@ -21,7 +21,7 @@ import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
 import { IPermissionRepository } from '@/modules/auth/interfaces/IPermissionRepository';
 import { AuditService } from '@/shared/services/audit/AuditService';
 import { CacheService } from '@/shared/services/cache/CacheService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 
 @injectable()
 export class RoleService implements IRoleService {
@@ -40,27 +40,41 @@ export class RoleService implements IRoleService {
 
   async createRole(data: CreateRoleDto, createdBy: string): Promise<RoleDto> {
     try {
+      console.log('🟢 [RoleService.createRole] START');
+      console.log('🟢 [RoleService.createRole] data:', JSON.stringify(data, null, 2));
+      console.log('🟢 [RoleService.createRole] data.companyId type:', typeof data.companyId);
+      console.log('🟢 [RoleService.createRole] createdBy:', createdBy);
+
       // Validar nombre único
+      console.log('🟢 [RoleService.createRole] Checking if role exists...');
       const exists = await this.roleRepository.exists(data.name, data.companyId);
+      console.log('🟢 [RoleService.createRole] exists:', exists);
+
       if (exists) {
-        throw new AppError('Role with this name already exists', 409);
+        throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'Role with this name already exists', 409);
       }
 
       // Crear el rol
-      const role = await this.roleRepository.create({
+      const roleCreateData = {
         name: data.name,
         description: data.description,
         companyId: data.companyId,
         isSystemRole: false,
         status: 'active'
-      });
+      };
+      console.log('🟢 [RoleService.createRole] roleCreateData:', JSON.stringify(roleCreateData, null, 2));
+
+      const role = await this.roleRepository.create(roleCreateData);
+      console.log('🟢 [RoleService.createRole] role created:', JSON.stringify(role, null, 2));
 
       // Asignar permisos si se especifican
       if (data.permissions && data.permissions.length > 0) {
+        console.log('🟢 [RoleService.createRole] Assigning permissions:', data.permissions);
         await this.roleRepository.assignPermissions(role.id, data.permissions);
       }
 
       // Registrar en auditoría
+      console.log('🟢 [RoleService.createRole] Logging audit...');
       await this.auditService.logActivity({
         action: 'role_created',
         entityType: 'role',
@@ -77,10 +91,18 @@ export class RoleService implements IRoleService {
         createdBy
       });
 
-      return this.formatRole(role);
+      console.log('🟢 [RoleService.createRole] Formatting role...');
+      const formattedRole = this.formatRole(role);
+      console.log('🟢 [RoleService.createRole] formattedRole:', JSON.stringify(formattedRole, null, 2));
+
+      return formattedRole;
     } catch (error) {
+      console.error('🔴 [RoleService.createRole] ERROR:', error);
+      console.error('🔴 [RoleService.createRole] ERROR message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('🔴 [RoleService.createRole] ERROR stack:', error instanceof Error ? error.stack : 'No stack');
+
       this.logger.error('Error creating role', {
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         data,
         createdBy
       });
@@ -94,12 +116,12 @@ export class RoleService implements IRoleService {
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(String(cached));
     }
 
     const role = await this.roleRepository.findById(roleId);
     if (!role) {
-      throw new AppError('Role not found', 404);
+      throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role not found', 404);
     }
 
     // Obtener permisos del rol
@@ -137,19 +159,19 @@ export class RoleService implements IRoleService {
       // Verificar que el rol existe
       const existingRole = await this.roleRepository.findById(roleId);
       if (!existingRole) {
-        throw new AppError('Role not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role not found', 404);
       }
 
       // Verificar que no es un rol del sistema
       if (existingRole.is_system_role) {
-        throw new AppError('System roles cannot be modified', 403);
+        throw new AppError(ErrorCode.FORBIDDEN, 'System roles cannot be modified', 403);
       }
 
       // Validar nombre único si se está cambiando
       if (data.name && data.name !== existingRole.name) {
         const exists = await this.roleRepository.exists(data.name, existingRole.company_id);
         if (exists) {
-          throw new AppError('Role with this name already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'Role with this name already exists', 409);
         }
       }
 
@@ -203,24 +225,24 @@ export class RoleService implements IRoleService {
     try {
       const role = await this.roleRepository.findById(roleId);
       if (!role) {
-        throw new AppError('Role not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role not found', 404);
       }
 
       // Verificar que no es un rol del sistema
       if (role.is_system_role) {
-        throw new AppError('System roles cannot be deleted', 403);
+        throw new AppError(ErrorCode.FORBIDDEN, 'System roles cannot be deleted', 403);
       }
 
       // Verificar que no hay usuarios asignados
       const users = await this.roleRepository.getUsersByRole(roleId);
       if (users.length > 0) {
-        throw new AppError('Cannot delete role with assigned users', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Cannot delete role with assigned users', 400);
       }
 
       // Eliminar el rol (soft delete)
       const deleted = await this.roleRepository.delete(roleId);
       if (!deleted) {
-        throw new AppError('Failed to delete role', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to delete role', 500);
       }
 
       // Invalidar caché
@@ -255,6 +277,9 @@ export class RoleService implements IRoleService {
   // ==================== CONSULTAS Y LISTADOS ====================
 
   async getRoles(filters: RoleFiltersDto): Promise<RolePaginationDto> {
+    console.log('🔍 [RoleService.getRoles] === INICIO ===');
+    console.log('🔍 [RoleService.getRoles] Filters received:', filters);
+
     const result = await this.roleRepository.findWithPagination({
       companyId: filters.companyId,
       isSystemRole: filters.isSystemRole,
@@ -262,6 +287,14 @@ export class RoleService implements IRoleService {
       page: filters.page || 1,
       limit: filters.limit || 10
     });
+
+    console.log('🔍 [RoleService.getRoles] Repository result:', {
+      rolesCount: result.roles?.length,
+      total: result.total,
+      page: result.page,
+      limit: result.limit
+    });
+    console.log('🔍 [RoleService.getRoles] Raw roles from repository:', result.roles);
 
     // Formatear roles y obtener permisos
     const formattedRoles = await Promise.all(
@@ -271,35 +304,63 @@ export class RoleService implements IRoleService {
       })
     );
 
-    return {
+    console.log('🔍 [RoleService.getRoles] Formatted roles:', formattedRoles);
+
+    const finalResult = {
       roles: formattedRoles,
       total: result.total,
       page: result.page,
       limit: result.limit,
       pages: Math.ceil(result.total / result.limit)
     };
+
+    console.log('🔍 [RoleService.getRoles] Final result:', finalResult);
+    console.log('🔍 [RoleService.getRoles] === FIN ===');
+
+    return finalResult;
   }
 
   async getCompanyRoles(companyId: string): Promise<RoleDto[]> {
+    console.log('🔍 [RoleService.getCompanyRoles] === INICIO ===');
+    console.log('🔍 [RoleService.getCompanyRoles] CompanyId:', companyId);
+
     const roles = await this.roleRepository.findByCompany(companyId);
 
-    return Promise.all(
+    console.log('🔍 [RoleService.getCompanyRoles] Roles from repository:', roles?.length);
+    console.log('🔍 [RoleService.getCompanyRoles] Raw roles:', roles);
+
+    const formattedRoles = await Promise.all(
       roles.map(async (role) => {
         const permissions = await this.roleRepository.getRolePermissions(role.id);
         return this.formatRole(role, permissions);
       })
     );
+
+    console.log('🔍 [RoleService.getCompanyRoles] Formatted roles:', formattedRoles);
+    console.log('🔍 [RoleService.getCompanyRoles] === FIN ===');
+
+    return formattedRoles;
   }
 
   async getSystemRoles(): Promise<RoleDto[]> {
+    console.log('🔍 [RoleService.getSystemRoles] === INICIO ===');
+
     const roles = await this.roleRepository.findSystemRoles();
 
-    return Promise.all(
+    console.log('🔍 [RoleService.getSystemRoles] Roles from repository:', roles?.length);
+    console.log('🔍 [RoleService.getSystemRoles] Raw roles:', roles);
+
+    const formattedRoles = await Promise.all(
       roles.map(async (role) => {
         const permissions = await this.roleRepository.getRolePermissions(role.id);
         return this.formatRole(role, permissions);
       })
     );
+
+    console.log('🔍 [RoleService.getSystemRoles] Formatted roles:', formattedRoles);
+    console.log('🔍 [RoleService.getSystemRoles] === FIN ===');
+
+    return formattedRoles;
   }
 
   async getRoleByName(name: string, companyId?: string): Promise<RoleDto | null> {
@@ -316,13 +377,13 @@ export class RoleService implements IRoleService {
     try {
       const role = await this.roleRepository.findById(data.roleId);
       if (!role) {
-        throw new AppError('Role not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role not found', 404);
       }
 
       // Verificar que los permisos existen
       const permissions = await this.permissionRepository.findByIds(data.permissionIds);
       if (permissions.length !== data.permissionIds.length) {
-        throw new AppError('Some permissions were not found', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Some permissions were not found', 400);
       }
 
       // Aplicar permisos según el modo
@@ -409,12 +470,12 @@ export class RoleService implements IRoleService {
       // Verificar que el rol existe
       const role = await this.roleRepository.findById(roleId);
       if (!role) {
-        throw new AppError('Role not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role not found', 404);
       }
 
       // Verificar que el rol pertenece a la empresa o es del sistema
       if (!role.is_system_role && role.company_id !== companyId) {
-        throw new AppError('Role does not belong to this company', 403);
+        throw new AppError(ErrorCode.FORBIDDEN, 'Role does not belong to this company', 403);
       }
 
       // Asignar el rol
@@ -458,7 +519,7 @@ export class RoleService implements IRoleService {
     try {
       const role = await this.roleRepository.findById(roleId);
       if (!role) {
-        throw new AppError('Role not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role not found', 404);
       }
 
       await this.roleRepository.removeRoleFromUser(userId, roleId, companyId);
@@ -545,7 +606,7 @@ export class RoleService implements IRoleService {
       // Obtener rol original
       const originalRole = await this.getRoleById(roleId);
       if (!originalRole) {
-        throw new AppError('Role to clone not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Role to clone not found', 404);
       }
 
       // Crear nuevo rol
@@ -603,7 +664,7 @@ export class RoleService implements IRoleService {
 
       const template = templates[templateName];
       if (!template) {
-        throw new AppError(`Template "${templateName}" not found`, 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, `Template "${templateName}" not found`, 404);
       }
 
       // Crear roles desde template

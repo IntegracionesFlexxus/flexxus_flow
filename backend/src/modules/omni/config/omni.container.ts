@@ -215,7 +215,7 @@ export function configureOmniContainer(container: Container): void {
     .inSingletonScope();
 
   // Bind Sprint 08 services - Analytics & Reporting
-  container.bind<RealTimeAnalytics>(TYPES.RealTimeAnalytics)
+  container.bind<RealTimeAnalytics>(TYPES.OmniRealTimeAnalytics)
     .to(RealTimeAnalytics)
     .inSingletonScope();
 

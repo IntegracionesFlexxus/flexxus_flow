@@ -55,8 +55,9 @@ export class UserController {
   getUserById = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      const companyId = req.user?.companyId || '1';
 
-      const user = await this.userService.getUserById(id);
+      const user = await this.userService.getUserById(id, companyId);
 
       if (!user) {
         res.status(404).json({
@@ -90,6 +91,7 @@ export class UserController {
   getProfile = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.id;
+      const companyId = req.user?.companyId || '1';
 
       if (!userId) {
         res.status(401).json({
@@ -99,7 +101,7 @@ export class UserController {
         return;
       }
 
-      const user = await this.userService.getUserById(userId);
+      const user = await this.userService.getUserById(userId, companyId);
 
       if (!user) {
         res.status(404).json({
@@ -268,7 +270,8 @@ export class UserController {
         return;
       }
 
-      const user = await this.userService.updateUser(id, updateUserDto);
+      const companyId = req.user?.companyId || '1';
+      const user = await this.userService.updateUser(id, companyId, updateUserDto);
 
       if (!user) {
         res.status(404).json({
@@ -334,7 +337,8 @@ export class UserController {
         return;
       }
 
-      const user = await this.userService.updateUser(userId, updateUserDto);
+      const companyId = req.user?.companyId || '1';
+      const user = await this.userService.updateUser(userId, companyId, updateUserDto);
 
       if (!user) {
         res.status(404).json({
@@ -486,7 +490,7 @@ export class UserController {
         return;
       }
 
-      await this.userService.assignToCompany(id, companyId, roleId);
+      await this.userService.assignUserToCompany(id, companyId, roleId);
 
       this.logger.info('User assigned to company', {
         userId: id,
@@ -521,7 +525,7 @@ export class UserController {
     try {
       const { id, companyId } = req.params;
 
-      await this.userService.removeFromCompany(id, companyId);
+      await this.userService.removeUserFromCompany(id, companyId);
 
       this.logger.info('User removed from company', {
         userId: id,

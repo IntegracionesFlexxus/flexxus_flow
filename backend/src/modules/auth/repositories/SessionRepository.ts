@@ -54,11 +54,11 @@ export class SessionRepository implements ISessionRepository {
     try {
       const result = await this.db.query(query, values);
 
-      if (!result || result.length === 0) {
+      if (!result || result.rows.length === 0) {
         throw new Error('Failed to create session - no rows returned');
       }
 
-      const row = result[0];
+      const row = result.rows[0];
       return this.mapRowToSessionData(row);
 
     } catch (error) {
@@ -81,11 +81,11 @@ export class SessionRepository implements ISessionRepository {
     try {
       const result = await this.db.query(query, [tokenHash]);
 
-      if (!result || result.length === 0) {
+      if (!result || result.rows.length === 0) {
         return null;
       }
 
-      return this.mapRowToSessionData(result[0]);
+      return this.mapRowToSessionData(result.rows[0]);
 
     } catch (error) {
       this.logger.error('Find by token hash failed', {
@@ -106,11 +106,11 @@ export class SessionRepository implements ISessionRepository {
     try {
       const result = await this.db.query(query, [refreshTokenHash]);
 
-      if (!result || result.length === 0) {
+      if (!result || result.rows.length === 0) {
         return null;
       }
 
-      return this.mapRowToSessionData(result[0]);
+      return this.mapRowToSessionData(result.rows[0]);
 
     } catch (error) {
       this.logger.error('Find by refresh token hash failed', {
@@ -131,11 +131,11 @@ export class SessionRepository implements ISessionRepository {
     try {
       const result = await this.db.query(query, [sessionId]);
 
-      if (!result || result.length === 0) {
+      if (!result || result.rows.length === 0) {
         return null;
       }
 
-      return this.mapRowToSessionData(result[0]);
+      return this.mapRowToSessionData(result.rows[0]);
 
     } catch (error) {
       this.logger.error('Find session by ID failed', {
@@ -264,7 +264,7 @@ export class SessionRepository implements ISessionRepository {
           affectedRows = (result as any).affectedRows || 0;
         } else if (Array.isArray(result)) {
           // Some drivers return array for UPDATE with RETURNING clause
-          affectedRows = result.length;
+          affectedRows = result.rows.length;
         }
       }
 
@@ -408,7 +408,7 @@ export class SessionRepository implements ISessionRepository {
     try {
       const result = await this.db.query(query, [userId]);
 
-      return result ? result.map(row => this.mapRowToSessionData(row)) : [];
+      return result ? result.rows.map(row => this.mapRowToSessionData(row)) : [];
 
     } catch (error) {
       this.logger.error('Get active user sessions failed', {
@@ -445,16 +445,16 @@ export class SessionRepository implements ISessionRepository {
     try {
       const result = await this.db.query(query, params);
 
-      if (!result || result.length === 0) {
+      if (!result || result.rows.length === 0) {
         return { total: 0, active: 0, expired: 0, suspicious: 0 };
       }
 
-      const row = result[0];
+      const row = result.rows[0];
       return {
-        total: parseInt(row.total) || 0,
-        active: parseInt(row.active) || 0,
-        expired: parseInt(row.expired) || 0,
-        suspicious: parseInt(row.suspicious) || 0
+        total: parseInt(row.total, 10) || 0,
+        active: parseInt(row.active, 10) || 0,
+        expired: parseInt(row.expired, 10) || 0,
+        suspicious: parseInt(row.suspicious, 10) || 0
       };
 
     } catch (error) {

@@ -244,8 +244,8 @@ export class TaskAutomationRepository extends CRMBaseRepository<TaskAutomationRu
   /**
    * Clone an automation rule
    */
-  async cloneRule(ruleId: number, newName: string, userId: number): Promise<TaskAutomationRule> {
-    const original = await this.findById(ruleId);
+  async cloneRule(ruleId: number, newName: string, userId: number, companyId: string): Promise<TaskAutomationRule> {
+    const original = await this.findById(ruleId, companyId);
     if (!original) {
       throw new Error('Rule not found');
     }

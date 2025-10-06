@@ -216,7 +216,7 @@ export class EnhancedAuditLogger implements IEnhancedAuditLogger {
         query += ` LIMIT ${criteria.limit}`;
       }
       const results = await this.connection.query<any>(query, params);
-      return results.map(this.mapToSecurityEvent);
+      return results.rows.map(this.mapToSecurityEvent);
     } catch (error) {
       this.logger.error('Failed to search events:', error);
       return [];
@@ -317,7 +317,7 @@ export class EnhancedAuditLogger implements IEnhancedAuditLogger {
         SELECT * FROM security_events 
         WHERE timestamp < $1
       `, [cutoffDate]);
-      if (oldEvents.length === 0) {
+      if (oldEvents.rows.length === 0) {
         this.logger.info('No events to archive');
         return;
       }
@@ -340,7 +340,7 @@ export class EnhancedAuditLogger implements IEnhancedAuditLogger {
         DELETE FROM security_events 
         WHERE timestamp < $1
       `, [cutoffDate]);
-      this.logger.info(`Archived ${oldEvents.length} events to ${archivePath}`);
+      this.logger.info(`Archived ${oldEvents.rows.length} events to ${archivePath}`);
     } catch (error) {
       this.logger.error('Failed to archive old logs:', error);
       throw error;
@@ -627,7 +627,7 @@ Timestamp: ${e.timestamp.toISOString()}
       ORDER BY created_at DESC 
       LIMIT 1
     `, []);
-    return result[0]?.hash || null;
+    return result.rows[0]?.hash || null;
   }
   private async persistAuditTrail(trail: AuditTrail): Promise<void> {
     await this.connection.query(`
@@ -649,7 +649,7 @@ Timestamp: ${e.timestamp.toISOString()}
     const result = await this.connection.query<any>(`
       SELECT * FROM audit_trails WHERE id = $1
     `, [trailId]);
-    if (result.length === 0) return null;
+    if (result.rows.length === 0) return null;
     // Obtener eventos del trail
     const events = await this.connection.query<any>(`
       SELECT se.* FROM security_events se
@@ -658,7 +658,7 @@ Timestamp: ${e.timestamp.toISOString()}
       ORDER BY te.event_order
     `, [trailId]);
     return {
-      ...result[0],
+      ...result.rows[0],
       events: events.map(this.mapToSecurityEvent)
     };
   }
@@ -666,7 +666,7 @@ Timestamp: ${e.timestamp.toISOString()}
     const result = await this.connection.query<any>(`
       SELECT * FROM audit_trails WHERE hash = $1
     `, [hash]);
-    return result[0] || null;
+    return result.rows[0] || null;
   }
   private async markTrailAsVerified(trailId: string): Promise<void> {
     await this.connection.query(`

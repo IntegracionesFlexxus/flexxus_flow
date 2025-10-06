@@ -302,7 +302,7 @@ export class SummarizationService extends EventEmitter {
 
       case 'technical':
         summaryText = this.generateTechnicalStyle(text, maxLength);
-        keyPoints = this.extractTechnicalPoints(text);
+        keyPoints = this.extractTechnicalTerms(text);
         break;
 
       default: // paragraph

@@ -30,6 +30,12 @@ export class AuditRepository implements IAuditRepository {
   ) {}
   async create(auditLog: Omit<AuditLog, 'id' | 'createdAt'>): Promise<AuditLog> {
     try {
+      console.log('🟠 [AuditRepository.create] START');
+      console.log('🟠 [AuditRepository.create] auditLog:', JSON.stringify(auditLog, null, 2));
+      console.log('🟠 [AuditRepository.create] companyId:', auditLog.companyId);
+      console.log('🟠 [AuditRepository.create] companyId type:', typeof auditLog.companyId);
+      console.log('🟠 [AuditRepository.create] companyId value:', JSON.stringify(auditLog.companyId));
+
       const query = `
         INSERT INTO audit_logs (
           action, entity_type, entity_id, user_id, company_id,
@@ -38,21 +44,46 @@ export class AuditRepository implements IAuditRepository {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
         RETURNING *
       `;
+
+      const companyIdValue = auditLog.companyId || null;
+      console.log('🟠 [AuditRepository.create] companyIdValue:', companyIdValue);
+      console.log('🟠 [AuditRepository.create] companyIdValue type:', typeof companyIdValue);
+
+      let metadataString: string;
+      try {
+        metadataString = JSON.stringify(auditLog.metadata || {});
+        console.log('🟠 [AuditRepository.create] metadataString:', metadataString);
+      } catch (jsonError) {
+        console.error('🔴 [AuditRepository.create] Error stringifying metadata:', jsonError);
+        throw jsonError;
+      }
+
       const params = [
         auditLog.action,
         auditLog.entityType,
         auditLog.entityId,
         auditLog.userId || null,
-        auditLog.companyId || null,
+        companyIdValue,
         auditLog.description || null,
-        JSON.stringify(auditLog.metadata || {}),
+        metadataString,
         auditLog.ipAddress || null,
         auditLog.userAgent || null,
         auditLog.sessionId || null
       ];
+
+      console.log('🟠 [AuditRepository.create] params:', JSON.stringify(params, null, 2));
+      console.log('🟠 [AuditRepository.create] Executing query...');
+
       const result = await this.db.query<AuditLog>(query, params);
-      return result[0];
+
+      console.log('🟠 [AuditRepository.create] result:', JSON.stringify(result.rows[0], null, 2));
+
+      return result.rows[0];
     } catch (error) {
+      console.error('🔴 [AuditRepository.create] ERROR:', error);
+      console.error('🔴 [AuditRepository.create] ERROR message:', error instanceof Error ? error.message : 'Unknown');
+      console.error('🔴 [AuditRepository.create] ERROR stack:', error instanceof Error ? error.stack : 'No stack');
+
       this.logger.error('Error creating audit log:', error);
       throw error;
     }
@@ -61,7 +92,7 @@ export class AuditRepository implements IAuditRepository {
     try {
       const query = 'SELECT * FROM audit_logs WHERE id = $1';
       const result = await this.db.query<AuditLog>(query, [id]);
-      return result.length > 0 ? result[0] : null;
+      return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
       this.logger.error('Error finding audit log by id:', error);
       throw error;
@@ -70,11 +101,12 @@ export class AuditRepository implements IAuditRepository {
   async findByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
     try {
       const query = `
-        SELECT * FROM audit_logs 
+        SELECT * FROM audit_logs
         WHERE entity_type = $1 AND entity_id = $2
         ORDER BY created_at DESC
       `;
-      return await this.db.query<AuditLog>(query, [entityType, entityId]);
+      const result = await this.db.query<AuditLog>(query, [entityType, entityId]);
+      return result.rows;
     } catch (error) {
       this.logger.error('Error finding audit logs by entity:', error);
       throw error;
@@ -83,12 +115,13 @@ export class AuditRepository implements IAuditRepository {
   async findByUser(userId: string, limit: number = 100): Promise<AuditLog[]> {
     try {
       const query = `
-        SELECT * FROM audit_logs 
+        SELECT * FROM audit_logs
         WHERE user_id = $1
         ORDER BY created_at DESC
         LIMIT $2
       `;
-      return await this.db.query<AuditLog>(query, [userId, limit]);
+      const result = await this.db.query<AuditLog>(query, [userId, limit]);
+      return result.rows;
     } catch (error) {
       this.logger.error('Error finding audit logs by user:', error);
       throw error;
@@ -97,12 +130,13 @@ export class AuditRepository implements IAuditRepository {
   async findByCompany(companyId: string, limit: number = 100): Promise<AuditLog[]> {
     try {
       const query = `
-        SELECT * FROM audit_logs 
+        SELECT * FROM audit_logs
         WHERE company_id = $1
         ORDER BY created_at DESC
         LIMIT $2
       `;
-      return await this.db.query<AuditLog>(query, [companyId, limit]);
+      const result = await this.db.query<AuditLog>(query, [companyId, limit]);
+      return result.rows;
     } catch (error) {
       this.logger.error('Error finding audit logs by company:', error);
       throw error;
@@ -135,7 +169,8 @@ export class AuditRepository implements IAuditRepository {
         }
       }
       query += ' ORDER BY created_at DESC';
-      return await this.db.query<AuditLog>(query, params);
+      const result = await this.db.query<AuditLog>(query, params);
+      return result.rows;
     } catch (error) {
       this.logger.error('Error finding audit logs by date range:', error);
       throw error;
@@ -154,7 +189,7 @@ export class AuditRepository implements IAuditRepository {
         WHERE created_at < NOW() - INTERVAL '1 day' * $1
       `;
       const result = await this.db.query(query, [safeDays]);
-      return result.length;
+      return result.rows.length;
     } catch (error) {
       this.logger.error('Error deleting old audit logs:', error);
       throw error;

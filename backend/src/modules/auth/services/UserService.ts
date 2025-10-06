@@ -394,7 +394,7 @@ export class UserService {
    * Obtener todos los usuarios con paginación
    */
   async getAllUsers(limit: number = 10, offset: number = 0): Promise<any[]> {
-    return await this.userRepository.findAll(limit, offset);
+    return await this.userRepository.findAll({ limit, offset });
   }
 
   /**
@@ -458,8 +458,8 @@ export class UserService {
       }
       
       // Verificar contraseña actual
-      const isValid = await this.passwordService.validatePassword(
-        currentPassword, 
+      const isValid = await this.passwordService.verifyPassword(
+        currentPassword,
         user.passwordHash
       );
       
@@ -497,7 +497,7 @@ export class UserService {
    * Validar contraseña
    */
   async validatePassword(password: string, hash: string): Promise<boolean> {
-    return await this.passwordService.validatePassword(password, hash);
+    return await this.passwordService.verifyPassword(password, hash);
   }
 
   /**

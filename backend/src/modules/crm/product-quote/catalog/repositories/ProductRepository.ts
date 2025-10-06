@@ -5,7 +5,7 @@
 
 import 'reflect-metadata';
 import { injectable, inject } from 'inversify';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { TYPES } from '@/container/types';
 import {
   Product,
@@ -65,8 +65,8 @@ export class ProductRepository {
         JSON.stringify(data.features || []),
         data.tags || [],
         JSON.stringify(data.metadata || {}),
-        data.min_order_quantity || 1,
-        data.max_order_quantity,
+        data.min_quantity || 1,
+        data.max_quantity,
         data.lead_time_days || 0,
         data.is_taxable !== false,
         data.tax_class,
@@ -440,7 +440,7 @@ export class ProductRepository {
         let query: string;
         let values: any[];
 
-        if (update.variant_id) {
+        if (update.variation_id) {
           // Actualizar variante específica
           switch (update.operation) {
             case 'add':
@@ -451,7 +451,7 @@ export class ProductRepository {
                   updated_at = CURRENT_TIMESTAMP
                 WHERE id = $2
               `;
-              values = [update.quantity_change, update.variant_id];
+              values = [update.quantity_change, update.variation_id];
               break;
             case 'subtract':
               query = `
@@ -461,7 +461,7 @@ export class ProductRepository {
                   updated_at = CURRENT_TIMESTAMP
                 WHERE id = $2
               `;
-              values = [update.quantity_change, update.variant_id];
+              values = [update.quantity_change, update.variation_id];
               break;
             case 'set':
               query = `
@@ -471,7 +471,7 @@ export class ProductRepository {
                   updated_at = CURRENT_TIMESTAMP
                 WHERE id = $2
               `;
-              values = [update.quantity_change, update.variant_id];
+              values = [update.quantity_change, update.variation_id];
               break;
             default:
               throw new Error(`Invalid operation: ${update.operation}`);
@@ -668,7 +668,7 @@ export class ProductRepository {
 
       await client.query(logQuery, [
         update.product_id,
-        update.variant_id,
+        update.variation_id,
         update.quantity_change,
         update.operation,
         update.reason || 'Manual update',

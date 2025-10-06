@@ -8,7 +8,7 @@ import { TYPES } from '@/container/types';
 import { ForecastRepository, IDemandForecast } from './ForecastRepository';
 import { FeatureStoreService } from '../../ml/services/FeatureStoreService';
 import { PredictionService } from '../../ml/services/PredictionService';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 interface TimeSeriesData {
   timestamp: Date;
@@ -195,13 +195,13 @@ export class DemandForecastingService {
     tenantId: string
   ): Promise<TimeSeriesData[]> {
     try {
-      const features = await this.featureStoreService.getFeatures(
-        tenantId,
-        'demand_history',
-        resourceType
+      const featureId = `demand_history_${resourceType}`;
+      const features = await this.featureStoreService.getFeature(
+        featureId,
+        tenantId
       );
 
-      const historicalValues = features.feature_values.demand_history as any[] || [];
+      const historicalValues = (features as any).demand_history as any[] || [];
 
       return historicalValues.map((item: any) => ({
         timestamp: new Date(item.timestamp),

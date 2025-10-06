@@ -22,8 +22,8 @@ export class DashboardController {
         return;
       }
 
-      const companyId = req.user?.companyId;
-      const userId = req.user?.id;
+      const companyId = Number(req.user?.companyId);
+      const userId = Number(req.user?.id);
 
       const dashboard = await this.dashboardService.createDashboard(req.body, companyId, userId);
 
@@ -36,8 +36,8 @@ export class DashboardController {
 
   async getDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
+      const id = parseInt(req.params.id, 10);
+      const companyId = Number(req.user?.companyId);
       const withData = req.query.withData === 'true';
 
       const result = withData
@@ -58,8 +58,8 @@ export class DashboardController {
 
   async getDashboards(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId;
-      const userId = req.user?.id;
+      const companyId = Number(req.user?.companyId);
+      const userId = Number(req.user?.id);
 
       const dashboards = await this.dashboardService.getDashboardsByCompany(companyId, userId);
 
@@ -78,8 +78,8 @@ export class DashboardController {
         return;
       }
 
-      const id = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
+      const id = parseInt(req.params.id, 10);
+      const companyId = Number(req.user?.companyId);
 
       const dashboard = await this.dashboardService.updateDashboard(id, req.body, companyId);
 
@@ -92,8 +92,8 @@ export class DashboardController {
 
   async deleteDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
+      const id = parseInt(req.params.id, 10);
+      const companyId = Number(req.user?.companyId);
 
       await this.dashboardService.deleteDashboard(id, companyId);
 
@@ -112,8 +112,8 @@ export class DashboardController {
         return;
       }
 
-      const dashboardId = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
+      const dashboardId = parseInt(req.params.id, 10);
+      const companyId = Number(req.user?.companyId);
 
       const widget = await this.dashboardService.addWidget(dashboardId, req.body, companyId);
 
@@ -126,8 +126,8 @@ export class DashboardController {
 
   async updateWidget(req: Request, res: Response): Promise<void> {
     try {
-      const widgetId = parseInt(req.params.widgetId);
-      const companyId = req.user?.companyId;
+      const widgetId = parseInt(req.params.widgetId, 10);
+      const companyId = Number(req.user?.companyId);
 
       const widget = await this.dashboardService.updateWidget(widgetId, req.body, companyId);
 
@@ -140,8 +140,8 @@ export class DashboardController {
 
   async deleteWidget(req: Request, res: Response): Promise<void> {
     try {
-      const widgetId = parseInt(req.params.widgetId);
-      const companyId = req.user?.companyId;
+      const widgetId = parseInt(req.params.widgetId, 10);
+      const companyId = Number(req.user?.companyId);
 
       await this.dashboardService.deleteWidget(widgetId, companyId);
 

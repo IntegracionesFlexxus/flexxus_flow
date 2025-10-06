@@ -43,6 +43,7 @@ export interface IQuote extends BaseEntity, CompanyScoped, Versionable {
   customer_notes?: string;
   terms_conditions?: string;
   custom_fields?: Record<string, any>;
+  items?: IQuoteLineItem[]; // Associated line items (populated when needed)
 }
 
 export interface IQuoteSection extends BaseEntity {
@@ -200,10 +201,12 @@ export interface CreateQuoteDto {
   customer_notes?: string;
   terms_conditions?: string;
   custom_fields?: Record<string, any>;
+  items?: AddLineItemDto[]; // Line items to create with quote
 }
 
 export interface UpdateQuoteDto extends Partial<CreateQuoteDto> {
   status?: QuoteStatus;
+  items?: AddLineItemDto[]; // Updated line items
 }
 
 export interface AddLineItemDto {

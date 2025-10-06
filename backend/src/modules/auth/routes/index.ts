@@ -94,11 +94,12 @@ router.post(
 /**
  * POST /api/v1/auth/verify-token
  * Verificar validez de token (para servicios externos)
+ * Commented out - verifyToken method not implemented yet
  */
-router.post(
-  '/verify-token',
-  withAuthController('verifyToken')
-);
+// router.post(
+//   '/verify-token',
+//   withAuthController('verifyToken')
+// );
 // ========== Rutas protegidas (requieren autenticación) ==========
 /**
  * GET /api/v1/auth/me

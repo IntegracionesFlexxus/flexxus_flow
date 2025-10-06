@@ -20,7 +20,7 @@ export function createAnalyticsRouter(): Router {
   router.use('/reports', createReportRoutes());
 
   // KPI routes (inline for simplicity)
-  const kpiController = container.get(TYPES.AnalyticsKpiController);
+  const kpiController = container.get(TYPES.OmniAnalyticsKpiController);
 
   router.post(
     '/kpis',

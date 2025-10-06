@@ -15,8 +15,8 @@ export class ProductCategoryController {
     try {
       const categoryData = {
         ...req.body,
-        company_id: req.user?.company_id || 1,
-        created_by: req.user?.user_id
+        company_id: req.user?.companyId || 1,
+        created_by: req.user?.id
       };
 
       const category = await this.categoryService.create(categoryData);
@@ -45,7 +45,7 @@ export class ProductCategoryController {
       const { id } = req.params;
       const categoryData = {
         ...req.body,
-        updated_by: req.user?.user_id
+        updated_by: req.user?.id
       };
 
       const category = await this.categoryService.update(Number(id), categoryData);

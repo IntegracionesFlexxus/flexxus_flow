@@ -110,8 +110,8 @@ export class ActivityTemplateRepository extends CRMBaseRepository<ActivityTempla
   /**
    * Clone a template
    */
-  async cloneTemplate(templateId: number, newName: string, userId: number): Promise<ActivityTemplate> {
-    const original = await this.findById(templateId);
+  async cloneTemplate(templateId: number, newName: string, userId: number, companyId: string): Promise<ActivityTemplate> {
+    const original = await this.findById(templateId, companyId);
     if (!original) {
       throw new Error('Template not found');
     }

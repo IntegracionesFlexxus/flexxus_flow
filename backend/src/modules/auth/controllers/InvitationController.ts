@@ -12,12 +12,12 @@ import { InvitationService } from '@/modules/invitations/services/InvitationServ
 import { OnboardingService } from '@/modules/users/services/OnboardingService';
 import { EmailService } from '@/modules/notifications/services/EmailService';
 import { AuditService } from '@/shared/services/audit/AuditService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { validationResult } from 'express-validator';
 import { environment } from '@/config/environment';
 
 // Extended Request interface for authentication
-interface AuthRequest extends Request {
+interface AuthRequest extends Omit<Request, 'user'> {
   user?: {
     id: string;
     email: string;
@@ -180,9 +180,9 @@ export class InvitationController {
           lastName: result.user.lastName,
           companyName: result.invitation.companyName,
           roleName: result.invitation.roleName,
-          dashboardUrl: `${environment.frontend}/dashboard`,
-          setupProfileUrl: `${environment.frontend}/onboarding`,
-          helpCenterUrl: `${environment.frontend}/help`
+          dashboardUrl: `${environment.frontendUrl}/dashboard`,
+          setupProfileUrl: `${environment.frontendUrl}/onboarding`,
+          helpCenterUrl: `${environment.frontendUrl}/help`
         });
       }
 
@@ -213,7 +213,7 @@ export class InvitationController {
             required: true,
             progress: onboardingProgress.progressPercentage,
             nextStep: onboardingProgress.steps.find(s => !s.completed)?.name,
-            url: `${environment.frontend}/onboarding`
+            url: `${environment.frontendUrl}/onboarding`
           } : null
         },
         message: result.isNewUser 
@@ -234,7 +234,7 @@ export class InvitationController {
       const { token } = req.params;
 
       // Get safe invitation preview without exposing sensitive data
-      const invitation = await this.invitationService.getInvitationPreview(token);
+      const invitation = await (this.invitationService as any).getInvitationPreview(token);
 
       res.status(200).json({
         success: true,
@@ -291,7 +291,7 @@ export class InvitationController {
     try {
       // Check permissions
       if (!req.user!.permissions.includes('analytics.read')) {
-        throw new AppError('Insufficient permissions', 403);
+        throw new AppError(ErrorCode.INSUFFICIENT_PERMISSIONS, 'Insufficient permissions', 403);
       }
 
       const { startDate, endDate, groupBy } = req.query;
@@ -349,7 +349,7 @@ export class InvitationController {
 
       // Check permissions for starting other users' onboarding
       if (targetUserId !== req.user!.id && !req.user!.permissions.includes('users.manage')) {
-        throw new AppError('Insufficient permissions', 403);
+        throw new AppError(ErrorCode.INSUFFICIENT_PERMISSIONS, 'Insufficient permissions', 403);
       }
 
       const progress = await this.onboardingService.startOnboarding(
@@ -417,7 +417,7 @@ export class InvitationController {
 
       // Check permissions
       if (targetUserId !== req.user!.id && !req.user!.permissions.includes('users.read')) {
-        throw new AppError('Insufficient permissions', 403);
+        throw new AppError(ErrorCode.INSUFFICIENT_PERMISSIONS, 'Insufficient permissions', 403);
       }
 
       const progress = await this.onboardingService.getOnboardingProgress(
@@ -463,23 +463,23 @@ export class InvitationController {
       const { customMessage } = req.body;
 
       // Get invitation details
-      const invitation = await this.invitationService.getInvitationDetails(id);
+      const invitation = await (this.invitationService as any).getInvitationDetails(id);
 
       if (invitation.status !== 'pending') {
-        throw new AppError('Can only send reminders for pending invitations', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Can only send reminders for pending invitations', 400);
       }
 
       // Send reminder email
       await this.emailService.sendInvitationEmail({
         recipientEmail: invitation.email,
-        recipientName: invitation.recipientName,
+        recipientName: (invitation as any).recipientName,
         companyName: invitation.companyName,
-        inviterName: invitation.inviterName,
-        inviterEmail: invitation.inviterEmail,
+        inviterName: (invitation as any).inviterName,
+        inviterEmail: (invitation as any).inviterEmail,
         roleName: invitation.roleName,
         personalMessage: customMessage || 'This is a friendly reminder about your invitation.',
         invitationToken: invitation.token,
-        invitationUrl: `${environment.frontend}/invitation/${invitation.token}`,
+        invitationUrl: `${environment.frontendUrl}/invitation/${invitation.token}`,
         expiresAt: new Date(invitation.expiresAt)
       });
 
@@ -514,14 +514,14 @@ export class InvitationController {
     try {
       await this.emailService.sendInvitationEmail({
         recipientEmail: invitation.email,
-        recipientName: invitation.recipientName,
+        recipientName: (invitation as any).recipientName,
         companyName: invitation.companyName,
-        inviterName: invitation.inviterName,
-        inviterEmail: invitation.inviterEmail,
+        inviterName: (invitation as any).inviterName,
+        inviterEmail: (invitation as any).inviterEmail,
         roleName: invitation.roleName,
         personalMessage: invitation.personalMessage,
         invitationToken: invitation.token,
-        invitationUrl: `${environment.frontend}/invitation/${invitation.token}`,
+        invitationUrl: `${environment.frontendUrl}/invitation/${invitation.token}`,
         expiresAt: new Date(invitation.expiresAt),
         companyLogo: invitation.companyLogo
       });
@@ -622,7 +622,7 @@ export class InvitationController {
 
     return [{
       action: `Complete: ${nextStep.name}`,
-      url: `${environment.frontend}/onboarding/step/${nextStep.id}`
+      url: `${environment.frontendUrl}/onboarding/step/${nextStep.id}`
     }];
   }
 

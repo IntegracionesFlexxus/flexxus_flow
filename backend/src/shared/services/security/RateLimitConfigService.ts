@@ -369,7 +369,7 @@ export class RateLimitConfigService {
         legacyHeaders: false
       },
       enabled: environment.nodeEnv === 'production'
-    });
+    } as any);
 
     // Regla para usuarios premium con límites más altos
     this.registerDynamicRule({
@@ -384,7 +384,7 @@ export class RateLimitConfigService {
         legacyHeaders: false
       },
       enabled: true
-    });
+    } as any);
   }
 
   /**

@@ -35,7 +35,7 @@ export class AssignmentRuleEngine {
 
   constructor(
     @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
-    @inject(TYPES.DatabasePool) private db: Pool,
+    @inject(TYPES.CrmConnection) private db: Pool,
     @inject(TYPES.EventEmitter) private eventBus: EventEmitter
   ) {}
 
@@ -43,7 +43,7 @@ export class AssignmentRuleEngine {
    * Assign lead based on rules
    */
   async assignLead(leadId: number, companyId: number, manualAssignee?: number): Promise<IAssignmentResult> {
-    const lead = await this.leadRepo.findById(leadId);
+    const lead = await this.leadRepo.findById(leadId, String(companyId));
     if (!lead) throw new Error('Lead not found');
 
     // Manual assignment takes precedence
@@ -222,13 +222,13 @@ export class AssignmentRuleEngine {
 
     // Get current index for this rule
     const key = `${companyId}-${rule.id}`;
-    let currentIndex = this.roundRobinIndex.get(key) || 0;
+    let currentIndex = this.roundRobinIndex.get(Number(key)) || 0;
 
     // Get next assignee
     const assigneeId = pool[currentIndex % pool.length];
 
     // Update index for next time
-    this.roundRobinIndex.set(key, (currentIndex + 1) % pool.length);
+    this.roundRobinIndex.set(Number(key), (currentIndex + 1) % pool.length);
 
     return assigneeId;
   }

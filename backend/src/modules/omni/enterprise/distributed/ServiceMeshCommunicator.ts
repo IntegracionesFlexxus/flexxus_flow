@@ -65,7 +65,7 @@ export class ServiceMeshCommunicator extends EventEmitter {
   private responseTimeCache: Map<string, number[]> = new Map();
   private roundRobinCounters: Map<string, number> = new Map();
   private httpClients: Map<string, AxiosInstance> = new Map();
-  private healthCheckInterval?: NodeJS.Timer;
+  private healthCheckInterval?: NodeJS.Timeout;
 
   constructor(
     @inject(TYPES.OmniConnection) private pool: Pool
@@ -710,7 +710,7 @@ export class ServiceMeshCommunicator extends EventEmitter {
    */
   async cleanup(): Promise<void> {
     if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval);
+      clearInterval(this.healthCheckInterval as any);
     }
 
     this.serviceRegistry.clear();

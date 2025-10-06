@@ -10,8 +10,8 @@ import * as PDFDocument from 'pdfkit';
 @injectable()
 export class ReportService {
   constructor(
-    @inject(TYPES.ReportRepository) private reportRepository: ReportRepository,
-    @inject(TYPES.ExportRepository) private exportRepository: ExportRepository
+    @inject(TYPES.CRMReportRepository) private reportRepository: ReportRepository,
+    @inject(TYPES.CRMExportRepository) private exportRepository: ExportRepository
   ) {}
 
   async createReport(report: ReportDefinition): Promise<ReportDefinition> {

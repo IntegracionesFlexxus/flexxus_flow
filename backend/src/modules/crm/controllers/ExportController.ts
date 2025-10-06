@@ -7,7 +7,7 @@ import * as fs from 'fs';
 @injectable()
 export class ExportController {
   constructor(
-    @inject(TYPES.ExportService) private exportService: ExportService
+    @inject(TYPES.CRMExportService) private exportService: ExportService
   ) {}
 
   /**
@@ -15,8 +15,8 @@ export class ExportController {
    */
   async createExport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
 
       const exportRequest = {
         ...req.body,
@@ -47,7 +47,7 @@ export class ExportController {
    */
   async getExports(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { status } = req.query;
 
       const exports = await this.exportService.getCompanyExports(
@@ -72,8 +72,8 @@ export class ExportController {
    */
   async getUserExports(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
 
       const exports = await this.exportService.getUserExports(companyId, userId);
 
@@ -96,7 +96,7 @@ export class ExportController {
     try {
       const { exportId } = req.params;
 
-      const exportRecord = await this.exportService.getExport(parseInt(exportId));
+      const exportRecord = await this.exportService.getExport(parseInt(exportId, 10));
 
       if (!exportRecord) {
         res.status(404).json({
@@ -125,7 +125,7 @@ export class ExportController {
     try {
       const { exportId } = req.params;
 
-      const status = await this.exportService.getExportStatus(parseInt(exportId));
+      const status = await this.exportService.getExportStatus(parseInt(exportId, 10));
 
       res.json({
         success: true,
@@ -146,7 +146,7 @@ export class ExportController {
     try {
       const { exportId } = req.params;
 
-      const { filePath, filename } = await this.exportService.downloadExport(parseInt(exportId));
+      const { filePath, filename } = await this.exportService.downloadExport(parseInt(exportId, 10));
 
       // Stream the file to the response
       const stream = fs.createReadStream(filePath);
@@ -200,7 +200,7 @@ export class ExportController {
     try {
       const { exportId } = req.params;
 
-      const cancelled = await this.exportService.cancelExport(parseInt(exportId));
+      const cancelled = await this.exportService.cancelExport(parseInt(exportId, 10));
 
       if (!cancelled) {
         res.status(400).json({
@@ -229,7 +229,7 @@ export class ExportController {
     try {
       const { exportId } = req.params;
 
-      const exportRecord = await this.exportService.retryExport(parseInt(exportId));
+      const exportRecord = await this.exportService.retryExport(parseInt(exportId, 10));
 
       res.json({
         success: true,
@@ -252,7 +252,7 @@ export class ExportController {
    */
   async getExportStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
 
       const statistics = await this.exportService.getExportStatistics(companyId);
 
@@ -273,8 +273,8 @@ export class ExportController {
    */
   async createBulkExport(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
       const { entities, format = 'csv', filters } = req.body;
 
       if (!entities || !Array.isArray(entities) || entities.length === 0) {

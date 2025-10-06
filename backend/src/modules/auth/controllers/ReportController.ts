@@ -68,13 +68,13 @@ export class ReportController {
         startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
         endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
         severity: req.query.severity as any,
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 50,
+        page: parseInt(req.query.page as string || '1', 10),
+        limit: parseInt(req.query.limit as string || '50', 10),
         sortBy: req.query.sortBy as string || 'createdAt',
         sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc'
       };
 
-      const result = await this.auditService.getAuditLogs(query);
+      const result = await (this.auditService as any).getAuditLogs(query);
 
       res.status(200).json({
         success: true,
@@ -270,8 +270,8 @@ export class ReportController {
         return;
       }
 
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const page = parseInt(req.query.page as string || '1', 10);
+      const limit = parseInt(req.query.limit as string || '20', 10);
 
       const history = await this.reportService.getUserReportHistory(
         req.user.id,
@@ -494,13 +494,13 @@ export class ReportController {
         companyId: req.user.companyId,
         startDate: new Date(req.body.startDate),
         endDate: new Date(req.body.endDate),
-        format: req.body.format || 'csv',
+        format: (req.body.format || 'csv') as 'json' | 'csv' | 'xlsx',
         filters: req.body.filters || {}
       };
 
       const exportData = await this.auditService.exportAuditLogs(
-        exportRequest,
-        req.user.id
+        exportRequest as any,
+        exportRequest.format
       );
 
       // Auditar exportación

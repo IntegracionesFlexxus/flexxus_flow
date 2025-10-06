@@ -64,7 +64,7 @@ export class LeadScoringService {
    */
   async calculateScore(leadId: number): Promise<number> {
     try {
-      const lead = await this.leadRepository.findById(leadId, 0);
+      const lead = await this.leadRepository.findById(leadId, '0');
 
       if (!lead) {
         throw new Error('Lead not found');
@@ -98,7 +98,7 @@ export class LeadScoringService {
       score = Math.min(score, 100);
 
       // Update lead score in database
-      await this.leadRepository.update(leadId, lead.company_id, { score }, undefined);
+      await this.leadRepository.update(leadId, String(lead.company_id), { score }, undefined);
 
       this.logger?.info('Lead score calculated', { leadId, score });
 
@@ -261,7 +261,7 @@ export class LeadScoringService {
    */
   async bulkUpdateScores(companyId: number): Promise<number> {
     try {
-      const leads = await this.leadRepository.findAll(companyId);
+      const leads = await this.leadRepository.findAll(String(companyId));
       let updatedCount = 0;
 
       for (const lead of leads) {
@@ -293,7 +293,7 @@ export class LeadScoringService {
    */
   async getScoreBreakdown(leadId: number): Promise<any> {
     try {
-      const lead = await this.leadRepository.findById(leadId, 0);
+      const lead = await this.leadRepository.findById(leadId, '0');
 
       if (!lead) {
         throw new Error('Lead not found');

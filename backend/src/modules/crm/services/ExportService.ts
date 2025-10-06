@@ -31,9 +31,9 @@ export class ExportService {
   private exportDir = process.env.EXPORT_DIR || '/tmp/exports';
 
   constructor(
-    @inject(TYPES.ExportRepository) private exportRepository: ExportRepository,
-    @inject(TYPES.IntegrationLogRepository) private integrationLogRepository: IntegrationLogRepository,
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CRMExportRepository) private exportRepository: ExportRepository,
+    @inject(TYPES.CRMIntegrationLogRepository) private integrationLogRepository: IntegrationLogRepository,
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {
     // Ensure export directory exists
     if (!fs.existsSync(this.exportDir)) {

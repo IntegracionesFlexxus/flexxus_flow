@@ -156,7 +156,7 @@ export class ActionExecutor {
       }
     };
 
-    const message = await this.messageService.sendMessage(messageData, context.company_id);
+    const message = await this.messageService.sendMessage(messageData as any, context.company_id);
     return { messageId: message.id };
   }
 

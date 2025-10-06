@@ -169,7 +169,7 @@ export class PricingServiceImpl {
   private readonly MAX_DISCOUNT_STACK = 3;
 
   constructor(
-    @inject(TYPES.DatabasePool) private pool: Pool,
+    @inject(TYPES.CrmConnection) private pool: Pool,
     @inject(TYPES.Logger) private logger: Logger,
     @inject(TYPES.RedisClient) private redis: Redis
   ) {}

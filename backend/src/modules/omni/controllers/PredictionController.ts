@@ -21,7 +21,7 @@ export class PredictionController {
    */
   async createPrediction(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { deployment_id, input_features } = req.body;
 
       if (!deployment_id || !input_features) {
@@ -56,7 +56,7 @@ export class PredictionController {
    */
   async getPrediction(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const prediction = await this.predictionService.getPrediction(id, tenantId);
@@ -79,7 +79,7 @@ export class PredictionController {
    */
   async getDeploymentPredictions(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { deploymentId } = req.params;
       const limit = parseInt(req.query.limit as string) || 100;
 
@@ -108,7 +108,7 @@ export class PredictionController {
    */
   async getDeploymentStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { deploymentId } = req.params;
 
       const statistics = await this.predictionService.getDeploymentStatistics(
@@ -134,7 +134,7 @@ export class PredictionController {
    */
   async createBatchPrediction(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const userId = req.user?.id;
       const { deployment_id, input_data_path } = req.body;
 

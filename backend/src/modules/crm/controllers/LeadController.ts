@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
 import { ILeadService } from '../interfaces/ILeadService';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 
 @injectable()
 export class LeadController {
@@ -84,7 +84,7 @@ export class LeadController {
       const lead = await this.leadService.getLeadById(leadId, companyId);
 
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       res.json({
@@ -109,7 +109,7 @@ export class LeadController {
       const lead = await this.leadService.updateLead(leadId, companyId, req.body, userId);
 
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       res.json({
@@ -135,7 +135,7 @@ export class LeadController {
       const deleted = await this.leadService.deleteLead(leadId, companyId, userId);
 
       if (!deleted) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       res.json({
@@ -255,7 +255,7 @@ export class LeadController {
       const { assignedTo } = req.body;
 
       if (!assignedTo) {
-        throw new AppError('Assigned user ID is required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Assigned user ID is required', 400);
       }
 
       const lead = await this.leadService.assignLead(leadId, companyId, assignedTo, userId);
@@ -280,7 +280,7 @@ export class LeadController {
       const { email } = req.query;
 
       if (!email) {
-        throw new AppError('Email is required to find duplicates', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Email is required to find duplicates', 400);
       }
 
       const duplicates = await this.leadService.findDuplicates(email as string, companyId);
@@ -305,7 +305,7 @@ export class LeadController {
       const { primaryLeadId, duplicateLeadIds } = req.body;
 
       if (!primaryLeadId || !duplicateLeadIds || !Array.isArray(duplicateLeadIds)) {
-        throw new AppError('Primary lead ID and duplicate lead IDs are required', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Primary lead ID and duplicate lead IDs are required', 400);
       }
 
       const lead = await this.leadService.mergeLeads(

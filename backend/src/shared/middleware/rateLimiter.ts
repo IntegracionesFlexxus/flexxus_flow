@@ -15,7 +15,7 @@ import { environment } from '@/config/environment';
  * Obtener instancia del servicio de rate limiting
  */
 const getRateLimitingService = (): RateLimitingService => {
-  return container.get<RateLimitingService>(TYPES.RateLimitingService);
+  return container.get<RateLimitingService>(TYPES.RateLimiterService);
 };
 
 /**

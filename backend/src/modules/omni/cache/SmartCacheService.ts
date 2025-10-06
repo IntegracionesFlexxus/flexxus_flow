@@ -46,7 +46,7 @@ export class SmartCacheService extends EventEmitter {
   private cache: Map<string, ICacheEntry> = new Map();
   private accessOrder: string[] = []; // For LRU tracking
   private stats: ICacheStats;
-  private cleanupInterval?: NodeJS.Timer;
+  private cleanupInterval?: NodeJS.Timeout;
   private config: ICacheConfig;
 
   private readonly DEFAULT_CONFIG: ICacheConfig = {
@@ -547,7 +547,7 @@ export class SmartCacheService extends EventEmitter {
    */
   async cleanup(): Promise<void> {
     if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
+      clearInterval(this.cleanupInterval as any);
       this.cleanupInterval = undefined;
     }
 

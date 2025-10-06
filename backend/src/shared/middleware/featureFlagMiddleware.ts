@@ -8,7 +8,7 @@ import { injectable, inject } from 'inversify';
 import { Logger } from 'winston';
 import { TYPES } from '@/container/types';
 import { FeatureFlagService, FeatureFlagContext } from '@/modules/feature-flags/services/FeatureFlagService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { environment } from '@/config/environment';
 // Extended Request interface to include feature flags
 declare global {
@@ -83,10 +83,9 @@ export class FeatureFlagMiddleware {
         // Check if flag is required to be enabled
         if (options.required && !evaluation.enabled) {
           const error = new AppError(
-            'Feature not available', 
-            403, 
-            'FEATURE_DISABLED',
-            { flagName, reason: evaluation.reason }
+            ErrorCode.FEATURE_NOT_AVAILABLE,
+            'Feature not available',
+            403
           );
           if (options.onFlagMissing === 'error') {
             throw error;

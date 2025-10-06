@@ -15,7 +15,7 @@ import { Contact } from '../types/contact.types';
 import { Opportunity } from '../types/opportunity.types';
 import { LeadConversionData } from '../types/crm.types';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { EventEmitter } from 'events';
 
 @injectable()
@@ -47,11 +47,11 @@ export class ConversionService {
       // Get lead details
       const lead = await this.leadRepository.getLeadWithDetails(leadId, companyId);
       if (!lead) {
-        throw new AppError('Lead not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Lead not found', 404);
       }
 
       if (lead.status === 'converted') {
-        throw new AppError('Lead is already converted', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Lead is already converted', 400);
       }
 
       // Start transaction
@@ -165,10 +165,10 @@ export class ConversionService {
     if (conversionData.existingAccountId) {
       const account = await this.accountRepository.findById(
         conversionData.existingAccountId,
-        lead.company_id
+        String(lead.company_id)
       );
       if (!account) {
-        throw new AppError('Specified account not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Specified account not found', 404);
       }
       return account;
     }
@@ -183,7 +183,7 @@ export class ConversionService {
       const existingAccounts = await this.accountRepository.findDuplicates(
         accountName,
         null,
-        lead.company_id
+        String(lead.company_id)
       );
 
       if (existingAccounts.length > 0) {
@@ -217,7 +217,7 @@ export class ConversionService {
       return account;
     }
 
-    throw new AppError('Account creation or selection is required', 400);
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Account creation or selection is required', 400);
   }
 
   /**
@@ -240,11 +240,11 @@ export class ConversionService {
       const existingContact = existingContacts[0];
       await this.contactRepository.update(
         existingContact.id!,
-        lead.company_id,
+        String(lead.company_id),
         { account_id: accountId },
         userId
       );
-      return this.contactRepository.findById(existingContact.id!, lead.company_id) as Promise<Contact>;
+      return this.contactRepository.findById(existingContact.id!, String(lead.company_id)) as Promise<Contact>;
     }
 
     // Create new contact
@@ -320,7 +320,7 @@ export class ConversionService {
     });
 
     for (const activity of activities) {
-      await this.activityRepository.update(activity.id!, companyId, {
+      await this.activityRepository.update(activity.id!, String(companyId), {
         lead_id: undefined,
         account_id: accountId,
         contact_id: contactId,
@@ -422,7 +422,7 @@ export class ConversionService {
     const errors: string[] = [];
 
     // Check lead exists and is not converted
-    const lead = await this.leadRepository.findById(leadId, companyId);
+    const lead = await this.leadRepository.findById(leadId, String(companyId));
     if (!lead) {
       errors.push('Lead not found');
     } else if (lead.status === 'converted') {
@@ -437,7 +437,7 @@ export class ConversionService {
     if (conversionData.existingAccountId) {
       const account = await this.accountRepository.findById(
         conversionData.existingAccountId,
-        companyId
+        String(companyId)
       );
       if (!account) {
         errors.push('Selected account does not exist');

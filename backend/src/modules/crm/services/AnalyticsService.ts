@@ -43,10 +43,10 @@ export interface TrendData {
 @injectable()
 export class AnalyticsService {
   constructor(
-    @inject(TYPES.ReportRepository) private reportRepository: ReportRepository,
-    @inject(TYPES.KpiRepository) private kpiRepository: KpiRepository,
-    @inject(TYPES.DashboardRepository) private dashboardRepository: DashboardRepository,
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CRMReportRepository) private reportRepository: ReportRepository,
+    @inject(TYPES.CRMKpiRepository) private kpiRepository: KpiRepository,
+    @inject(TYPES.CRMDashboardRepository) private dashboardRepository: DashboardRepository,
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async getCompanyMetrics(companyId: number): Promise<AnalyticsMetrics> {

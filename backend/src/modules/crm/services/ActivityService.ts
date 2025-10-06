@@ -16,7 +16,7 @@ import {
 import { PaginatedResponse } from '../types/crm.types';
 import { ActivityRepository } from '../repositories/ActivityRepository';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { EventEmitter } from 'events';
 
 @injectable()
@@ -34,7 +34,7 @@ export class ActivityService implements IActivityService {
     try {
       // Validate at least one related entity
       if (!data.account_id && !data.contact_id && !data.opportunity_id && !data.lead_id) {
-        throw new AppError('Activity must be related to at least one entity', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Activity must be related to at least one entity', 400);
       }
 
       // Set default status and priority
@@ -84,13 +84,13 @@ export class ActivityService implements IActivityService {
     userId: number
   ): Promise<Activity | null> {
     try {
-      const existingActivity = await this.activityRepository.findById(id, companyId);
+      const existingActivity = await this.activityRepository.findById(id, String(companyId));
       if (!existingActivity) {
         return null;
       }
 
       // Update activity
-      const updated = await this.activityRepository.update(id, companyId, data, userId);
+      const updated = await this.activityRepository.update(id, String(companyId), data, userId);
 
       if (updated) {
         // Check for status change
@@ -215,13 +215,13 @@ export class ActivityService implements IActivityService {
     userId: number
   ): Promise<Activity> {
     try {
-      const activity = await this.activityRepository.findById(activityId, companyId);
+      const activity = await this.activityRepository.findById(activityId, String(companyId));
       if (!activity) {
-        throw new AppError('Activity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Activity not found', 404);
       }
 
       if (activity.status === 'completed') {
-        throw new AppError('Activity is already completed', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Activity is already completed', 400);
       }
 
       const result = await this.activityRepository.completeActivity(
@@ -245,7 +245,7 @@ export class ActivityService implements IActivityService {
         }
       }
 
-      const updatedActivity = await this.activityRepository.findById(activityId, companyId);
+      const updatedActivity = await this.activityRepository.findById(activityId, String(companyId));
       return updatedActivity!;
     } catch (error) {
       this.logger?.error('Error completing activity', { error, activityId, outcome });
@@ -264,13 +264,13 @@ export class ActivityService implements IActivityService {
     userId: number
   ): Promise<Activity> {
     try {
-      const activity = await this.activityRepository.findById(activityId, companyId);
+      const activity = await this.activityRepository.findById(activityId, String(companyId));
       if (!activity) {
-        throw new AppError('Activity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Activity not found', 404);
       }
 
       if (activity.status === 'completed') {
-        throw new AppError('Cannot reschedule completed activity', 400);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Cannot reschedule completed activity', 400);
       }
 
       const result = await this.activityRepository.rescheduleActivity(
@@ -296,7 +296,7 @@ export class ActivityService implements IActivityService {
         }
       }
 
-      const updatedActivity = await this.activityRepository.findById(activityId, companyId);
+      const updatedActivity = await this.activityRepository.findById(activityId, String(companyId));
       return updatedActivity!;
     } catch (error) {
       this.logger?.error('Error rescheduling activity', { error, activityId, newDueDate });
@@ -327,12 +327,12 @@ export class ActivityService implements IActivityService {
   ): Promise<number> {
     try {
       if (activityIds.length === 0) {
-        throw new AppError('No activities provided', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'No activities provided', 400);
       }
 
       const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
       if (!validStatuses.includes(status)) {
-        throw new AppError('Invalid status', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid status', 400);
       }
 
       const updatedCount = await this.activityRepository.bulkUpdateStatus(
@@ -380,12 +380,12 @@ export class ActivityService implements IActivityService {
    */
   async deleteActivity(activityId: number, companyId: number, userId: number): Promise<boolean> {
     try {
-      const activity = await this.activityRepository.findById(activityId, companyId);
+      const activity = await this.activityRepository.findById(activityId, String(companyId));
       if (!activity) {
-        throw new AppError('Activity not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Activity not found', 404);
       }
 
-      const deleted = await this.activityRepository.delete(activityId, companyId);
+      const deleted = await this.activityRepository.delete(activityId, String(companyId));
 
       if (deleted) {
         this.eventEmitter.emit('activity:deleted', {

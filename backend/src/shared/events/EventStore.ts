@@ -55,7 +55,7 @@ export class EventStore implements IEventStore {
         JSON.stringify(event.metadata || {}),
         event.occurredAt
       ]);
-      const storedEvent = result[0];
+      const storedEvent = result.rows[0];
       if (this.logger) {
         this.logger.info('Event stored', {
           eventId,
@@ -84,7 +84,7 @@ export class EventStore implements IEventStore {
     `;
     const params = fromVersion ? [streamId, fromVersion] : [streamId];
     const result = await this.db.query<StoredEvent>(query, params);
-    return result.map(this.deserializeEvent);
+    return result.rows.map(this.deserializeEvent);
   }
   /**
    * Obtiene eventos por ID de agregado
@@ -101,7 +101,7 @@ export class EventStore implements IEventStore {
     `;
     const params = fromDate ? [aggregateId, fromDate] : [aggregateId];
     const result = await this.db.query<StoredEvent>(query, params);
-    return result.map(this.deserializeEvent);
+    return result.rows.map(this.deserializeEvent);
   }
   /**
    * Obtiene eventos para replay
@@ -119,7 +119,7 @@ export class EventStore implements IEventStore {
     `;
     const params = toDate ? [fromDate, toDate] : [fromDate];
     const result = await this.db.query<StoredEvent>(query, params);
-    return result.map(this.deserializeEvent);
+    return result.rows.map(this.deserializeEvent);
   }
   /**
    * Marca un evento como procesado
@@ -144,7 +144,7 @@ export class EventStore implements IEventStore {
       LIMIT $1
     `;
     const result = await this.db.query<StoredEvent>(query, [limit]);
-    return result.map(this.deserializeEvent);
+    return result.rows.map(this.deserializeEvent);
   }
   /**
    * Incrementa el contador de reintentos
@@ -176,13 +176,13 @@ export class EventStore implements IEventStore {
       version: number;
       created_at: Date;
     }>(query, [aggregateId]);
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return null;
     }
     return {
-      data: result[0].snapshot_data,
-      version: result[0].version,
-      createdAt: result[0].created_at
+      data: result.rows[0].snapshot_data,
+      version: result.rows[0].version,
+      createdAt: result.rows[0].created_at
     };
   }
   /**

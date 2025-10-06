@@ -10,7 +10,7 @@ import { TYPES } from '@/container/types';
 import { IUserRepository } from '@/shared/interfaces/repositories/IUserRepository';
 import { AuditService } from '@/modules/users/services/AuditService';
 import { ICacheService } from '@/shared/interfaces/ICacheService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 // Advanced User Preferences Interfaces
 export interface PersonalizationPreferences {
   dashboard?: {
@@ -313,7 +313,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
       }
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const preferences = this.mapToAdvancedPreferencesResponse(user);
       // Cachear resultado
@@ -339,7 +339,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
       await this.validatePersonalizationPreferences(preferences);
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const currentAdvancedPrefs = user.advancedPreferences || {};
       const updatedPreferences = {
@@ -392,7 +392,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
       await this.validateIntegrationPreferences(preferences);
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const currentAdvancedPrefs = user.advancedPreferences || {};
       const updatedPreferences = {
@@ -448,7 +448,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
       await this.validateCollaborationPreferences(preferences);
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const currentAdvancedPrefs = user.advancedPreferences || {};
       const updatedPreferences = {
@@ -501,7 +501,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
       await this.validateProductivitySettings(settings);
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const currentAdvancedPrefs = user.advancedPreferences || {};
       const updatedPreferences = {
@@ -554,7 +554,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
       await this.validateSecurityPersonalSettings(settings);
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const currentAdvancedPrefs = user.advancedPreferences || {};
       const updatedPreferences = {
@@ -610,7 +610,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
     try {
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const preferences = await this.getAdvancedPreferences(userId);
       const exportData = {
@@ -649,7 +649,7 @@ export class AdvancedUserPreferencesService extends EventEmitter {
     try {
       const user = await this.userRepository.findById(userId);
       if (!user) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'User not found', 404);
       }
       const defaultPreferences = this.getDefaultAdvancedPreferences();
       const currentPrefs = user.advancedPreferences || {};
@@ -886,14 +886,14 @@ export class AdvancedUserPreferencesService extends EventEmitter {
   private async validatePersonalizationPreferences(preferences: PersonalizationPreferences): Promise<void> {
     if (preferences.contentPreferences?.itemsPerPage && 
         (preferences.contentPreferences.itemsPerPage < 5 || preferences.contentPreferences.itemsPerPage > 100)) {
-      throw new AppError('Items per page must be between 5 and 100', 400, 'INVALID_PREFERENCE');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Items per page must be between 5 and 100', 400);
     }
   }
   private async validateIntegrationPreferences(preferences: IntegrationPreferences): Promise<void> {
     if (preferences.webhookSubscriptions) {
       for (const webhook of preferences.webhookSubscriptions) {
         if (!webhook.url.startsWith('https://')) {
-          throw new AppError('Webhook URLs must use HTTPS', 400, 'INVALID_WEBHOOK_URL');
+          throw new AppError(ErrorCode.VALIDATION_ERROR, 'Webhook URLs must use HTTPS', 400);
         }
       }
     }
@@ -901,19 +901,19 @@ export class AdvancedUserPreferencesService extends EventEmitter {
   private async validateCollaborationPreferences(preferences: CollaborationPreferences): Promise<void> {
     if (preferences.sharingDefaults?.expirationDefault && 
         (preferences.sharingDefaults.expirationDefault < 1 || preferences.sharingDefaults.expirationDefault > 365)) {
-      throw new AppError('Expiration default must be between 1 and 365 days', 400, 'INVALID_EXPIRATION');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Expiration default must be between 1 and 365 days', 400);
     }
   }
   private async validateProductivitySettings(settings: ProductivitySettings): Promise<void> {
     if (settings.taskManagement?.timeTracking?.roundingMinutes && 
         ![1, 5, 15, 30].includes(settings.taskManagement.timeTracking.roundingMinutes)) {
-      throw new AppError('Rounding minutes must be 1, 5, 15, or 30', 400, 'INVALID_ROUNDING');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Rounding minutes must be 1, 5, 15, or 30', 400);
     }
   }
   private async validateSecurityPersonalSettings(settings: SecurityPersonalSettings): Promise<void> {
     if (settings.dataManagement?.dataRetention?.activityLogs && 
         (settings.dataManagement.dataRetention.activityLogs < 1 || settings.dataManagement.dataRetention.activityLogs > 2555)) {
-      throw new AppError('Activity logs retention must be between 1 and 2555 days', 400, 'INVALID_RETENTION');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Activity logs retention must be between 1 and 2555 days', 400);
     }
   }
 }

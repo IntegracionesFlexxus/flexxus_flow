@@ -37,7 +37,7 @@ export class DuplicateDetectorService {
 
   constructor(
     @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
-    @inject(TYPES.DatabasePool) private db: Pool,
+    @inject(TYPES.CrmConnection) private db: Pool,
     @inject(TYPES.EventEmitter) private eventBus: EventEmitter
   ) {}
 
@@ -45,7 +45,7 @@ export class DuplicateDetectorService {
    * Find potential duplicates for a lead
    */
   async findDuplicates(leadId: number, companyId: number): Promise<IDuplicateMatch[]> {
-    const lead = await this.leadRepo.findById(leadId);
+    const lead = await this.leadRepo.findById(leadId, String(companyId));
     if (!lead) throw new Error('Lead not found');
 
     const duplicates: IDuplicateMatch[] = [];

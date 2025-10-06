@@ -3,14 +3,20 @@
  * Data access layer for account hierarchy management
  */
 
-import { injectable } from 'inversify';
+import { injectable, inject, optional } from 'inversify';
 import { CRMBaseRepository } from './CRMBaseRepository';
 import { AccountHierarchy } from '../types/hierarchy.types';
+import { TYPES } from '@/container/types';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
+import { Logger } from 'winston';
 
 @injectable()
 export class AccountHierarchyRepository extends CRMBaseRepository<AccountHierarchy> {
-  constructor() {
-    super('account_hierarchies');
+  constructor(
+    @inject(TYPES.SharedConnection) db: IDatabaseConnection,
+    @inject(TYPES.Logger) @optional() logger?: Logger
+  ) {
+    super('account_hierarchies', db, logger);
     this.schema = 'public'; // Sprint 17 uses public schema
 
     this.allowedFields = new Set([

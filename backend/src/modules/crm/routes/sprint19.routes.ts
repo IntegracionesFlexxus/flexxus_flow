@@ -8,8 +8,12 @@ import { Container } from 'inversify';
 import { TYPES } from '@/container/types';
 import { authenticateToken, requirePermission } from '@/shared/middleware/auth';
 import { validateRequest } from '@/shared/middleware/validation';
-import { generalLimiter } from '@/shared/middleware/rateLimiter';
+import { generalLimiter, createEndpointLimiter } from '@/shared/middleware/rateLimiter';
 import { PRODUCT_QUOTE_PERMISSIONS } from '@/modules/auth/middleware/permissionMiddleware';
+
+// Create aliases for common usage patterns
+const checkPermission = requirePermission;
+const rateLimiter = createEndpointLimiter;
 
 // Import Controllers
 import { ProductCatalogController } from '../controllers/ProductCatalogController';
@@ -22,7 +26,7 @@ export function registerSprint19Routes(container: Container): Router {
   const router = Router();
 
   // Get controller instances from container
-  const productController = container.get<ProductCatalogController>(TYPES.ProductCatalogController);
+  const productController = container.get<ProductCatalogController>(TYPES.ProductController);
   const pricingController = container.get<PricingController>(TYPES.PricingController);
   const quoteController = container.get<QuoteController>(TYPES.QuoteController);
   const approvalController = container.get<ApprovalController>(TYPES.ApprovalController);
@@ -161,12 +165,16 @@ export function registerSprint19Routes(container: Container): Router {
   // ============================================
 
   // Quote Management
+  // NOTE: Following methods are commented out - they don't exist in QuoteController
+  // Uncomment when QuoteController methods are fully implemented
+  /*
   router.get('/quotes',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_VIEW),
     quoteController.getQuotes.bind(quoteController));
   router.get('/quotes/:id',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_VIEW),
     quoteController.getQuoteById.bind(quoteController));
+  */
   router.post('/quotes',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_CREATE),
     validateRequest,
@@ -184,6 +192,7 @@ export function registerSprint19Routes(container: Container): Router {
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_UPDATE),
     validateRequest,
     quoteController.addQuoteItem.bind(quoteController));
+  /*
   router.put('/quotes/:id/items/:itemId',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_UPDATE),
     validateRequest,
@@ -191,6 +200,7 @@ export function registerSprint19Routes(container: Container): Router {
   router.delete('/quotes/:id/items/:itemId',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_UPDATE),
     quoteController.deleteQuoteItem.bind(quoteController));
+  */
   router.post('/quotes/:id/sections',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_UPDATE),
     validateRequest,
@@ -215,10 +225,12 @@ export function registerSprint19Routes(container: Container): Router {
     quoteController.updateQuoteStatus.bind(quoteController));
 
   // Quote Documents
+  /*
   router.post('/quotes/:id/generate-document',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.DOCUMENT_GENERATE),
     validateRequest,
     quoteController.generateQuoteDocument.bind(quoteController));
+  */
   router.post('/quotes/:id/send-email',
     checkPermission(PRODUCT_QUOTE_PERMISSIONS.QUOTE_VIEW),
     validateRequest,

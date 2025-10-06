@@ -14,11 +14,15 @@ import { Logger } from 'winston';
 
 @injectable()
 export class NotificationRepository extends BaseRepository<NotificationEntity> implements INotificationRepository {
+  protected repository!: Repository<NotificationEntity>;
+
   constructor(
     @inject(TYPES.DatabaseConnection) databaseConnection: DatabaseConnection,
     @inject(TYPES.Logger) private logger: Logger
   ) {
-    super(databaseConnection, 'notifications');
+    super(databaseConnection as any, 'notifications' as any);
+    // TODO: Initialize TypeORM repository when TypeORM is properly configured
+    // this.repository = databaseConnection.getRepository(NotificationEntity);
   }
 
   /**
@@ -307,8 +311,8 @@ export class NotificationRepository extends BaseRepository<NotificationEntity> i
       const result = await query.getRawOne();
 
       return {
-        total: parseInt(result.total) || 0,
-        unread: parseInt(result.unread) || 0,
+        total: parseInt(result.total, 10) || 0,
+        unread: parseInt(result.unread, 10) || 0,
         byType: result.byType || {},
         byCategory: result.byCategory || {},
         byPriority: result.byPriority || {}

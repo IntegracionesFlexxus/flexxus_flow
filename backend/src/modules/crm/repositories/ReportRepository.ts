@@ -34,7 +34,7 @@ export interface ReportExecution {
 @injectable()
 export class ReportRepository {
   constructor(
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async create(report: ReportDefinition): Promise<ReportDefinition> {

@@ -167,7 +167,7 @@ export function setupCsrfProtection() {
       return next();
     }
 
-    csrfProtection(req, res, (err) => {
+    csrfProtection(req as any, res as any, (err: any) => {
       if (err) {
         const logger = container.get<Logger>(TYPES.Logger);
         logger.warn('CSRF token validation failed', {

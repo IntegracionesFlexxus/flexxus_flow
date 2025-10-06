@@ -18,7 +18,7 @@ export class AnalyticsController {
    */
   async getMetrics(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const metrics = await this.analyticsService.getCompanyMetrics(companyId);
 
       res.json({
@@ -38,7 +38,7 @@ export class AnalyticsController {
    */
   async getRevenueTrend(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { period = 'monthly', startDate, endDate } = req.query;
 
       const trend = await this.analyticsService.getRevenueTrend(
@@ -65,7 +65,7 @@ export class AnalyticsController {
    */
   async getConversionFunnel(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const funnel = await this.analyticsService.getConversionFunnel(companyId);
 
       res.json({
@@ -85,13 +85,13 @@ export class AnalyticsController {
    */
   async getTopPerformers(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { metric = 'revenue', limit = '10' } = req.query;
 
       const performers = await this.analyticsService.getTopPerformers(
         companyId,
         metric as 'revenue' | 'deals' | 'activities',
-        parseInt(limit as string)
+        parseInt(limit as string || '10', 10)
       );
 
       res.json({
@@ -111,7 +111,7 @@ export class AnalyticsController {
    */
   async comparePerformance(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { currentStart, currentEnd, previousStart, previousEnd } = req.query;
 
       if (!currentStart || !currentEnd || !previousStart || !previousEnd) {
@@ -151,12 +151,12 @@ export class AnalyticsController {
    */
   async getSalesForecast(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { months = '3' } = req.query;
 
       const forecast = await this.analyticsService.getSalesForecast(
         companyId,
-        parseInt(months as string)
+        parseInt(months as string || '3', 10)
       );
 
       res.json({
@@ -176,12 +176,12 @@ export class AnalyticsController {
    */
   async getCampaignROI(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { campaignId } = req.query;
 
       const roi = await this.analyticsService.getCampaignROI(
         companyId,
-        campaignId ? parseInt(campaignId as string) : undefined
+        campaignId ? parseInt(campaignId as string, 10) : undefined
       );
 
       res.json({
@@ -201,7 +201,7 @@ export class AnalyticsController {
    */
   async getKpis(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { category } = req.query;
 
       const kpis = category
@@ -225,7 +225,7 @@ export class AnalyticsController {
    */
   async getKpiDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
+      const companyId = Number(req.user?.companyId || 1);
       const { date } = req.query;
 
       const dashboard = await this.kpiService.getCompanyKpiDashboard(
@@ -275,9 +275,9 @@ export class AnalyticsController {
       const { period = 'daily', days = '30' } = req.query;
 
       const trends = await this.kpiService.getKpiTrends(
-        parseInt(kpiId),
+        parseInt(kpiId, 10),
         period as 'daily' | 'weekly' | 'monthly',
-        parseInt(days as string)
+        parseInt(days as string || '30', 10)
       );
 
       res.json({
@@ -297,8 +297,8 @@ export class AnalyticsController {
    */
   async getDashboards(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
 
       const dashboards = await this.dashboardService.getUserDashboards(companyId, userId);
 
@@ -323,7 +323,7 @@ export class AnalyticsController {
       const filters = req.query.filters ? JSON.parse(req.query.filters as string) : undefined;
 
       const dashboard = await this.dashboardService.getDashboardWithData(
-        parseInt(dashboardId),
+        parseInt(dashboardId, 10),
         filters
       );
 
@@ -352,8 +352,8 @@ export class AnalyticsController {
    */
   async createDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId || 1;
-      const userId = req.user?.id || 1;
+      const companyId = Number(req.user?.companyId || 1);
+      const userId = Number(req.user?.id || 1);
 
       const dashboardData = {
         ...req.body,
@@ -383,7 +383,7 @@ export class AnalyticsController {
       const { dashboardId } = req.params;
 
       const dashboard = await this.dashboardService.updateDashboard(
-        parseInt(dashboardId),
+        parseInt(dashboardId, 10),
         req.body
       );
 
@@ -414,7 +414,7 @@ export class AnalyticsController {
     try {
       const { dashboardId } = req.params;
 
-      const deleted = await this.dashboardService.deleteDashboard(parseInt(dashboardId));
+      const deleted = await this.dashboardService.deleteDashboard(parseInt(dashboardId, 10));
 
       if (!deleted) {
         res.status(404).json({
@@ -443,7 +443,7 @@ export class AnalyticsController {
     try {
       const { dashboardId } = req.params;
       const { name } = req.body;
-      const userId = req.user?.id || 1;
+      const userId = Number(req.user?.id || 1);
 
       if (!name) {
         res.status(400).json({
@@ -454,7 +454,7 @@ export class AnalyticsController {
       }
 
       const cloned = await this.dashboardService.cloneDashboard(
-        parseInt(dashboardId),
+        parseInt(dashboardId, 10),
         name,
         userId
       );
@@ -480,7 +480,7 @@ export class AnalyticsController {
 
       const widgetData = {
         ...req.body,
-        dashboard_id: parseInt(dashboardId)
+        dashboard_id: parseInt(dashboardId, 10)
       };
 
       const widget = await this.dashboardService.addWidget(widgetData);
@@ -505,7 +505,7 @@ export class AnalyticsController {
       const { widgetId } = req.params;
 
       const widget = await this.dashboardService.updateWidget(
-        parseInt(widgetId),
+        parseInt(widgetId, 10),
         req.body
       );
 
@@ -536,7 +536,7 @@ export class AnalyticsController {
     try {
       const { widgetId } = req.params;
 
-      const deleted = await this.dashboardService.deleteWidget(parseInt(widgetId));
+      const deleted = await this.dashboardService.deleteWidget(parseInt(widgetId, 10));
 
       if (!deleted) {
         res.status(404).json({

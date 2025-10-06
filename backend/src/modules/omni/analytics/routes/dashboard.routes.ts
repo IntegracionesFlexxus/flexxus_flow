@@ -9,7 +9,7 @@ import { analyticsValidators } from '../validators/analytics.validators';
 
 export function createDashboardRoutes(): Router {
   const router = Router();
-  const controller = container.get(TYPES.AnalyticsDashboardController);
+  const controller = container.get(TYPES.OmniAnalyticsDashboardController);
 
   // Dashboard CRUD
   router.post(

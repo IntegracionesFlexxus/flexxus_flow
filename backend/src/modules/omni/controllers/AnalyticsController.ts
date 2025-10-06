@@ -226,7 +226,8 @@ export class AnalyticsController {
   async getDashboard(req: Request, res: Response): Promise<void> {
     try {
       const { dashboardId } = req.params;
-      const dashboard = await this.dashboards.getDashboard(dashboardId);
+      const companyId = Number(req.user?.companyId);
+      const dashboard = await this.dashboards.getDashboard(Number(dashboardId), companyId);
 
       res.json({
         success: true,
@@ -247,7 +248,8 @@ export class AnalyticsController {
   async addWidget(req: Request, res: Response): Promise<void> {
     try {
       const { dashboardId } = req.params;
-      const widget = await this.dashboards.addWidget(dashboardId, req.body);
+      const companyId = Number(req.user?.companyId);
+      const widget = await this.dashboards.addWidget(Number(dashboardId), req.body, companyId);
 
       res.status(201).json({
         success: true,

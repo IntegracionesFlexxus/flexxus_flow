@@ -65,24 +65,24 @@ export class UserResponseDto {
   @MapProperty('name')
   name: string;
   @ApiProperty({ description: 'Company ID' })
-  @MapProperty('company_id', 'companyId')
+  @MapProperty('company_id')
   companyId: string;
   @ApiProperty({ description: 'User active state' })
-  @MapProperty('is_active', 'isActive')
+  @MapProperty('is_active')
   isActive: boolean;
   @ApiProperty({ description: 'Email verification status' })
-  @MapProperty('email_verified', 'emailVerified')
+  @MapProperty('email_verified')
   emailVerified: boolean;
   @ApiPropertyOptional({ description: 'Last login timestamp' })
-  @MapProperty('last_login', 'lastLogin')
+  @MapProperty('last_login')
   @Transform((value: Date | null) => value ? value.toISOString() : null)
   lastLogin?: string;
   @ApiProperty({ description: 'User creation timestamp' })
-  @MapProperty('created_at', 'createdAt')
+  @MapProperty('created_at')
   @Transform((value: Date) => value.toISOString())
   createdAt: string;
   @ApiProperty({ description: 'User last update timestamp' })
-  @MapProperty('updated_at', 'updatedAt')
+  @MapProperty('updated_at')
   @Transform((value: Date) => value.toISOString())
   updatedAt: string;
   // Ignore sensitive fields
@@ -105,13 +105,13 @@ export class UserListItemDto {
   @MapProperty('name')
   name: string;
   @ApiProperty({ description: 'User active state' })
-  @MapProperty('is_active', 'isActive')
+  @MapProperty('is_active')
   isActive: boolean;
   @ApiProperty({ description: 'Email verification status' })
-  @MapProperty('email_verified', 'emailVerified')
+  @MapProperty('email_verified')
   emailVerified: boolean;
   @ApiPropertyOptional({ description: 'Last login date (ISO string)' })
-  @MapProperty('last_login', 'lastLogin')
+  @MapProperty('last_login')
   @Transform((value: Date | null) => {
     if (!value) return null;
     return value.toISOString().split('T')[0]; // Return only date part
@@ -154,25 +154,25 @@ export class UserProfileDto extends UserResponseDto {
  */
 export class UserStatsDto {
   @ApiProperty({ description: 'User ID' })
-  @MapProperty('user_id', 'userId')
+  @MapProperty('user_id')
   userId: string;
   @ApiProperty({ description: 'User name' })
-  @MapProperty('user_name', 'userName')
+  @MapProperty('user_name')
   userName: string;
   @ApiProperty({ description: 'Login count' })
-  @MapProperty('login_count', 'loginCount')
+  @MapProperty('login_count')
   @Transform((value: string | number) => parseInt(String(value), 10))
   loginCount: number;
   @ApiProperty({ description: 'Last login date' })
-  @MapProperty('last_login', 'lastLogin')
+  @MapProperty('last_login')
   @Transform((value: Date | null) => value ? value.toISOString() : null)
   lastLogin?: string;
   @ApiProperty({ description: 'Session duration in minutes' })
-  @MapProperty('avg_session_duration', 'avgSessionDuration')
+  @MapProperty('avg_session_duration')
   @Transform((value: string | number) => Math.round(parseFloat(String(value))))
   avgSessionDuration: number;
   @ApiProperty({ description: 'Active days count' })
-  @MapProperty('active_days', 'activeDays')
+  @MapProperty('active_days')
   @Transform((value: string | number) => parseInt(String(value), 10))
   activeDays: number;
 }

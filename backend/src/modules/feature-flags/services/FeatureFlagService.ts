@@ -10,7 +10,7 @@ import { TYPES } from '@/container/types';
 import { IFeatureFlagService } from '@/modules/feature-flags/interfaces/IFeatureFlagService';
 import { IFeatureFlagRepository } from '@/modules/feature-flags/interfaces/IFeatureFlagRepository';
 import { ICacheService } from '@/shared/interfaces/ICacheService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { RuleEvaluatorRegistry } from '@/modules/feature-flags/services/RuleEvaluators';
 import { FeatureFlagCacheManager } from '@/modules/feature-flags/services/FeatureFlagCacheManager';
 // Enhanced Types and Interfaces
@@ -351,7 +351,7 @@ export class EnhancedFeatureFlagService extends EventEmitter implements IFeature
       // Update in database
       const updatedFlag = await this.flagRepository.update(flagName, companyId, updates, environment);
       if (!updatedFlag) {
-        throw new AppError('Flag not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Flag not found', 404);
       }
       // Increment version for cache invalidation
       updatedFlag.version = (updatedFlag.version || 0) + 1;

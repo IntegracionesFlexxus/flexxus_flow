@@ -111,7 +111,7 @@ export class DeadLetterQueue implements IDeadLetterQueue {
     `;
     const maxRetries = this.defaultRetryPolicy.maxRetries;
     const result = await this.db.query<DeadLetterEvent>(query, [maxRetries, limit]);
-    return result.map(row => this.deserializeDeadLetterEvent(row));
+    return result.rows.map(row => this.deserializeDeadLetterEvent(row));
   }
   /**
    * Reintenta procesar un evento
@@ -124,10 +124,10 @@ export class DeadLetterQueue implements IDeadLetterQueue {
         WHERE id = $1
       `;
       const result = await this.db.query<any>(getQuery, [eventId]);
-      if (result.length === 0) {
+      if (result.rows.length === 0) {
         return false;
       }
-      const dlqEvent = this.deserializeDeadLetterEvent(result[0]);
+      const dlqEvent = this.deserializeDeadLetterEvent(result.rows[0]);
       // Actualizar estado a retrying
       await this.updateStatus(eventId, 'retrying');
       // Reconstruir el evento original
@@ -224,7 +224,7 @@ export class DeadLetterQueue implements IDeadLetterQueue {
       failed: 0,
       resolved: 0
     };
-    result.forEach(row => {
+    result.rows.forEach(row => {
       stats[row.status] = parseInt(row.count, 10);
     });
     return stats;
@@ -255,8 +255,8 @@ export class DeadLetterQueue implements IDeadLetterQueue {
       WHERE id = $1
     `;
     const result = await this.db.query<{ failure_count: number }>(getQuery, [eventId]);
-    if (result.length === 0) return;
-    const failureCount = result[0].failure_count + 1;
+    if (result.rows.length === 0) return;
+    const failureCount = result.rows[0].failure_count + 1;
     const nextRetryAt = this.calculateNextRetryTime(failureCount);
     const updateQuery = `
       UPDATE dead_letter_queue

@@ -11,7 +11,7 @@ import {
   IKnowledgeRelationship
 } from '../repositories/KnowledgeGraphRepository';
 import { EntityType, RelationshipType } from '../../types/cognitive.types';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class KnowledgeGraphService {

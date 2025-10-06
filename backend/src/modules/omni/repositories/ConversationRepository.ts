@@ -68,19 +68,19 @@ export class ConversationRepository extends BaseOmniRepository<IConversation> {
     if (filters.tags && filters.tags.length > 0) {
       paramCount++;
       conditions.push(`tags && $${paramCount}`);
-      params.push(filters.tags);
+      params.push(filters.tags as any); // PostgreSQL array parameter
     }
 
     if (filters.dateFrom) {
       paramCount++;
       conditions.push(`created_at >= $${paramCount}`);
-      params.push(filters.dateFrom);
+      params.push(filters.dateFrom.toISOString());
     }
 
     if (filters.dateTo) {
       paramCount++;
       conditions.push(`created_at <= $${paramCount}`);
-      params.push(filters.dateTo);
+      params.push(filters.dateTo.toISOString());
     }
 
     // Build query

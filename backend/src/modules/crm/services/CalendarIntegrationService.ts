@@ -6,7 +6,7 @@
 import { injectable, inject } from 'inversify';
 import { EventEmitter } from 'events';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { Logger } from 'winston';
 import axios, { AxiosInstance } from 'axios';
 import { Activity } from '../types/activity.types';
@@ -126,7 +126,7 @@ export class CalendarIntegrationService {
   ): Promise<string> {
     const config = PROVIDER_CONFIGS[provider];
     if (!config) {
-      throw new AppError(`Unsupported calendar provider: ${provider}`, 400);
+      throw new AppError(ErrorCode.INVALID_INPUT, `Unsupported calendar provider: ${provider}`, 400);
     }
 
     // Generate state token for security
@@ -189,7 +189,7 @@ export class CalendarIntegrationService {
       return integration;
     } catch (error) {
       this.logger.error('OAuth callback failed', { error, provider, userId });
-      throw new AppError('Failed to connect calendar', 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to connect calendar', 500);
     }
   }
 
@@ -210,7 +210,7 @@ export class CalendarIntegrationService {
       // Get integration details
       const integration = await this.getIntegration(integrationId);
       if (!integration) {
-        throw new AppError('Calendar integration not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Calendar integration not found', 404);
       }
 
       // Check and refresh token if needed
@@ -271,7 +271,7 @@ export class CalendarIntegrationService {
       case 'outlook':
         return this.createOutlookEvent(integration, event);
       default:
-        throw new AppError(`Unsupported provider: ${integration.provider}`, 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, `Unsupported provider: ${integration.provider}`, 400);
     }
   }
 
@@ -293,7 +293,7 @@ export class CalendarIntegrationService {
         await this.updateOutlookEvent(integration, eventId, event);
         break;
       default:
-        throw new AppError(`Unsupported provider: ${integration.provider}`, 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, `Unsupported provider: ${integration.provider}`, 400);
     }
   }
 
@@ -312,7 +312,7 @@ export class CalendarIntegrationService {
         await this.deleteOutlookEvent(integration, eventId);
         break;
       default:
-        throw new AppError(`Unsupported provider: ${integration.provider}`, 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, `Unsupported provider: ${integration.provider}`, 400);
     }
   }
 
@@ -397,7 +397,7 @@ export class CalendarIntegrationService {
         return outlookResponse.data;
 
       default:
-        throw new AppError(`Unsupported provider: ${provider}`, 400);
+        throw new AppError(ErrorCode.INVALID_INPUT, `Unsupported provider: ${provider}`, 400);
     }
   }
 
@@ -507,7 +507,7 @@ export class CalendarIntegrationService {
       integration.token_expires_at = new Date(Date.now() + response.data.expires_in * 1000);
     } catch (error) {
       this.logger.error('Token refresh failed', { error, integration });
-      throw new AppError('Failed to refresh calendar token', 401);
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'Failed to refresh calendar token', 401);
     }
   }
 

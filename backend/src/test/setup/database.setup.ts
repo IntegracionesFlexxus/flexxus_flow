@@ -34,7 +34,7 @@ export async function initializeTestDatabase(): Promise<DatabaseConnection> {
   if (testConnection && testConnection.isConnected()) {
     return testConnection;
   }
-  testConnection = new DatabaseConnection(testDatabaseConfig);
+  testConnection = new DatabaseConnection(testDatabaseConfig as any);
   await testConnection.connect();
   return testConnection;
 }

@@ -21,6 +21,7 @@ export interface IFeature {
   version: string;
   created_at: Date;
   updated_at: Date;
+  feature_values?: any[]; // Historical values for trend analysis
 }
 
 export interface IFeatureValue {

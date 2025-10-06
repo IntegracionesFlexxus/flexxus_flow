@@ -38,7 +38,7 @@ export interface KpiSnapshot {
 @injectable()
 export class KpiRepository {
   constructor(
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async create(kpi: KpiDefinition): Promise<KpiDefinition> {

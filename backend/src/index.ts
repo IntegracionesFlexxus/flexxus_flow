@@ -30,7 +30,7 @@ class Application {
       // Start server
       await this.startServer();
     } catch (error) {
-      logger.error('Failed to initialize application:', error);
+      console.error('Failed to initialize application:', error);
       process.exit(1);
     }
   }
@@ -137,7 +137,7 @@ async function main() {
   const app = new Application();
   // Handle shutdown signals
   const shutdownHandler = async (signal: string) => {
-    logger.info(`\n${signal} received. Starting graceful shutdown...`);
+    console.log(`\n${signal} received. Starting graceful shutdown...`);
     await app.shutdown();
     process.exit(0);
   };
@@ -145,11 +145,11 @@ async function main() {
   process.on('SIGINT', () => shutdownHandler('SIGINT'));
   // Handle uncaught errors
   process.on('uncaughtException', (error) => {
-    logger.error('Uncaught Exception:', error);
+    console.error('Uncaught Exception:', error);
     process.exit(1);
   });
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     process.exit(1);
   });
   // Start application
@@ -158,7 +158,7 @@ async function main() {
 // Run if executed directly
 if (require.main === module) {
   main().catch((error) => {
-    logger.error('Fatal error:', error);
+    console.error('Fatal error:', error);
     process.exit(1);
   });
 }

@@ -58,10 +58,10 @@ export class AnalyticsController {
         return;
       }
 
-      const campaignId = parseInt(req.params.campaignId);
+      const campaignId = parseInt(req.params.campaignId, 10);
       const companyId = req.user?.companyId;
 
-      const analytics = await this.analyticsService.getCampaignAnalytics(campaignId, companyId);
+      const analytics = await this.analyticsService.getCampaignAnalytics(campaignId, parseInt(String(companyId), 10));
 
       res.json({
         success: true,
@@ -84,10 +84,10 @@ export class AnalyticsController {
         return;
       }
 
-      const customerId = parseInt(req.params.customerId);
+      const customerId = parseInt(req.params.customerId, 10);
       const companyId = req.user?.companyId;
 
-      const analytics = await this.analyticsService.getCustomerAnalytics(customerId, companyId);
+      const analytics = await this.analyticsService.getCustomerAnalytics(customerId, parseInt(String(companyId), 10));
 
       res.json({
         success: true,
@@ -104,7 +104,7 @@ export class AnalyticsController {
 
   async getRealTimeMetrics(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId;
+      const companyId = Number(req.user?.companyId);
 
       const metrics = await this.analyticsService.getRealTimeMetrics(companyId);
 
@@ -123,7 +123,7 @@ export class AnalyticsController {
 
   async getChannelComparison(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = req.user?.companyId;
+      const companyId = Number(req.user?.companyId);
       const startDate = new Date(req.query.startDate as string);
       const endDate = new Date(req.query.endDate as string);
 

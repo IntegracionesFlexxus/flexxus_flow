@@ -22,7 +22,7 @@ export class OmniChannelIntegrationService {
 
   constructor(
     @inject(TYPES.LeadRepository) private leadRepo: LeadRepository,
-    @inject(TYPES.DatabasePool) private db: Pool,
+    @inject(TYPES.CrmConnection) private db: Pool,
     @inject(TYPES.EventEmitter) eventBus: EventEmitter,
     @inject(TYPES.Logger) private logger: any
   ) {

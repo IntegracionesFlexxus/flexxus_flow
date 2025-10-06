@@ -18,7 +18,7 @@ export class AIWorkflowController {
 
   async createWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const userId = req.user?.id;
       const workflowData: CreateAIWorkflowDTO = req.body;
 
@@ -32,7 +32,7 @@ export class AIWorkflowController {
 
   async getWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const workflow = await this.workflowService.getWorkflow(id, tenantId);
@@ -45,7 +45,7 @@ export class AIWorkflowController {
 
   async listWorkflows(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { status } = req.query;
 
       const filters: any = {};
@@ -61,7 +61,7 @@ export class AIWorkflowController {
 
   async updateWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
       const updateData: UpdateAIWorkflowDTO = req.body;
 
@@ -75,7 +75,7 @@ export class AIWorkflowController {
 
   async deleteWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       await this.workflowService.deleteWorkflow(id, tenantId);
@@ -88,7 +88,7 @@ export class AIWorkflowController {
 
   async activateWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const workflow = await this.workflowService.activateWorkflow(id, tenantId);
@@ -101,7 +101,7 @@ export class AIWorkflowController {
 
   async pauseWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const workflow = await this.workflowService.pauseWorkflow(id, tenantId);
@@ -114,7 +114,7 @@ export class AIWorkflowController {
 
   async executeWorkflow(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
       const { trigger_data } = req.body;
 
@@ -133,7 +133,7 @@ export class AIWorkflowController {
 
   async getWorkflowExecutions(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
       const limit = parseInt(req.query.limit as string) || 100;
 
@@ -147,7 +147,7 @@ export class AIWorkflowController {
 
   async getWorkflowStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id || req.headers['x-tenant-id'] as string;
+      const tenantId = req.user?.companyId || req.headers['x-tenant-id'] as string;
       const { id } = req.params;
 
       const statistics = await this.workflowService.getWorkflowStatistics(id, tenantId);

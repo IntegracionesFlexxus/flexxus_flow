@@ -71,8 +71,8 @@ export class AutoScalingEngine extends EventEmitter {
   private scalingRules: Map<string, IScalingRule[]> = new Map();
   private lastScalingActions: Map<string, Date> = new Map();
   private metricsBuffer: Map<string, IScalingMetric[]> = new Map();
-  private scalingInterval?: NodeJS.Timer;
-  private metricsCollectionInterval?: NodeJS.Timer;
+  private scalingInterval?: NodeJS.Timeout;
+  private metricsCollectionInterval?: NodeJS.Timeout;
   private isScaling = false;
 
   constructor(
@@ -118,12 +118,12 @@ export class AutoScalingEngine extends EventEmitter {
     this.isScaling = false;
 
     if (this.scalingInterval) {
-      clearInterval(this.scalingInterval);
+      clearInterval(this.scalingInterval as any);
       this.scalingInterval = undefined;
     }
 
     if (this.metricsCollectionInterval) {
-      clearInterval(this.metricsCollectionInterval);
+      clearInterval(this.metricsCollectionInterval as any);
       this.metricsCollectionInterval = undefined;
     }
 

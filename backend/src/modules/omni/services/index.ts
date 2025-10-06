@@ -74,7 +74,7 @@ export class ChannelService {
   }
 
   async checkDailyLimit(channelId: string, channelType: string): Promise<boolean> {
-    return await this.channelRepo.checkDailyLimit(channelId, channelType);
+    return await this.channelRepo.checkDailyLimit(channelId, channelType as any);
   }
 
   private validateChannelConfig(data: IChannelCreate): void {

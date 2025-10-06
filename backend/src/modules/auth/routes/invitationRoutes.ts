@@ -46,13 +46,14 @@ router.post(
 /**
  * Reject invitation
  * POST /api/v1/invitations/:token/reject
+ * TODO: Implement rejectInvitation method in InvitationController
  */
-router.post(
-  '/:token/reject',
-  rateLimitMiddleware('invitation_reject', { windowMs: 60 * 60 * 1000, max: 10 }), // 10 requests per hour
-  invitationValidators.rejectInvitation,
-  invitationController.rejectInvitation
-);
+// router.post(
+//   '/:token/reject',
+//   rateLimitMiddleware('invitation_reject', { windowMs: 60 * 60 * 1000, max: 10 }), // 10 requests per hour
+//   invitationValidators.rejectInvitation,
+//   invitationController.rejectInvitation
+// );
 // ========== Protected Routes (Authentication required) ==========
 /**
  * Create new invitation
@@ -84,14 +85,15 @@ router.post(
  * Get company invitations
  * GET /api/v1/invitations
  * Permissions: invitations.read
+ * TODO: Implement getInvitations method in InvitationController
  */
-router.get(
-  '/',
-  authMiddleware.authenticate,
-  requirePermission('invitations.read'),
-  invitationValidators.getInvitations,
-  invitationController.getInvitations
-);
+// router.get(
+//   '/',
+//   authMiddleware.authenticate,
+//   requirePermission('invitations.read'),
+//   invitationValidators.getInvitations,
+//   invitationController.getInvitations
+// );
 /**
  * Get invitation analytics
  * GET /api/v1/invitations/analytics
@@ -135,14 +137,15 @@ router.post(
  * Cancel invitation
  * DELETE /api/v1/invitations/:id
  * Permissions: invitations.delete
+ * TODO: Implement cancelInvitation method in InvitationController
  */
-router.delete(
-  '/:id',
-  authMiddleware.authenticate,
-  requirePermission('invitations.delete'),
-  invitationValidators.cancelInvitation,
-  invitationController.cancelInvitation
-);
+// router.delete(
+//   '/:id',
+//   authMiddleware.authenticate,
+//   requirePermission('invitations.delete'),
+//   invitationValidators.cancelInvitation,
+//   invitationController.cancelInvitation
+// );
 // ========== Onboarding Routes ==========
 /**
  * Start onboarding manually
@@ -195,49 +198,53 @@ router.post(
  * Skip optional onboarding step
  * POST /api/v1/onboarding/steps/:stepId/skip
  * Permissions: Self only
+ * TODO: Implement skipOnboardingStep method in InvitationController
  */
-router.post(
-  '/onboarding/steps/:stepId/skip',
-  authMiddleware.authenticate,
-  invitationValidators.skipOnboardingStep,
-  invitationController.skipOnboardingStep
-);
+// router.post(
+//   '/onboarding/steps/:stepId/skip',
+//   authMiddleware.authenticate,
+//   invitationValidators.skipOnboardingStep,
+//   invitationController.skipOnboardingStep
+// );
 /**
  * Reset onboarding
  * POST /api/v1/onboarding/reset
  * Permissions: users.manage (for others) OR self
+ * TODO: Implement resetOnboarding method in InvitationController
  */
-router.post(
-  '/onboarding/reset',
-  authMiddleware.authenticate,
-  authorize({
-    customCheck: async (req) => {
-      const { userId } = req.body;
-      return !userId || userId === req.user?.id || req.user?.permissions.includes('users.manage');
-    }
-  }),
-  invitationValidators.resetOnboarding,
-  invitationController.resetOnboarding
-);
+// router.post(
+//   '/onboarding/reset',
+//   authMiddleware.authenticate,
+//   authorize({
+//     customCheck: async (req) => {
+//       const { userId } = req.body;
+//       return !userId || userId === req.user?.id || req.user?.permissions.includes('users.manage');
+//     }
+//   }),
+//   invitationValidators.resetOnboarding,
+//   invitationController.resetOnboarding
+// );
 // ========== Admin Routes ==========
 /**
  * Get invitation statistics (detailed)
  * GET /api/v1/invitations/stats
  * Permissions: invitations.analytics OR admin.*
+ * TODO: Implement getInvitationStats method in InvitationController
  */
-router.get(
-  '/stats',
-  authMiddleware.authenticate,
-  requireAnyPermission(['invitations.analytics', 'admin.read', 'analytics.*']),
-  invitationValidators.getInvitationStats,
-  invitationController.getInvitationStats
-);
+// router.get(
+//   '/stats',
+//   authMiddleware.authenticate,
+//   requireAnyPermission(['invitations.analytics', 'admin.read', 'analytics.*']),
+//   invitationValidators.getInvitationStats,
+//   invitationController.getInvitationStats
+// );
 /**
  * Health check endpoint
  * GET /api/v1/invitations/health
  * Public endpoint for monitoring
+ * TODO: Implement healthCheck method in InvitationController
  */
-router.get('/health', invitationController.healthCheck);
+// router.get('/health', invitationController.healthCheck);
 // ========== Webhook Routes ==========
 /**
  * Email webhook for tracking
@@ -257,12 +264,12 @@ router.post(
 /**
  * Route-specific error handler
  */
-router.use((error: any, req: any, res: any, next: any) => {
+router.use((error: Error | any, req: any, res: any, next: any) => {
   // Log the error with context
-  const logger = container.get(TYPES.Logger);
+  const logger = container.get<any>(TYPES.Logger);
   logger.error('Invitation route error', {
-    error: error.message,
-    stack: error.stack,
+    error: error?.message,
+    stack: error?.stack,
     path: req.path,
     method: req.method,
     user: req.user?.id,

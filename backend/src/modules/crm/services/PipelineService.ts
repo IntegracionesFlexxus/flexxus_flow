@@ -53,7 +53,7 @@ export class PipelineService {
       `;
 
       const stagesResult = await this.db.query(stagesQuery, [companyId]);
-      const stages = stagesResult;
+      const stages = stagesResult.rows;
 
       // Get opportunities
       const opportunitiesQuery = `
@@ -85,7 +85,7 @@ export class PipelineService {
       }
 
       const opportunitiesResult = await this.db.query(opportunitiesQuery, params);
-      const opportunities = opportunitiesResult;
+      const opportunities = opportunitiesResult.rows;
 
       // Get pipeline metrics
       const metrics = await this.opportunityRepository.getPipelineMetrics(companyId, filters.owner_id);

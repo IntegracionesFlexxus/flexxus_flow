@@ -252,7 +252,7 @@ export class ConsistencyChecker implements IConsistencyChecker {
       const companies = await this.sharedDb.query<{ id: string; name: string }>(
         `SELECT id, name FROM companies WHERE status = 'active'`
       );
-      for (const company of companies) {
+      for (const company of companies.rows) {
         try {
           const results = await this.checkDataConsistency(company.id);
           // Registrar resultados
@@ -308,7 +308,7 @@ export class ConsistencyChecker implements IConsistencyChecker {
     companyId: string
   ): Promise<ConsistencyCheckResult> {
     const result = await this.sharedDb.query(rule.query, [companyId]);
-    const hasIssues = result.length > 0;
+    const hasIssues = result.rows.length > 0;
     const checkStatus = hasIssues 
       ? (rule.severity === 'critical' || rule.severity === 'high' ? 'FAILED' : 'WARNING')
       : 'PASSED';
@@ -318,9 +318,9 @@ export class ConsistencyChecker implements IConsistencyChecker {
       details: {
         description: rule.description,
         severity: rule.severity,
-        issueCount: result.length,
+        issueCount: result.rows.length,
         canAutoRepair: rule.autoRepair,
-        affectedRecords: result.slice(0, 10) // Limitar a 10 registros en los detalles
+        affectedRecords: result.rows.slice(0, 10) // Limitar a 10 registros en los detalles
       },
       timestamp: new Date()
     };
@@ -342,7 +342,7 @@ export class ConsistencyChecker implements IConsistencyChecker {
       try {
         // Primero verificar si hay problemas
         const checkResult = await this.sharedDb.query(rule.query, [companyId]);
-        if (checkResult.length === 0) {
+        if (checkResult.rows.length === 0) {
           continue; // No hay problemas para esta regla
         }
         let repairCount = 0;
@@ -352,10 +352,10 @@ export class ConsistencyChecker implements IConsistencyChecker {
             rule.repairQuery,
             [companyId]
           );
-          repairCount = repairResult.length;
+          repairCount = repairResult.rows.length;
           this.logger.info(`Repaired ${repairCount} issues for rule ${rule.name}`);
         } else {
-          repairCount = checkResult.length;
+          repairCount = checkResult.rows.length;
         }
         repairs.push({
           type: rule.name,
@@ -431,7 +431,8 @@ export class ConsistencyChecker implements IConsistencyChecker {
       ORDER BY created_at DESC
       LIMIT $2
     `;
-    return await this.sharedDb.query(query, [companyId, limit]);
+    const result = await this.sharedDb.query(query, [companyId, limit]);
+    return result.rows;
   }
   /**
    * Ejecuta un check específico
@@ -462,6 +463,6 @@ export class ConsistencyChecker implements IConsistencyChecker {
       WHERE company_id = $1
     `;
     const result = await this.sharedDb.query(query, [companyId]);
-    return result[0];
+    return result.rows[0];
   }
 }

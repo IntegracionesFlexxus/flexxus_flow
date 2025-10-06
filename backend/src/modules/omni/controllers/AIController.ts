@@ -6,9 +6,9 @@
 import { Request, Response } from 'express';
 import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
-import { BaseController } from '@/shared/controllers/BaseController';
+import { BaseController } from '@/core/base/BaseController';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
-import { ValidationError } from '@/shared/errors/ValidationError';
+import { ValidationError } from '@/shared/errors';
 
 // Import AI services
 import { SentimentAnalysisService } from '../ai/services/SentimentAnalysisService';

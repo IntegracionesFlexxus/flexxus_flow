@@ -99,7 +99,7 @@ export class ProductCatalogController {
    */
   async getProducts(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       if (!company_id) {
         res.status(401).json({ error: 'Company ID not found in request' });
         return;
@@ -117,14 +117,12 @@ export class ProductCatalogController {
         page_size: Number(req.query.page_size) || 20
       };
 
-      const result = await this.productService.searchProducts(
-        company_id,
-        {
+      const result = await this.productService.searchProducts({
           ...filters,
+          company_id: company_id,
           page: pagination.page,
-          page_size: pagination.page_size
-        }
-      );
+          limit: pagination.page_size
+        });
 
       res.json({
         success: true,
@@ -149,7 +147,7 @@ export class ProductCatalogController {
    */
   async getProductById(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const product_id = Number(req.params.id);
 
       if (!company_id) {
@@ -184,8 +182,8 @@ export class ProductCatalogController {
    */
   async createProduct(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -202,9 +200,8 @@ export class ProductCatalogController {
         return;
       }
 
-      const product = await this.productService.createProduct({
+      const product = await this.productService.createProduct(company_id, {
         ...value,
-        company_id,
         created_by: user_id
       });
 
@@ -231,8 +228,8 @@ export class ProductCatalogController {
    */
   async updateProduct(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
       const product_id = Number(req.params.id);
 
       if (!company_id || !user_id) {
@@ -249,10 +246,8 @@ export class ProductCatalogController {
         return;
       }
 
-      const product = await this.productService.updateProduct({
+      const product = await this.productService.updateProduct(product_id, {
         ...value,
-        product_id,
-        company_id,
         updated_by: user_id
       });
 
@@ -279,7 +274,7 @@ export class ProductCatalogController {
    */
   async deleteProduct(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const product_id = Number(req.params.id);
 
       if (!company_id) {
@@ -288,9 +283,7 @@ export class ProductCatalogController {
       }
 
       // Soft delete by setting is_active to false
-      await this.productService.updateProduct({
-        product_id,
-        company_id,
+      await this.productService.updateProduct(product_id, {
         is_active: false,
         deleted_at: new Date()
       });
@@ -312,7 +305,7 @@ export class ProductCatalogController {
    */
   async searchProducts(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -328,7 +321,10 @@ export class ProductCatalogController {
         return;
       }
 
-      const result = await this.productService.searchProducts(company_id, value);
+      const result = await this.productService.searchProducts({
+        ...value,
+        company_id: company_id
+      });
 
       res.json({
         success: true,
@@ -354,7 +350,7 @@ export class ProductCatalogController {
    */
   async createVariant(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const product_id = Number(req.params.id);
 
       if (!company_id) {
@@ -395,8 +391,8 @@ export class ProductCatalogController {
    */
   async createBundle(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -421,11 +417,11 @@ export class ProductCatalogController {
         return;
       }
 
-      const bundle = await this.productService.createBundle(
-        company_id,
-        value,
-        user_id
-      );
+      const bundle = await this.productService.createBundle({
+        ...value,
+        company_id: company_id,
+        created_by: user_id
+      });
 
       res.status(201).json({
         success: true,
@@ -445,8 +441,8 @@ export class ProductCatalogController {
    */
   async recordInventoryMovement(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -486,7 +482,7 @@ export class ProductCatalogController {
    */
   async getInventoryLevels(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -520,8 +516,8 @@ export class ProductCatalogController {
    */
   async bulkImportProducts(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -570,14 +566,14 @@ export class ProductCatalogController {
    */
   async exportProducts(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }
 
-      const format = (req.query.format as string) || 'csv';
+      const format = ((req.query.format as string) || 'csv') as 'json' | 'csv';
       const filters = {
         category_id: req.query.category_id ? Number(req.query.category_id) : undefined,
         is_active: req.query.is_active === 'false' ? false : true
@@ -585,8 +581,8 @@ export class ProductCatalogController {
 
       const result = await this.productService.exportProducts(
         company_id,
-        format as 'csv' | 'excel' | 'json',
-        filters
+        format,
+        filters as any
       );
 
       // Set appropriate headers based on format
@@ -615,7 +611,7 @@ export class ProductCatalogController {
    */
   async getCategories(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
 
       if (!company_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -646,8 +642,8 @@ export class ProductCatalogController {
    */
   async createCategory(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
-      const user_id = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const user_id = req.user?.id;
 
       if (!company_id || !user_id) {
         res.status(401).json({ error: 'Authentication required' });
@@ -694,7 +690,7 @@ export class ProductCatalogController {
    */
   async moveCategory(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const category_id = Number(req.params.id);
       const { new_parent_id } = req.body;
 
@@ -726,7 +722,7 @@ export class ProductCatalogController {
    */
   async deleteCategory(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       const category_id = Number(req.params.id);
 
       if (!company_id) {

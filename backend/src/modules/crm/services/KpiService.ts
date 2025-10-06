@@ -9,8 +9,8 @@ export class KpiService {
   private scheduledTasks: Map<number, cron.ScheduledTask> = new Map();
 
   constructor(
-    @inject(TYPES.KpiRepository) private kpiRepository: KpiRepository,
-    @inject(TYPES.DatabasePool) private pool: Pool
+    @inject(TYPES.CRMKpiRepository) private kpiRepository: KpiRepository,
+    @inject(TYPES.CrmConnection) private pool: Pool
   ) {}
 
   async createKpi(kpi: KpiDefinition): Promise<KpiDefinition> {

@@ -97,8 +97,9 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
   // delete method inherited from BaseRepository (soft delete)
   // ==================== OPERACIONES ESPECÍFICAS DE EMPRESA ====================
   async findByCompany(companyId: string): Promise<any[]> {
+
     const query = `
-      SELECT r.*, 
+      SELECT r.*,
              COUNT(DISTINCT ur.user_id) as user_count
       FROM ${this.tableName} r
       LEFT JOIN user_roles ur ON r.id = ur.role_id AND ur.company_id = $1
@@ -107,11 +108,17 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
       GROUP BY r.id
       ORDER BY r.is_system_role DESC, r.name ASC
     `;
-    return this.executeQuery(query, [companyId]);
+
+
+    const result = await this.executeQuery(query, [companyId]);
+
+
+    return result;
   }
   async findSystemRoles(): Promise<any[]> {
+
     const query = `
-      SELECT r.*, 
+      SELECT r.*,
              COUNT(DISTINCT ur.user_id) as user_count
       FROM ${this.tableName} r
       LEFT JOIN user_roles ur ON r.id = ur.role_id
@@ -120,7 +127,12 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
       GROUP BY r.id
       ORDER BY r.name ASC
     `;
-    return this.executeQuery(query);
+
+
+    const result = await this.executeQuery(query, []);
+
+
+    return result;
   }
   // ==================== GESTIÓN DE PERMISOS DE ROLES ====================
   async assignPermissions(roleId: string, permissionIds: string[]): Promise<void> {
@@ -268,7 +280,7 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
       WHERE user_id = $1 AND company_id = $2
     `;
     await this.executeQuery(query, [userId, companyId, newRoleId]);
-    this.clearCache(`user:${userId}:roles`);
+    this.clearCachePattern(`user:${userId}:roles`);
   }
   // ==================== OPERACIONES DE CONSULTA ====================
   async exists(name: string, companyId?: string): Promise<boolean> {
@@ -327,6 +339,7 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
     page: number;
     limit: number;
   }> {
+
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
     const offset = (page - 1) * limit;
@@ -346,12 +359,12 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
       params.push(filters.status);
     }
     const countQuery = `
-      SELECT COUNT(*) as total 
-      FROM ${this.tableName} r 
+      SELECT COUNT(*) as total
+      FROM ${this.tableName} r
       WHERE ${conditions.join(' AND ')}
     `;
     const dataQuery = `
-      SELECT r.*, 
+      SELECT r.*,
              COUNT(DISTINCT ur.user_id) as user_count
       FROM ${this.tableName} r
       LEFT JOIN user_roles ur ON r.id = ur.role_id
@@ -360,18 +373,27 @@ export class RoleRepository extends BaseRepository<Role> implements IRoleReposit
       ORDER BY r.is_system_role DESC, r.name ASC
       LIMIT $${paramCount++} OFFSET $${paramCount}
     `;
+
+
     const countParams = [...params];
     params.push(limit, offset);
+
+
     const [countResult, dataResult] = await Promise.all([
       this.executeQuery<{ total: string }>(countQuery, countParams),
       this.executeQuery(dataQuery, params)
     ]);
-    return {
+
+
+    const result = {
       roles: dataResult,
       total: parseInt(countResult[0]?.total || '0', 10),
       page,
       limit
     };
+
+
+    return result;
   }
   // Helper method to clear cache by pattern
   protected clearCachePattern(pattern: string): void {

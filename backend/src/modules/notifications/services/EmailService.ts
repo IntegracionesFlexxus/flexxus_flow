@@ -11,7 +11,7 @@ import * as handlebars from 'handlebars';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { TYPES } from '@/container/types';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 import { ILoggerService } from '@/shared/services/logger/LoggerService';
 import { environment } from '@/config/environment';
 
@@ -133,7 +133,7 @@ class SMTPProvider implements IEmailProvider {
     @inject(TYPES.LoggerService) private logger: ILoggerService) {
     this.fromEmail = fromEmail;
     this.fromName = fromName;
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host,
       port,
       secure,
@@ -260,7 +260,8 @@ export class EmailService {
         environment.email.smtp.user,
         environment.email.smtp.pass,
         environment.email.fromEmail,
-        environment.email.fromName
+        environment.email.fromName,
+        this.logger
       );
     }
     // Validate connection on startup
@@ -344,7 +345,7 @@ export class EmailService {
     try {
       const template = this.templates.get('invitation');
       if (!template) {
-        throw new AppError('Invitation template not found', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Invitation template not found', 500);
       }
       const html = template({
         ...data,
@@ -382,7 +383,7 @@ export class EmailService {
     try {
       const template = this.templates.get('welcome');
       if (!template) {
-        throw new AppError('Welcome template not found', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Welcome template not found', 500);
       }
       const html = template({
         ...data,
@@ -416,7 +417,7 @@ export class EmailService {
     try {
       const template = this.templates.get('password-reset');
       if (!template) {
-        throw new AppError('Password reset template not found', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Password reset template not found', 500);
       }
       const html = template({
         ...data,
@@ -453,7 +454,7 @@ export class EmailService {
     try {
       const template = this.templates.get('onboarding');
       if (!template) {
-        throw new AppError('Onboarding template not found', 500);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Onboarding template not found', 500);
       }
       const html = template({
         ...data,

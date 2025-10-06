@@ -1,10 +1,3 @@
-/**
-// Logger instance
-const logger = LoggerFactory.create({ file: __filename });
-
- * WebSocket Server Integration Example
- * Sprint 4 - Ejemplo de integración con Express
- */
 import { Server as HttpServer } from 'http';
 import { Application } from 'express';
 import { Container } from 'inversify';
@@ -12,6 +5,14 @@ import { TYPES } from '@/container/types';
 import { IWebSocketServer } from '@/modules/websocket/interfaces/IWebSocketServer';
 import { registerWebSocketModule } from '@/modules/websocket/index';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
+
+// Logger instance
+const logger = LoggerFactory.create({ file: __filename });
+
+/**
+ * WebSocket Server Integration Example
+ * Sprint 4 - Ejemplo de integración con Express
+ */
 
 /**
  * Integra el servidor WebSocket con Express

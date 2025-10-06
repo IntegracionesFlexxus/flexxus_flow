@@ -463,7 +463,7 @@ export class AuthService implements IAuthService {
       await this.passwordResetRepository.markTokenAsUsed(dto.token);
 
       // Invalidar todas las sesiones activas del usuario
-      await this.sessionRepository.invalidateAllUserSessions(user.id);
+      await this.sessionRepository.invalidateUserSessions(user.id);
 
       // Auditoría
       await this.auditService.logActivity({
@@ -806,7 +806,7 @@ export class AuthService implements IAuthService {
       if (!user) {
         return false;
       }
-      return await this.passwordService.validatePassword(password, user.passwordHash);
+      return await this.passwordService.verifyPassword(password, user.passwordHash);
     } catch (error) {
       this.logger.error('Error validating password', { error: error.message });
       return false;

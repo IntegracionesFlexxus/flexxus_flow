@@ -27,7 +27,7 @@ interface IHealthStatus {
 export class ChannelHealthMonitor {
   private logger: any;
   private healthStatuses: Map<string, IHealthStatus> = new Map();
-  private monitoringInterval: NodeJS.Timer | null = null;
+  private monitoringInterval: NodeJS.Timeout | null = null;
   private checkInterval: number = 300000; // 5 minutes default
   private maxConsecutiveFailures: number = 3;
   private connectorFactory: ConnectorFactory;
@@ -66,7 +66,7 @@ export class ChannelHealthMonitor {
    */
   stopMonitoring(): void {
     if (this.monitoringInterval) {
-      clearInterval(this.monitoringInterval);
+      clearInterval(this.monitoringInterval as any);
       this.monitoringInterval = null;
       this.logger.info('Channel health monitoring stopped');
     }

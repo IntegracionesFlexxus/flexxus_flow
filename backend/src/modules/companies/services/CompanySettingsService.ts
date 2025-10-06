@@ -10,7 +10,7 @@ import { TYPES } from '@/container/types';
 import { ICompanyRepository } from '@/shared/interfaces/repositories/ICompanyRepository';
 import { AuditService } from '@/modules/companies/services/AuditService';
 import { ICacheService } from '@/shared/interfaces/ICacheService';
-import { AppError } from '@/shared/errors/AppError';
+import { AppError, ErrorCode } from '@/shared/errors/AppError';
 // Advanced Settings Interfaces siguiendo principio de responsabilidad única
 export interface BusinessProcessSettings {
   workflowConfig?: {
@@ -339,7 +339,7 @@ export class AdvancedCompanySettingsService extends EventEmitter {
       }
       const company = await this.companyRepository.findById(companyId);
       if (!company) {
-        throw new AppError('Company not found', 404, 'COMPANY_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Company not found', 404);
       }
       const settings = this.mapToAdvancedSettingsResponse(company);
       // Cachear resultado
@@ -366,7 +366,7 @@ export class AdvancedCompanySettingsService extends EventEmitter {
       await this.validateBusinessProcessSettings(settings);
       const company = await this.companyRepository.findById(companyId);
       if (!company) {
-        throw new AppError('Company not found', 404, 'COMPANY_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Company not found', 404);
       }
       const currentAdvancedSettings = company.advancedSettings || {};
       const updatedSettings = {
@@ -428,7 +428,7 @@ export class AdvancedCompanySettingsService extends EventEmitter {
       await this.validateIntegrationManagementSettings(settings);
       const company = await this.companyRepository.findById(companyId);
       if (!company) {
-        throw new AppError('Company not found', 404, 'COMPANY_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Company not found', 404);
       }
       const currentAdvancedSettings = company.advancedSettings || {};
       const updatedSettings = {
@@ -491,7 +491,7 @@ export class AdvancedCompanySettingsService extends EventEmitter {
       await this.validateSecurityGovernanceSettings(settings);
       const company = await this.companyRepository.findById(companyId);
       if (!company) {
-        throw new AppError('Company not found', 404, 'COMPANY_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Company not found', 404);
       }
       const currentAdvancedSettings = company.advancedSettings || {};
       const updatedSettings = {
@@ -556,7 +556,7 @@ export class AdvancedCompanySettingsService extends EventEmitter {
       await this.validatePerformanceOptimizationSettings(settings);
       const company = await this.companyRepository.findById(companyId);
       if (!company) {
-        throw new AppError('Company not found', 404, 'COMPANY_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Company not found', 404);
       }
       const currentAdvancedSettings = company.advancedSettings || {};
       const updatedSettings = {
@@ -613,7 +613,7 @@ export class AdvancedCompanySettingsService extends EventEmitter {
     try {
       const company = await this.companyRepository.findById(companyId);
       if (!company) {
-        throw new AppError('Company not found', 404, 'COMPANY_NOT_FOUND');
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Company not found', 404);
       }
       const defaultSettings = this.getDefaultAdvancedSettings();
       const currentSettings = company.advancedSettings || {};
@@ -876,33 +876,33 @@ export class AdvancedCompanySettingsService extends EventEmitter {
   }
   // Validation methods
   private async validateBusinessProcessSettings(settings: BusinessProcessSettings): Promise<void> {
-    if (settings.workflowConfig?.maxConcurrentProcesses && 
+    if (settings.workflowConfig?.maxConcurrentProcesses &&
         (settings.workflowConfig.maxConcurrentProcesses < 1 || settings.workflowConfig.maxConcurrentProcesses > 100)) {
-      throw new AppError('Max concurrent processes must be between 1 and 100', 400, 'INVALID_CONFIG');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Max concurrent processes must be between 1 and 100', 400);
     }
-    if (settings.complianceConfig?.dataRetentionDays && 
+    if (settings.complianceConfig?.dataRetentionDays &&
         (settings.complianceConfig.dataRetentionDays < 30 || settings.complianceConfig.dataRetentionDays > 3650)) {
-      throw new AppError('Data retention days must be between 30 and 3650', 400, 'INVALID_CONFIG');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Data retention days must be between 30 and 3650', 400);
     }
   }
   private async validateIntegrationManagementSettings(settings: IntegrationManagementSettings): Promise<void> {
-    if (settings.apiManagement?.customRateLimits?.requestsPerMinute && 
-        (settings.apiManagement.customRateLimits.requestsPerMinute < 1 || 
+    if (settings.apiManagement?.customRateLimits?.requestsPerMinute &&
+        (settings.apiManagement.customRateLimits.requestsPerMinute < 1 ||
          settings.apiManagement.customRateLimits.requestsPerMinute > 10000)) {
-      throw new AppError('Requests per minute must be between 1 and 10000', 400, 'INVALID_CONFIG');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Requests per minute must be between 1 and 10000', 400);
     }
   }
   private async validateSecurityGovernanceSettings(settings: SecurityGovernanceSettings): Promise<void> {
-    if (settings.accessControl?.passwordPolicies?.complexity?.minLength && 
-        (settings.accessControl.passwordPolicies.complexity.minLength < 8 || 
+    if (settings.accessControl?.passwordPolicies?.complexity?.minLength &&
+        (settings.accessControl.passwordPolicies.complexity.minLength < 8 ||
          settings.accessControl.passwordPolicies.complexity.minLength > 128)) {
-      throw new AppError('Password min length must be between 8 and 128', 400, 'INVALID_CONFIG');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Password min length must be between 8 and 128', 400);
     }
   }
   private async validatePerformanceOptimizationSettings(settings: PerformanceOptimizationSettings): Promise<void> {
-    if (settings.caching?.maxMemoryMb && 
+    if (settings.caching?.maxMemoryMb &&
         (settings.caching.maxMemoryMb < 64 || settings.caching.maxMemoryMb > 8192)) {
-      throw new AppError('Cache memory must be between 64MB and 8GB', 400, 'INVALID_CONFIG');
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Cache memory must be between 64MB and 8GB', 400);
     }
   }
 }

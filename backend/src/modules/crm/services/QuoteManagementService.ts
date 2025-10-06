@@ -99,7 +99,7 @@ export class QuoteManagementService {
       await client.query('BEGIN');
 
       // Create quote using builder
-      const quote = await this.quoteBuilder.createQuote(request);
+      const quote = await this.quoteBuilder.createQuote(request.company_id, request);
 
       // Log creation in audit trail
       await this.logQuoteActivity(quote.quote_id!, 'created', {
@@ -164,9 +164,8 @@ export class QuoteManagementService {
 
       // Update quote
       const updatedQuote = await this.quoteRepository.update(quote_id, {
-        ...updates,
-        updated_by
-      });
+        ...updates
+      }, updated_by || 1);
 
       // Log update
       await this.logQuoteActivity(quote_id, 'updated', {
@@ -221,9 +220,8 @@ export class QuoteManagementService {
 
       // Update status
       const updatedQuote = await this.quoteRepository.update(quote_id, {
-        status: transition.to_status,
-        updated_by: changed_by
-      });
+        status: transition.to_status
+      }, changed_by || 1);
 
       // Log status change
       await this.logQuoteActivity(quote_id, 'status_changed', {
@@ -337,16 +335,24 @@ export class QuoteManagementService {
       await client.query('BEGIN');
 
       // Clone base quote
-      const clonedQuote = await this.quoteBuilder.cloneQuote(
-        quote_id,
-        modifications?.quote_name
-      );
+      // TODO: Implement cloneQuote in QuoteBuilderService
+      const originalQuote = await this.quoteRepository.findById(quote_id);
+      if (!originalQuote) {
+        throw new Error(`Quote ${quote_id} not found`);
+      }
+
+      // For now, create a new quote with the same data
+      const clonedQuote = await this.quoteRepository.create({
+        ...originalQuote,
+        quote_id: undefined,
+        quote_number: modifications?.quote_name || `${originalQuote.quote_number}_copy`
+      } as any);
 
       // Apply modifications
       if (modifications?.account_id && modifications.account_id !== clonedQuote.account_id) {
         await this.quoteRepository.update(clonedQuote.quote_id!, {
           account_id: modifications.account_id
-        });
+        }, 1);
       }
 
       // Update prices if requested
@@ -442,7 +448,7 @@ export class QuoteManagementService {
         ? `AND q.created_at BETWEEN $2 AND $3`
         : '';
 
-      const params = [company_id];
+      const params: any[] = [company_id];
       if (date_from && date_to) {
         params.push(date_from.toISOString(), date_to.toISOString());
       }

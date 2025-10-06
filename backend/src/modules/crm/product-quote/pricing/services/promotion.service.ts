@@ -2,12 +2,12 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { IPromotionService } from '../interfaces/IPromotionService';
 import { Pool } from 'pg';
-import { AppError } from '../../../../../shared/errors/AppError';
+import { AppError, ErrorCode } from '../../../../../shared/errors/AppError';
 
 @injectable()
 export class PromotionService implements IPromotionService {
   constructor(
-    @inject(TYPES.DatabasePool)
+    @inject(TYPES.CrmConnection)
     private pool: Pool
   ) {}
 
@@ -25,7 +25,7 @@ export class PromotionService implements IPromotionService {
         );
 
         if (existing.rows.length > 0) {
-          throw new AppError('Promotion code already exists', 409);
+          throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'Promotion code already exists', 409);
         }
       }
 
@@ -74,7 +74,7 @@ export class PromotionService implements IPromotionService {
     } catch (error) {
       await client.query('ROLLBACK');
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to create promotion: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to create promotion: ${error.message}`, 500);
     } finally {
       client.release();
     }
@@ -93,7 +93,7 @@ export class PromotionService implements IPromotionService {
       );
 
       if (existing.rows.length === 0) {
-        throw new AppError('Promotion not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Promotion not found', 404);
       }
 
       // Construir query de actualización dinámica
@@ -110,7 +110,7 @@ export class PromotionService implements IPromotionService {
       });
 
       if (fields.length === 0) {
-        throw new AppError('No fields to update', 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'No fields to update', 400);
       }
 
       fields.push(`updated_at = CURRENT_TIMESTAMP`);
@@ -128,7 +128,7 @@ export class PromotionService implements IPromotionService {
     } catch (error) {
       await client.query('ROLLBACK');
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to update promotion: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to update promotion: ${error.message}`, 500);
     } finally {
       client.release();
     }
@@ -147,7 +147,7 @@ export class PromotionService implements IPromotionService {
       );
 
       if (parseInt(applications.rows[0].count) > 0) {
-        throw new AppError('Cannot delete promotion with existing applications', 409);
+        throw new AppError(ErrorCode.BUSINESS_RULE_VIOLATION, 'Cannot delete promotion with existing applications', 409);
       }
 
       const result = await client.query(
@@ -160,7 +160,7 @@ export class PromotionService implements IPromotionService {
     } catch (error) {
       await client.query('ROLLBACK');
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to delete promotion: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to delete promotion: ${error.message}`, 500);
     } finally {
       client.release();
     }
@@ -278,7 +278,7 @@ export class PromotionService implements IPromotionService {
         discount: this.calculateDiscount(promotion, context)
       };
     } catch (error) {
-      throw new AppError(`Failed to validate promotion: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to validate promotion: ${error.message}`, 500);
     }
   }
 
@@ -295,7 +295,7 @@ export class PromotionService implements IPromotionService {
       );
 
       if (quoteResult.rows.length === 0) {
-        throw new AppError('Quote not found', 404);
+        throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Quote not found', 404);
       }
 
       const quote = quoteResult.rows[0];
@@ -308,7 +308,7 @@ export class PromotionService implements IPromotionService {
       });
 
       if (!validation.valid) {
-        throw new AppError(validation.reason, 400);
+        throw new AppError(ErrorCode.VALIDATION_ERROR, validation.reason, 400);
       }
 
       // Aplicar promoción usando función de BD
@@ -322,7 +322,7 @@ export class PromotionService implements IPromotionService {
     } catch (error) {
       await client.query('ROLLBACK');
       if (error instanceof AppError) throw error;
-      throw new AppError(`Failed to apply promotion: ${error.message}`, 500);
+      throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, `Failed to apply promotion: ${error.message}`, 500);
     } finally {
       client.release();
     }

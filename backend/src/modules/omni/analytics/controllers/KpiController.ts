@@ -10,7 +10,7 @@ import { TYPES } from '@/container/types';
 @injectable()
 export class KpiController {
   constructor(
-    @inject(TYPES.AnalyticsKpiService) private kpiService: KpiService,
+    @inject(TYPES.OmniAnalyticsKpiService) private kpiService: KpiService,
     @inject(TYPES.Logger) private logger: Logger
   ) {}
 
@@ -24,7 +24,7 @@ export class KpiController {
 
       const companyId = req.user?.companyId;
 
-      const kpi = await this.kpiService.createKpi(req.body, companyId);
+      const kpi = await this.kpiService.createKpi(req.body, parseInt(String(companyId), 10));
 
       res.status(201).json({ success: true, data: kpi });
     } catch (error) {
@@ -38,7 +38,7 @@ export class KpiController {
       const category = req.params.category;
       const companyId = req.user?.companyId;
 
-      const kpis = await this.kpiService.getKpisByCategory(category, companyId);
+      const kpis = await this.kpiService.getKpisByCategory(category, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: kpis });
     } catch (error) {
@@ -49,10 +49,10 @@ export class KpiController {
 
   async calculateKpi(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      const value = await this.kpiService.calculateKpi(id, companyId);
+      const value = await this.kpiService.calculateKpi(id, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: { value } });
     } catch (error) {
@@ -63,14 +63,14 @@ export class KpiController {
 
   async getKpiTrend(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
       const dateRange = {
         startDate: new Date(req.query.startDate as string),
         endDate: new Date(req.query.endDate as string)
       };
 
-      const trend = await this.kpiService.getKpiTrend(id, companyId, dateRange);
+      const trend = await this.kpiService.getKpiTrend(id, parseInt(String(companyId), 10), dateRange);
 
       res.json({ success: true, data: trend });
     } catch (error) {
@@ -87,10 +87,10 @@ export class KpiController {
         return;
       }
 
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      const kpi = await this.kpiService.updateKpi(id, req.body, companyId);
+      const kpi = await this.kpiService.updateKpi(id, req.body, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: kpi });
     } catch (error) {

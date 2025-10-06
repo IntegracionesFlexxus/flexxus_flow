@@ -3,14 +3,20 @@
  * Data access layer for territory management
  */
 
-import { injectable } from 'inversify';
+import { injectable, inject, optional } from 'inversify';
 import { CRMBaseRepository } from './CRMBaseRepository';
 import { Territory } from '../types/territory.types';
+import { TYPES } from '@/container/types';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
+import { Logger } from 'winston';
 
 @injectable()
 export class TerritoryRepository extends CRMBaseRepository<Territory> {
-  constructor() {
-    super('territories');
+  constructor(
+    @inject(TYPES.SharedConnection) db: IDatabaseConnection,
+    @inject(TYPES.Logger) @optional() logger?: Logger
+  ) {
+    super('territories', db, logger);
     this.schema = 'public'; // Sprint 17 uses public schema
 
     this.allowedFields = new Set([

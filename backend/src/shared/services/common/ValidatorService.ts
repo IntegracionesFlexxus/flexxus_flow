@@ -41,6 +41,35 @@ export class ValidatorService implements IValidatorService {
     }
     return this.uuidRegex.test(uuid);
   }
+
+  /**
+   * Generic validation method using Joi schema
+   */
+  async validate<T>(
+    data: T,
+    schema: Joi.Schema,
+    options?: Joi.ValidationOptions
+  ): Promise<{ isValid: boolean; errors?: any[]; value?: T }> {
+    try {
+      const value = await schema.validateAsync(data, {
+        abortEarly: false,
+        ...options
+      });
+      return {
+        isValid: true,
+        value
+      };
+    } catch (error: any) {
+      const errors = error.details?.map((detail: any) => ({
+        field: detail.path.join('.'),
+        message: detail.message
+      })) || [{ message: error.message }];
+      return {
+        isValid: false,
+        errors
+      };
+    }
+  }
   required<T>(value: T, fieldName: string): T {
     if (value === null || value === undefined || value === '') {
       throw new ValidationError(

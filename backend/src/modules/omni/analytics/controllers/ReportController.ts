@@ -10,7 +10,7 @@ import { TYPES } from '@/container/types';
 @injectable()
 export class ReportController {
   constructor(
-    @inject(TYPES.AnalyticsReportService) private reportService: ReportService,
+    @inject(TYPES.OmniAnalyticsReportService) private reportService: ReportService,
     @inject(TYPES.Logger) private logger: Logger
   ) {}
 
@@ -25,7 +25,7 @@ export class ReportController {
       const companyId = req.user?.companyId;
       const userId = req.user?.id;
 
-      const report = await this.reportService.createReport(req.body, companyId, userId);
+      const report = await this.reportService.createReport(req.body, parseInt(String(companyId), 10), parseInt(String(userId), 10));
 
       res.status(201).json({ success: true, data: report });
     } catch (error) {
@@ -36,10 +36,10 @@ export class ReportController {
 
   async getReport(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      const report = await this.reportService.getReport(id, companyId);
+      const report = await this.reportService.getReport(id, parseInt(String(companyId), 10));
 
       if (!report) {
         res.status(404).json({ success: false, error: 'Report not found' });
@@ -57,7 +57,7 @@ export class ReportController {
     try {
       const companyId = req.user?.companyId;
 
-      const reports = await this.reportService.getReportsByCompany(companyId);
+      const reports = await this.reportService.getReportsByCompany(parseInt(String(companyId), 10));
 
       res.json({ success: true, data: reports });
     } catch (error) {
@@ -74,10 +74,10 @@ export class ReportController {
         return;
       }
 
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      const report = await this.reportService.updateReport(id, req.body, companyId);
+      const report = await this.reportService.updateReport(id, req.body, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: report });
     } catch (error) {
@@ -88,10 +88,10 @@ export class ReportController {
 
   async deleteReport(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      await this.reportService.deleteReport(id, companyId);
+      await this.reportService.deleteReport(id, parseInt(String(companyId), 10));
 
       res.json({ success: true, message: 'Report deleted' });
     } catch (error) {
@@ -102,10 +102,10 @@ export class ReportController {
 
   async generateReport(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      const generated = await this.reportService.generateReport(id, companyId);
+      const generated = await this.reportService.generateReport(id, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: generated });
     } catch (error) {
@@ -122,11 +122,11 @@ export class ReportController {
         return;
       }
 
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
       const { scheduleCron, recipients } = req.body;
 
-      const report = await this.reportService.scheduleReport(id, scheduleCron, recipients, companyId);
+      const report = await this.reportService.scheduleReport(id, scheduleCron, recipients, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: report });
     } catch (error) {
@@ -137,10 +137,10 @@ export class ReportController {
 
   async cancelSchedule(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
 
-      const report = await this.reportService.cancelSchedule(id, companyId);
+      const report = await this.reportService.cancelSchedule(id, parseInt(String(companyId), 10));
 
       res.json({ success: true, data: report });
     } catch (error) {
@@ -151,11 +151,11 @@ export class ReportController {
 
   async getExecutions(req: Request, res: Response): Promise<void> {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id, 10);
       const companyId = req.user?.companyId;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string || '10', 10);
 
-      const executions = await this.reportService.getExecutionHistory(id, companyId, limit);
+      const executions = await this.reportService.getExecutionHistory(id, parseInt(String(companyId), 10), limit);
 
       res.json({ success: true, data: executions });
     } catch (error) {

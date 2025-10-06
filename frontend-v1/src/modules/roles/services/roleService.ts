@@ -210,7 +210,7 @@ export class RoleService extends BaseService {
   private roleCache: Map<string, Role> = new Map();
   
   private constructor() {
-    super('/api/v1/roles');
+    super('/roles');  // baseURL ya incluye /api/v1
   }
 
   /**
@@ -237,18 +237,47 @@ export class RoleService extends BaseService {
     page: number;
     totalPages: number;
   }> {
-    const result = await this.getPaginated<Role>('/list', params, options);
-    
+    // Llamar al endpoint correcto del backend
+    const response = await this.get<{
+      success: boolean;
+      data: any[];
+      pagination?: {
+        total: number;
+        page: number;
+        limit: number;
+        pages: number;
+      };
+    }>('/', { ...options, params });
+
+    // Adaptar formato del backend al esperado por el frontend
+    const rolesData = response.data || [];
+    const pagination = response.pagination || {
+      total: rolesData.length,
+      page: params?.page || 1,
+      limit: params?.limit || rolesData.length,
+      pages: 1
+    };
+
+    // Normalizar roles del backend
+    const roles = rolesData.map(role => ({
+      ...role,
+      isSystem: role.isSystem ?? role.isSystemRole ?? role.is_system_role,
+      isSystemRole: role.isSystemRole ?? role.isSystem ?? role.is_system_role,
+      companyId: role.companyId ?? role.company_id,
+      userCount: role.user_count ? parseInt(role.user_count) : (role.userCount || 0),
+      permissionIds: role.permissions?.map((p: any) => p.id) || []
+    }));
+
     // Update cache
-    result.items.forEach(role => {
+    roles.forEach(role => {
       this.roleCache.set(role.id, role);
     });
-    
+
     return {
-      roles: result.items,
-      total: result.total,
-      page: result.page,
-      totalPages: result.totalPages
+      roles,
+      total: pagination.total,
+      page: pagination.page,
+      totalPages: pagination.pages
     };
   }
 
@@ -263,8 +292,20 @@ export class RoleService extends BaseService {
     if (this.roleCache.has(roleId) && options.cache) {
       return this.roleCache.get(roleId)!;
     }
-    
-    const role = await this.get<Role>(`/${roleId}`, options);
+
+    const response = await this.get<{ success: boolean; data: any }>(`/${roleId}`, options);
+    const roleData = response.data || response;
+
+    // Normalizar rol del backend
+    const role = {
+      ...roleData,
+      isSystem: roleData.isSystem ?? roleData.isSystemRole ?? roleData.is_system_role,
+      isSystemRole: roleData.isSystemRole ?? roleData.isSystem ?? roleData.is_system_role,
+      companyId: roleData.companyId ?? roleData.company_id,
+      userCount: roleData.user_count ? parseInt(roleData.user_count) : (roleData.userCount || 0),
+      permissionIds: roleData.permissions?.map((p: any) => p.id) || []
+    };
+
     this.roleCache.set(roleId, role);
     return role;
   }
@@ -277,6 +318,163 @@ export class RoleService extends BaseService {
     options = { cache: true, cacheTime: 300000 }
   ): Promise<Role> {
     return this.get<Role>(`/code/${code}`, options);
+  }
+
+  /**
+   * Get system roles
+   */
+  async getSystemRoles(options = { cache: true, cacheTime: 300000 }): Promise<Role[]> {
+
+    try {
+      const response = await this.get<{ success: boolean; data: any[] }>('/system', options);
+
+      const rolesData = response.data || response || [];
+
+      // Normalizar roles del backend
+      const roles = rolesData.map(role => ({
+        ...role,
+        isSystem: role.isSystem ?? role.isSystemRole ?? role.is_system_role ?? true,
+        isSystemRole: role.isSystemRole ?? role.isSystem ?? role.is_system_role ?? true,
+        companyId: role.companyId ?? role.company_id,
+        userCount: role.user_count ? parseInt(role.user_count) : (role.userCount || 0),
+        permissionIds: role.permissions?.map((p: any) => p.id) || [],
+        code: role.code || role.name?.toLowerCase().replace(/\s+/g, '_'),
+        level: role.level || 1,
+        isDefault: role.isDefault ?? false,
+        isActive: role.status === 'active'
+      }));
+
+
+      // Update cache
+      roles.forEach(role => {
+        this.roleCache.set(role.id, role);
+      });
+
+      return roles;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get company roles
+   */
+  async getCompanyRoles(companyId: string, options = { cache: true, cacheTime: 300000 }): Promise<Role[]> {
+
+    try {
+      // El endpoint es /company con companyId como query param
+      const response = await this.get<{ success: boolean; data: any[] }>('/company', {
+        ...options,
+        params: { companyId }
+      });
+
+      const rolesData = response.data || response || [];
+
+      // Normalizar roles del backend
+      const roles = rolesData.map(role => ({
+        ...role,
+        isSystem: role.isSystem ?? role.isSystemRole ?? role.is_system_role ?? false,
+        isSystemRole: role.isSystemRole ?? role.isSystem ?? role.is_system_role ?? false,
+        companyId: role.companyId ?? role.company_id,
+        userCount: role.user_count ? parseInt(role.user_count) : (role.userCount || 0),
+        permissionIds: role.permissions?.map((p: any) => p.id) || [],
+        code: role.code || role.name?.toLowerCase().replace(/\s+/g, '_'),
+        level: role.level || 1,
+        isDefault: role.isDefault ?? false,
+        isActive: role.status === 'active'
+      }));
+
+
+      // Update cache
+      roles.forEach(role => {
+        this.roleCache.set(role.id, role);
+      });
+
+      return roles;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get role stats for a company
+   */
+  async getRoleStats(companyId: string): Promise<{
+    usersPerRole: Record<string, number>;
+    totalUsers: number;
+    totalRoles: number;
+  }> {
+
+    try {
+      // Obtener todos los roles con sus usuarios
+      const roles = await this.getRoles({ companyId } as any);
+
+      const usersPerRole: Record<string, number> = {};
+      let totalUsers = 0;
+
+      roles.roles.forEach(role => {
+        const userCount = typeof role.userCount === 'string' ? parseInt(role.userCount) : (role.userCount || 0);
+        usersPerRole[role.id] = userCount;
+        totalUsers += userCount;
+      });
+
+      const stats = {
+        usersPerRole,
+        totalUsers,
+        totalRoles: roles.total
+      };
+
+
+      return stats;
+    } catch (error) {
+      // Return default stats on error
+      return {
+        usersPerRole: {},
+        totalUsers: 0,
+        totalRoles: 0
+      };
+    }
+  }
+
+  /**
+   * Get all permissions
+   */
+  async getAllPermissions(options = { cache: true, cacheTime: 3600000 }): Promise<Permission[]> {
+
+    try {
+      // El endpoint correcto es /permissions (sin /all)
+      const response = await this.get<{ success: boolean; data: any[] }>('/permissions', options);
+
+      const permissionsData = response.data || response || [];
+
+      // Normalizar permisos del backend
+      const permissions = permissionsData.map(perm => ({
+        id: perm.id,
+        name: perm.name,
+        code: perm.code || perm.name?.toLowerCase().replace(/\s+/g, '_'),
+        description: perm.description,
+        module: perm.module || 'general',
+        resource: perm.resource,
+        actions: perm.actions || [],
+        scope: perm.scope,
+        dependencies: perm.dependencies,
+        metadata: perm.metadata,
+        createdAt: perm.created_at || perm.createdAt,
+        updatedAt: perm.updated_at || perm.updatedAt,
+        displayName: perm.displayName || perm.display_name || perm.name
+      }));
+
+
+      // Update cache
+      permissions.forEach(permission => {
+        this.permissionCache.set(permission.id, permission);
+      });
+
+      return permissions;
+    } catch (error) {
+      // Return empty array on error instead of throwing
+      return [];
+    }
   }
 
   /**
@@ -313,15 +511,37 @@ export class RoleService extends BaseService {
    */
   async cloneRole(
     roleId: string,
-    data: {
-      name: string;
-      code: string;
-      description?: string;
-    }
+    name: string,
+    companyId?: string
   ): Promise<Role> {
-    const role = await this.post<Role>(`/${roleId}/clone`, data);
-    this.roleCache.set(role.id, role);
-    return role;
+
+    try {
+      const data = {
+        name,
+        companyId
+      };
+
+      const response = await this.post<{ success: boolean; data: any }>(`/${roleId}/clone`, data);
+
+      const roleData = response.data || response;
+      const role = {
+        ...roleData,
+        isSystem: roleData.isSystem ?? roleData.isSystemRole ?? roleData.is_system_role,
+        isSystemRole: roleData.isSystemRole ?? roleData.isSystem ?? roleData.is_system_role,
+        companyId: roleData.companyId ?? roleData.company_id,
+        userCount: roleData.user_count ? parseInt(roleData.user_count) : (roleData.userCount || 0),
+        permissionIds: roleData.permissions?.map((p: any) => p.id) || [],
+        code: roleData.code || roleData.name?.toLowerCase().replace(/\s+/g, '_'),
+        level: roleData.level || 1,
+        isDefault: roleData.isDefault ?? false,
+        isActive: roleData.status === 'active'
+      };
+
+      this.roleCache.set(role.id, role);
+      return role;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // ==================== Permission Management ====================
@@ -333,17 +553,25 @@ export class RoleService extends BaseService {
     params?: PermissionFilters,
     options = { cache: true, cacheTime: 3600000 }
   ): Promise<Permission[]> {
-    const permissions = await this.get<Permission[]>('/permissions', {
-      ...options,
-      params
-    });
-    
-    // Update cache
-    permissions.forEach(permission => {
-      this.permissionCache.set(permission.id, permission);
-    });
-    
-    return permissions;
+
+    try {
+      const response = await this.get<{ success: boolean; data: Permission[] }>('/permissions', {
+        ...options,
+        params
+      });
+
+
+      const permissions = response.data || response || [];
+
+      // Update cache
+      permissions.forEach(permission => {
+        this.permissionCache.set(permission.id, permission);
+      });
+
+      return permissions;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -697,17 +925,27 @@ export class RoleService extends BaseService {
    * Export roles
    */
   async exportRoles(
-    format: 'json' | 'csv' | 'yaml',
-    roleIds?: string[]
-  ): Promise<void> {
-    const params = roleIds ? `?roleIds=${roleIds.join(',')}` : '';
-    await this.downloadFile(`/export/${format}${params}`, `roles.${format}`);
+    companyId: string,
+    format: 'json' | 'csv' | 'yaml' = 'json'
+  ): Promise<any> {
+
+    try {
+      const response = await this.get(`/export?companyId=${companyId}&format=${format}`, {
+        cache: false
+      });
+
+
+      return JSON.stringify(response, null, 2);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
    * Import roles
    */
   async importRoles(
+    companyId: string,
     file: File,
     options?: {
       overwrite?: boolean;
@@ -715,13 +953,24 @@ export class RoleService extends BaseService {
     }
   ): Promise<{
     imported: number;
-    updated: number;
+    skipped: number;
     errors?: Array<{
       line: number;
       error: string;
     }>;
   }> {
-    return this.uploadFile('/import', file, options);
+
+    try {
+      const result = await this.uploadFile(`/import?companyId=${companyId}`, file, options);
+
+      return {
+        imported: result.imported || 0,
+        skipped: result.skipped || result.updated || 0,
+        errors: result.errors
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 
   // ==================== Utility Methods ====================

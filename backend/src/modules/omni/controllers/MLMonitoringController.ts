@@ -9,7 +9,7 @@ import { TYPES } from '@/container/types';
 import { ModelPerformanceMonitoringService } from '../monitoring/services/ModelPerformanceMonitoringService';
 import { DataDriftDetectionService } from '../monitoring/services/DataDriftDetectionService';
 import { ABTestingService } from '../monitoring/services/ABTestingService';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class MLMonitoringController {
@@ -31,7 +31,7 @@ export class MLMonitoringController {
   async recordMetrics(req: Request, res: Response): Promise<void> {
     try {
       const { deployment_id, metrics } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !deployment_id || !metrics) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -50,7 +50,7 @@ export class MLMonitoringController {
     try {
       const { deploymentId } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -69,7 +69,7 @@ export class MLMonitoringController {
     try {
       const { deploymentId } = req.params;
       const hours = req.query.hours ? parseInt(req.query.hours as string) : 24;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -88,7 +88,7 @@ export class MLMonitoringController {
   async detectDrift(req: Request, res: Response): Promise<void> {
     try {
       const { deployment_id, baseline_data, current_data } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !deployment_id || !baseline_data || !current_data) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -111,7 +111,7 @@ export class MLMonitoringController {
   async getUnresolvedDrift(req: Request, res: Response): Promise<void> {
     try {
       const { deploymentId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -129,7 +129,7 @@ export class MLMonitoringController {
   async acknowledgeDrift(req: Request, res: Response): Promise<void> {
     try {
       const { driftId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -147,7 +147,7 @@ export class MLMonitoringController {
   async resolveDrift(req: Request, res: Response): Promise<void> {
     try {
       const { driftId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -173,7 +173,7 @@ export class MLMonitoringController {
         success_metrics,
         options
       } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !test_name || !control_deployment_id || !variant_deployments || !traffic_split || !success_metrics) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -199,7 +199,7 @@ export class MLMonitoringController {
   async startABTest(req: Request, res: Response): Promise<void> {
     try {
       const { testId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -217,7 +217,7 @@ export class MLMonitoringController {
   async endABTest(req: Request, res: Response): Promise<void> {
     try {
       const { testId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -236,7 +236,7 @@ export class MLMonitoringController {
     try {
       const { testId } = req.params;
       const { variant, deployment_id, metric_name, metric_value, sample_size } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !variant || !deployment_id || !metric_name || metric_value === undefined || !sample_size) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -262,7 +262,7 @@ export class MLMonitoringController {
   async getABTestResults(req: Request, res: Response): Promise<void> {
     try {
       const { testId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -279,7 +279,7 @@ export class MLMonitoringController {
 
   async getAllABTests(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });

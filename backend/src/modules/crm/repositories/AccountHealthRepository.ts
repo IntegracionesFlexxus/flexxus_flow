@@ -3,14 +3,20 @@
  * Data access layer for account health scoring
  */
 
-import { injectable } from 'inversify';
+import { injectable, inject, optional } from 'inversify';
 import { CRMBaseRepository } from './CRMBaseRepository';
 import { AccountHealthScore, HealthAlert } from '../types/health.types';
+import { TYPES } from '@/container/types';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
+import { Logger } from 'winston';
 
 @injectable()
 export class AccountHealthRepository extends CRMBaseRepository<AccountHealthScore> {
-  constructor() {
-    super('account_health_scores');
+  constructor(
+    @inject(TYPES.SharedConnection) db: IDatabaseConnection,
+    @inject(TYPES.Logger) @optional() logger?: Logger
+  ) {
+    super('account_health_scores', db, logger);
     this.schema = 'public'; // Sprint 17 uses public schema
 
     this.allowedFields = new Set([
@@ -56,7 +62,7 @@ export class AccountHealthRepository extends CRMBaseRepository<AccountHealthScor
       WHERE company_id = $1 AND account_id = $2
     `;
 
-    const params = [companyId, accountId];
+    const params: any[] = [companyId, accountId];
 
     if (startDate) {
       query += ` AND calculated_at >= $${params.length + 1}`;
@@ -252,11 +258,11 @@ export class AccountHealthRepository extends CRMBaseRepository<AccountHealthScor
       alert.severity,
       alert.status || 'new',
       alert.message,
-      alert.threshold_violated,
+      alert.threshold_value,
       alert.metric_value,
       alert.recommended_action,
       JSON.stringify(alert.metadata || {}),
-      alert.created_by
+      alert.created_at
     ]);
 
     return result.rows[0];

@@ -22,7 +22,7 @@ export class KPIService extends EventEmitter {
   private logger: any;
   private kpiCache: Map<string, IKPI> = new Map();
   private calculationInterval: number = 300000; // 5 minutes
-  private calculationTimer?: NodeJS.Timer;
+  private calculationTimer?: NodeJS.Timeout;
   private alertThresholds: Map<string, number> = new Map();
 
   constructor(
@@ -373,9 +373,10 @@ export class KPIService extends EventEmitter {
       this.getPeriodStart(kpi.frequency as any)
     ]);
 
+    const row = result.rows[0] as any;
     return {
-      value: parseFloat(result.rows[0]?.value || 0),
-      breakdown: result.rows[0] || {}
+      value: parseFloat(row?.value || 0),
+      breakdown: row || {}
     };
   }
 
@@ -680,7 +681,7 @@ export class KPIService extends EventEmitter {
    */
   stopCalculationTimer(): void {
     if (this.calculationTimer) {
-      clearInterval(this.calculationTimer);
+      clearInterval(this.calculationTimer as any);
       this.calculationTimer = undefined;
     }
   }

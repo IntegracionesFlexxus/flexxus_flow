@@ -95,10 +95,42 @@ const Sidebar: React.FC<SidebarProps> = ({
       path: '/roles',
     },
     {
-      text: 'Omnicanalidad', 
+      text: 'Omnicanalidad',
       icon: <MessageIcon />,
       path: '/omni',
-      badge: 5 // Ejemplo de notificaciones pendientes
+      badge: 5, // Ejemplo de notificaciones pendientes
+      children: [
+        {
+          text: 'Dashboard',
+          icon: <DashboardIcon />,
+          path: '/omni',
+        },
+        {
+          text: 'Conversaciones',
+          icon: <MessageIcon />,
+          path: '/omni/conversations',
+        },
+        {
+          text: 'Canales',
+          icon: <WorkflowIcon />,
+          path: '/omni/channels',
+        },
+        {
+          text: 'Plantillas',
+          icon: <SettingsIcon />,
+          path: '/omni/templates',
+        },
+        {
+          text: 'Automatizaciones',
+          icon: <WorkflowIcon />,
+          path: '/omni/automations',
+        },
+        {
+          text: 'Analytics',
+          icon: <AnalyticsIcon />,
+          path: '/omni/analytics',
+        },
+      ]
     },
     {
       text: 'CRM',

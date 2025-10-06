@@ -87,8 +87,8 @@ export class QueryAnalyzer implements IQueryAnalyzer {
       // Use EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
       const explainQuery = `EXPLAIN (ANALYZE true, BUFFERS true, VERBOSE true, FORMAT JSON) ${query}`;
       const result = await connection.query<any>(explainQuery, []);
-      if (result.length > 0 && result[0]['QUERY PLAN']) {
-        const plan = result[0]['QUERY PLAN'][0];
+      if (result.rows.length > 0 && result.rows[0]['QUERY PLAN']) {
+        const plan = result.rows[0]['QUERY PLAN'][0];
         return this.parseExecutionPlan(plan);
       }
       return null;
@@ -97,8 +97,8 @@ export class QueryAnalyzer implements IQueryAnalyzer {
       try {
         const explainQuery = `EXPLAIN (FORMAT JSON) ${query}`;
         const result = await connection.query<any>(explainQuery, []);
-        if (result.length > 0 && result[0]['QUERY PLAN']) {
-          return result[0]['QUERY PLAN'][0];
+        if (result.rows.length > 0 && result.rows[0]['QUERY PLAN']) {
+          return result.rows[0]['QUERY PLAN'][0];
         }
       } catch (innerError) {
         this.logger.error('Explain query failed:', innerError);
@@ -117,7 +117,7 @@ export class QueryAnalyzer implements IQueryAnalyzer {
         `SELECT * FROM pg_extension WHERE extname = 'pg_stat_statements'`,
         []
       );
-      if (checkExtension.length > 0) {
+      if (checkExtension.rows.length > 0) {
         const slowQueries = await connection.query<any>(`
           SELECT 
             query,
@@ -133,7 +133,7 @@ export class QueryAnalyzer implements IQueryAnalyzer {
           LIMIT 100
         `, [threshold]);
         const results: QueryAnalysisResult[] = [];
-        for (const sq of slowQueries) {
+        for (const sq of slowQueries.rows) {
           const result: QueryAnalysisResult = {
             query: sq.query,
             executionTime: sq.mean_exec_time,
@@ -212,8 +212,8 @@ export class QueryAnalyzer implements IQueryAnalyzer {
         LIMIT 10
       `, []);
       return {
-        summary: stats[0],
-        topQueries,
+        summary: stats.rows[0],
+        topQueries: topQueries.rows,
         period,
         generatedAt: new Date()
       };
@@ -247,12 +247,12 @@ export class QueryAnalyzer implements IQueryAnalyzer {
         WHERE query = $1
         LIMIT 1
       `, [query]);
-      if (stats.length > 0) {
+      if (stats.rows.length > 0) {
         return {
-          executionTime: stats[0].mean_exec_time,
-          calls: stats[0].calls,
-          rows: stats[0].rows,
-          cacheHitRatio: stats[0].shared_blks_hit / (stats[0].shared_blks_hit + stats[0].shared_blks_read)
+          executionTime: stats.rows[0].mean_exec_time,
+          calls: stats.rows[0].calls,
+          rows: stats.rows[0].rows,
+          cacheHitRatio: stats.rows[0].shared_blks_hit / (stats.rows[0].shared_blks_hit + stats.rows[0].shared_blks_read)
         };
       }
       // Fallback: execute query with timing
@@ -296,7 +296,7 @@ export class QueryAnalyzer implements IQueryAnalyzer {
           FROM pg_stat_user_indexes
           WHERE tablename = $1
         `, [table]);
-        for (const idx of indexes) {
+        for (const idx of indexes.rows) {
           const efficiency = idx.tuple_fetches > 0 
             ? (idx.tuple_reads / idx.tuple_fetches) * 100 
             : 0;

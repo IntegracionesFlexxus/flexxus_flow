@@ -9,7 +9,7 @@ import { TYPES } from '@/container/types';
 import { CustomerBehaviorPredictionService } from '../analytics/predictions/CustomerBehaviorPredictionService';
 import { AnomalyDetectionService } from '../analytics/anomaly/AnomalyDetectionService';
 import { DemandForecastingService } from '../analytics/forecasting/DemandForecastingService';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class PredictiveAnalyticsController {
@@ -36,7 +36,7 @@ export class PredictiveAnalyticsController {
     try {
       const { customerId } = req.params;
       const { deployment_id } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -63,7 +63,7 @@ export class PredictiveAnalyticsController {
     try {
       const { customerId } = req.params;
       const { deployment_id } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -90,7 +90,7 @@ export class PredictiveAnalyticsController {
     try {
       const { customerId } = req.params;
       const { deployment_id } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -117,7 +117,7 @@ export class PredictiveAnalyticsController {
     try {
       const { customerId } = req.params;
       const { deployment_id } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -143,7 +143,7 @@ export class PredictiveAnalyticsController {
   async getCustomerPredictions(req: Request, res: Response): Promise<void> {
     try {
       const { customerId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -169,7 +169,7 @@ export class PredictiveAnalyticsController {
     try {
       const { predictionId } = req.params;
       const { actual_outcome } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !actual_outcome) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -197,7 +197,7 @@ export class PredictiveAnalyticsController {
   async detectBehavioralAnomaly(req: Request, res: Response): Promise<void> {
     try {
       const { entity_type, entity_id, current_metrics, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !entity_type || !entity_id || !current_metrics) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -225,7 +225,7 @@ export class PredictiveAnalyticsController {
   async detectPerformanceAnomaly(req: Request, res: Response): Promise<void> {
     try {
       const { entity_type, entity_id, performance_metrics, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !entity_type || !entity_id || !performance_metrics) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -253,7 +253,7 @@ export class PredictiveAnalyticsController {
   async detectDataQualityAnomaly(req: Request, res: Response): Promise<void> {
     try {
       const { entity_type, entity_id, data_metrics } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !entity_type || !entity_id || !data_metrics) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -280,7 +280,7 @@ export class PredictiveAnalyticsController {
   async detectSecurityAnomaly(req: Request, res: Response): Promise<void> {
     try {
       const { entity_type, entity_id, security_metrics } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !entity_type || !entity_id || !security_metrics) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -306,7 +306,7 @@ export class PredictiveAnalyticsController {
    */
   async getUnresolvedAnomalies(req: Request, res: Response): Promise<void> {
     try {
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
       if (!tenantId) {
@@ -329,7 +329,7 @@ export class PredictiveAnalyticsController {
   async getAnomaliesBySeverity(req: Request, res: Response): Promise<void> {
     try {
       const { severity } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
       if (!tenantId) {
@@ -356,7 +356,7 @@ export class PredictiveAnalyticsController {
   async acknowledgeAnomaly(req: Request, res: Response): Promise<void> {
     try {
       const { anomalyId } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -379,7 +379,7 @@ export class PredictiveAnalyticsController {
     try {
       const { anomalyId } = req.params;
       const { is_false_positive } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -403,7 +403,7 @@ export class PredictiveAnalyticsController {
   async forecastDemand(req: Request, res: Response): Promise<void> {
     try {
       const { resource_type, options } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || !resource_type || !options?.horizon) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -429,7 +429,7 @@ export class PredictiveAnalyticsController {
   async getForecastsByResourceType(req: Request, res: Response): Promise<void> {
     try {
       const { resourceType } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
 
       if (!tenantId) {
@@ -457,7 +457,7 @@ export class PredictiveAnalyticsController {
     try {
       const { forecastId } = req.params;
       const { actual_demand } = req.body;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId || actual_demand === undefined) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -483,7 +483,7 @@ export class PredictiveAnalyticsController {
   async getForecastAccuracy(req: Request, res: Response): Promise<void> {
     try {
       const { resourceType } = req.params;
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user?.companyId;
 
       if (!tenantId) {
         res.status(401).json({ error: 'Unauthorized' });

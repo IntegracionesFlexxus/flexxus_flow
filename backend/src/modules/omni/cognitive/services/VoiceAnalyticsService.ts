@@ -7,7 +7,7 @@ import { injectable, inject } from 'inversify';
 import { TYPES } from '@/container/types';
 import { VoiceAnalyticsRepository, IVoiceAnalysis } from '../repositories/VoiceAnalyticsRepository';
 import { SentimentType, EmotionType } from '../../types/cognitive.types';
-import { Logger } from '@/utils/logger';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 
 @injectable()
 export class VoiceAnalyticsService {

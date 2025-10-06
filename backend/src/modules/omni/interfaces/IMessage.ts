@@ -11,6 +11,7 @@ export interface IMessage extends BaseEntity {
   customer_id?: string;
   sender_type: MessageSenderType;
   sender_id?: string;
+  recipient_identifier?: string; // Email, phone number, social media handle, etc.
   content_type: MessageContentType;
   content?: string;
   media_url?: string;

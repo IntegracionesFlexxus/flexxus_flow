@@ -8,9 +8,10 @@
  */
 
 import { injectable, inject } from 'inversify';
-import { Pool, PoolClient } from 'pg';
+import { PoolClient } from 'pg';
 import { TYPES } from '@/container/types';
 import { Logger } from 'winston';
+import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
 import { CRMBaseRepository } from './CRMBaseRepository';
 
 export interface ApprovalWorkflow {
@@ -113,12 +114,12 @@ export type ProcessPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type DecisionType = 'approved' | 'rejected' | 'returned' | 'delegated';
 
 @injectable()
-export class ApprovalRepository extends CRMBaseRepository {
+export class ApprovalRepository extends CRMBaseRepository<any> {
   constructor(
-    @inject(TYPES.DatabasePool) pool: Pool,
+    @inject(TYPES.CRMDatabaseConnection) db: IDatabaseConnection,
     @inject(TYPES.Logger) logger: Logger
   ) {
-    super(pool, logger);
+    super('approval_workflows', db, logger);
   }
 
   /**
@@ -155,7 +156,7 @@ export class ApprovalRepository extends CRMBaseRepository {
       userId || workflow.updated_by
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -197,7 +198,7 @@ export class ApprovalRepository extends CRMBaseRepository {
       JSON.stringify(step.metadata || {})
     ];
 
-    const result = await this.pool.query(query, values);
+    const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
@@ -252,7 +253,7 @@ export class ApprovalRepository extends CRMBaseRepository {
       LIMIT 1
     `;
 
-    const result = await this.pool.query(query, params);
+    const result = await this.db.query(query, params);
     return result.rows[0] || null;
   }
 
@@ -260,7 +261,7 @@ export class ApprovalRepository extends CRMBaseRepository {
    * Get workflow steps
    */
   async getWorkflowSteps(workflowId: number): Promise<WorkflowStep[]> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM approval_workflow_steps
        WHERE workflow_id = $1 AND is_active = true
        ORDER BY step_number`,
@@ -277,7 +278,7 @@ export class ApprovalRepository extends CRMBaseRepository {
     process: ApprovalProcess,
     client?: PoolClient
   ): Promise<ApprovalProcess> {
-    const queryClient = client || await this.pool.connect();
+    const queryClient = client || await this.db.getClient();
 
     try {
       if (!client) await queryClient.query('BEGIN');
@@ -409,7 +410,7 @@ export class ApprovalRepository extends CRMBaseRepository {
         p.created_at
     `;
 
-    const result = await this.pool.query(query, [userId]);
+    const result = await this.db.query(query, [userId]);
     return result.rows;
   }
 
@@ -417,7 +418,7 @@ export class ApprovalRepository extends CRMBaseRepository {
    * Record approval decision
    */
   async recordDecision(decision: ApprovalDecision): Promise<ApprovalDecision> {
-    const client = await this.pool.connect();
+    const client = await this.db.getClient();
 
     try {
       await client.query('BEGIN');
@@ -660,7 +661,7 @@ export class ApprovalRepository extends CRMBaseRepository {
    * Get approval history for entity
    */
   async getApprovalHistory(entityType: string, entityId: number): Promise<ApprovalProcess[]> {
-    const result = await this.pool.query(
+    const result = await this.db.query(
       `SELECT * FROM approval_processes
        WHERE entity_type = $1 AND entity_id = $2
        ORDER BY created_at DESC`,
@@ -679,7 +680,7 @@ export class ApprovalRepository extends CRMBaseRepository {
     context: any
   ): Promise<{ required: boolean; workflow?: ApprovalWorkflow }> {
     // Get applicable workflows
-    const workflows = await this.pool.query(
+    const workflows = await this.db.query(
       `SELECT * FROM approval_workflows
        WHERE company_id = $1
          AND entity_type = $2

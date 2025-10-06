@@ -22,7 +22,7 @@ export class MigrationVersion {
     try {
       const query = 'SELECT version FROM migrations ORDER BY version ASC';
       const results = await this.db.query<{ version: string }>(query);
-      return results.map(r => r.version);
+      return results.rows.map(r => r.version);
     } catch (error) {
       // Table might not exist yet
       if (error instanceof Error && error.message?.includes('does not exist')) {
@@ -39,7 +39,7 @@ export class MigrationVersion {
     try {
       const query = 'SELECT version FROM migrations ORDER BY applied_at DESC LIMIT 1';
       const results = await this.db.query<{ version: string }>(query);
-      return results[0]?.version || null;
+      return results.rows[0]?.version || null;
     } catch (error) {
       if (error instanceof Error && error.message?.includes('does not exist')) {
         return null;
@@ -77,7 +77,7 @@ export class MigrationVersion {
     try {
       const query = 'SELECT 1 FROM migrations WHERE version = $1';
       const results = await this.db.query(query, [version]);
-      return results.length > 0;
+      return results.rows.length > 0;
     } catch (error) {
       if (error instanceof Error && error.message?.includes('does not exist')) {
         return false;
@@ -108,8 +108,8 @@ export class MigrationVersion {
         applied_at: Date;
         execution_time_ms: number;
       }>(query);
-      
-      return results.map(r => ({
+
+      return results.rows.map(r => ({
         version: r.version,
         name: r.name,
         appliedAt: r.applied_at,

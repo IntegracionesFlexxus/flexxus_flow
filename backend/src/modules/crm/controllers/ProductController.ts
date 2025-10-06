@@ -109,8 +109,8 @@ export class ProductController {
         return;
       }
 
-      const company_id = req.user?.company_id;
-      const created_by = req.user?.user_id;
+      const company_id = req.user?.companyId;
+      const created_by = req.user?.id;
 
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
@@ -196,7 +196,7 @@ export class ProductController {
         return;
       }
 
-      const updated_by = req.user?.user_id;
+      const updated_by = req.user?.id;
       const updates = {
         ...req.body,
         updated_by
@@ -225,7 +225,7 @@ export class ProductController {
    */
   async searchProducts(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
         return;
@@ -306,13 +306,15 @@ export class ProductController {
         return;
       }
 
-      await this.catalogService.updateInventory(product_id, quantity_change, {
-        company_id: req.user?.company_id!,
+      await this.catalogService.updateInventory({
+        product_id,
+        quantity_change,
+        company_id: req.user?.companyId!,
         movement_type,
         reference_type,
         reference_id,
         notes,
-        created_by: req.user?.user_id
+        created_by: req.user?.id
       });
 
       res.status(200).json({
@@ -345,7 +347,7 @@ export class ProductController {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
 
       const movements = await this.catalogService.getInventoryMovements(
-        req.user?.company_id!,
+        req.user?.companyId!,
         product_id,
         limit
       );
@@ -379,7 +381,7 @@ export class ProductController {
       }
 
       const spec: ProductSpecification = {
-        company_id: req.user?.company_id!,
+        company_id: req.user?.companyId!,
         product_id,
         spec_name: req.body.spec_name,
         spec_value: req.body.spec_value,
@@ -419,7 +421,7 @@ export class ProductController {
       }
 
       const media: ProductMedia = {
-        company_id: req.user?.company_id!,
+        company_id: req.user?.companyId!,
         product_id,
         media_type: req.body.media_type,
         media_url: req.body.media_url,
@@ -486,7 +488,7 @@ export class ProductController {
    */
   async getCategoryTree(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
         return;
@@ -494,7 +496,7 @@ export class ProductController {
 
       const include_counts = req.query.include_counts === 'true';
 
-      const tree = await this.catalogService.getCategoryTree(company_id, include_counts);
+      const tree = await this.catalogService.getCategoryTree(company_id);
 
       res.status(200).json({
         success: true,
@@ -528,7 +530,7 @@ export class ProductController {
 
       const category: ProductCategory = {
         ...value,
-        company_id: req.user?.company_id!,
+        company_id: req.user?.companyId!,
         is_active: value.is_active !== false,
         sort_order: value.sort_order || 0
       };
@@ -567,7 +569,7 @@ export class ProductController {
 
       const bundle: ProductBundle = {
         ...value,
-        company_id: req.user?.company_id!,
+        company_id: req.user?.companyId!,
         is_active: value.is_active !== false
       };
 
@@ -629,7 +631,7 @@ export class ProductController {
    */
   async getLowStockProducts(req: Request, res: Response): Promise<void> {
     try {
-      const company_id = req.user?.company_id;
+      const company_id = req.user?.companyId;
       if (!company_id) {
         res.status(400).json({ error: 'Company ID is required' });
         return;

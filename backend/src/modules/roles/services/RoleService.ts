@@ -40,15 +40,9 @@ export class RoleService implements IRoleService {
 
   async createRole(data: CreateRoleDto, createdBy: string): Promise<RoleDto> {
     try {
-      console.log('🟢 [RoleService.createRole] START');
-      console.log('🟢 [RoleService.createRole] data:', JSON.stringify(data, null, 2));
-      console.log('🟢 [RoleService.createRole] data.companyId type:', typeof data.companyId);
-      console.log('🟢 [RoleService.createRole] createdBy:', createdBy);
 
       // Validar nombre único
-      console.log('🟢 [RoleService.createRole] Checking if role exists...');
       const exists = await this.roleRepository.exists(data.name, data.companyId);
-      console.log('🟢 [RoleService.createRole] exists:', exists);
 
       if (exists) {
         throw new AppError(ErrorCode.RESOURCE_ALREADY_EXISTS, 'Role with this name already exists', 409);
@@ -62,19 +56,15 @@ export class RoleService implements IRoleService {
         isSystemRole: false,
         status: 'active'
       };
-      console.log('🟢 [RoleService.createRole] roleCreateData:', JSON.stringify(roleCreateData, null, 2));
 
       const role = await this.roleRepository.create(roleCreateData);
-      console.log('🟢 [RoleService.createRole] role created:', JSON.stringify(role, null, 2));
 
       // Asignar permisos si se especifican
       if (data.permissions && data.permissions.length > 0) {
-        console.log('🟢 [RoleService.createRole] Assigning permissions:', data.permissions);
         await this.roleRepository.assignPermissions(role.id, data.permissions);
       }
 
       // Registrar en auditoría
-      console.log('🟢 [RoleService.createRole] Logging audit...');
       await this.auditService.logActivity({
         action: 'role_created',
         entityType: 'role',
@@ -91,15 +81,10 @@ export class RoleService implements IRoleService {
         createdBy
       });
 
-      console.log('🟢 [RoleService.createRole] Formatting role...');
       const formattedRole = this.formatRole(role);
-      console.log('🟢 [RoleService.createRole] formattedRole:', JSON.stringify(formattedRole, null, 2));
 
       return formattedRole;
     } catch (error) {
-      console.error('🔴 [RoleService.createRole] ERROR:', error);
-      console.error('🔴 [RoleService.createRole] ERROR message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('🔴 [RoleService.createRole] ERROR stack:', error instanceof Error ? error.stack : 'No stack');
 
       this.logger.error('Error creating role', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -277,8 +262,6 @@ export class RoleService implements IRoleService {
   // ==================== CONSULTAS Y LISTADOS ====================
 
   async getRoles(filters: RoleFiltersDto): Promise<RolePaginationDto> {
-    console.log('🔍 [RoleService.getRoles] === INICIO ===');
-    console.log('🔍 [RoleService.getRoles] Filters received:', filters);
 
     const result = await this.roleRepository.findWithPagination({
       companyId: filters.companyId,
@@ -288,13 +271,11 @@ export class RoleService implements IRoleService {
       limit: filters.limit || 10
     });
 
-    console.log('🔍 [RoleService.getRoles] Repository result:', {
       rolesCount: result.roles?.length,
       total: result.total,
       page: result.page,
       limit: result.limit
     });
-    console.log('🔍 [RoleService.getRoles] Raw roles from repository:', result.roles);
 
     // Formatear roles y obtener permisos
     const formattedRoles = await Promise.all(
@@ -304,7 +285,6 @@ export class RoleService implements IRoleService {
       })
     );
 
-    console.log('🔍 [RoleService.getRoles] Formatted roles:', formattedRoles);
 
     const finalResult = {
       roles: formattedRoles,
@@ -314,20 +294,14 @@ export class RoleService implements IRoleService {
       pages: Math.ceil(result.total / result.limit)
     };
 
-    console.log('🔍 [RoleService.getRoles] Final result:', finalResult);
-    console.log('🔍 [RoleService.getRoles] === FIN ===');
 
     return finalResult;
   }
 
   async getCompanyRoles(companyId: string): Promise<RoleDto[]> {
-    console.log('🔍 [RoleService.getCompanyRoles] === INICIO ===');
-    console.log('🔍 [RoleService.getCompanyRoles] CompanyId:', companyId);
 
     const roles = await this.roleRepository.findByCompany(companyId);
 
-    console.log('🔍 [RoleService.getCompanyRoles] Roles from repository:', roles?.length);
-    console.log('🔍 [RoleService.getCompanyRoles] Raw roles:', roles);
 
     const formattedRoles = await Promise.all(
       roles.map(async (role) => {
@@ -336,19 +310,14 @@ export class RoleService implements IRoleService {
       })
     );
 
-    console.log('🔍 [RoleService.getCompanyRoles] Formatted roles:', formattedRoles);
-    console.log('🔍 [RoleService.getCompanyRoles] === FIN ===');
 
     return formattedRoles;
   }
 
   async getSystemRoles(): Promise<RoleDto[]> {
-    console.log('🔍 [RoleService.getSystemRoles] === INICIO ===');
 
     const roles = await this.roleRepository.findSystemRoles();
 
-    console.log('🔍 [RoleService.getSystemRoles] Roles from repository:', roles?.length);
-    console.log('🔍 [RoleService.getSystemRoles] Raw roles:', roles);
 
     const formattedRoles = await Promise.all(
       roles.map(async (role) => {
@@ -357,8 +326,6 @@ export class RoleService implements IRoleService {
       })
     );
 
-    console.log('🔍 [RoleService.getSystemRoles] Formatted roles:', formattedRoles);
-    console.log('🔍 [RoleService.getSystemRoles] === FIN ===');
 
     return formattedRoles;
   }

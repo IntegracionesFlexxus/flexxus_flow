@@ -30,11 +30,6 @@ export class AuditRepository implements IAuditRepository {
   ) {}
   async create(auditLog: Omit<AuditLog, 'id' | 'createdAt'>): Promise<AuditLog> {
     try {
-      console.log('🟠 [AuditRepository.create] START');
-      console.log('🟠 [AuditRepository.create] auditLog:', JSON.stringify(auditLog, null, 2));
-      console.log('🟠 [AuditRepository.create] companyId:', auditLog.companyId);
-      console.log('🟠 [AuditRepository.create] companyId type:', typeof auditLog.companyId);
-      console.log('🟠 [AuditRepository.create] companyId value:', JSON.stringify(auditLog.companyId));
 
       const query = `
         INSERT INTO audit_logs (
@@ -46,15 +41,11 @@ export class AuditRepository implements IAuditRepository {
       `;
 
       const companyIdValue = auditLog.companyId || null;
-      console.log('🟠 [AuditRepository.create] companyIdValue:', companyIdValue);
-      console.log('🟠 [AuditRepository.create] companyIdValue type:', typeof companyIdValue);
 
       let metadataString: string;
       try {
         metadataString = JSON.stringify(auditLog.metadata || {});
-        console.log('🟠 [AuditRepository.create] metadataString:', metadataString);
       } catch (jsonError) {
-        console.error('🔴 [AuditRepository.create] Error stringifying metadata:', jsonError);
         throw jsonError;
       }
 
@@ -71,18 +62,12 @@ export class AuditRepository implements IAuditRepository {
         auditLog.sessionId || null
       ];
 
-      console.log('🟠 [AuditRepository.create] params:', JSON.stringify(params, null, 2));
-      console.log('🟠 [AuditRepository.create] Executing query...');
 
       const result = await this.db.query<AuditLog>(query, params);
 
-      console.log('🟠 [AuditRepository.create] result:', JSON.stringify(result.rows[0], null, 2));
 
       return result.rows[0];
     } catch (error) {
-      console.error('🔴 [AuditRepository.create] ERROR:', error);
-      console.error('🔴 [AuditRepository.create] ERROR message:', error instanceof Error ? error.message : 'Unknown');
-      console.error('🔴 [AuditRepository.create] ERROR stack:', error instanceof Error ? error.stack : 'No stack');
 
       this.logger.error('Error creating audit log:', error);
       throw error;

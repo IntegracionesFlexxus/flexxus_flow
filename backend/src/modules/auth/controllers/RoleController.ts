@@ -4,25 +4,25 @@
  * Controlador REST para gestión completa de roles
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
+
 import { TYPES } from '@/container/types';
 import { IRoleService } from '@/modules/auth/interfaces/IRoleService';
-import { AuthRequest } from '@/modules/auth/middleware/auth';
-import { validateData } from '@/shared/validators/validator';
 import {
   createRoleSchema,
   updateRoleSchema,
   assignPermissionsSchema,
   roleFiltersSchema,
-  assignRoleToUserSchema
+  assignRoleToUserSchema,
 } from '@/modules/auth/validators/roleValidators';
+import { validateData } from '@/shared/validators/validator';
+
+import type { AuthRequest } from '@/modules/auth/middleware/auth';
 
 @injectable()
 export class RoleController {
-  constructor(
-    @inject(TYPES.RoleService) private roleService: IRoleService
-  ) {}
+  constructor(@inject(TYPES.RoleService) private roleService: IRoleService) {}
 
   // ==================== OPERACIONES CRUD ====================
 
@@ -32,37 +32,19 @@ export class RoleController {
    */
   async create(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      console.log('🔵 [RoleController.create] START');
-      console.log('🔵 [RoleController.create] req.body:', JSON.stringify(req.body, null, 2));
-      console.log('🔵 [RoleController.create] req.user:', JSON.stringify(req.user, null, 2));
-
       const roleData = validateData(createRoleSchema, req.body);
-      console.log('🔵 [RoleController.create] roleData after validation:', JSON.stringify(roleData, null, 2));
-
       const userId = req.user!.id;
       const companyId = req.user!.companyId || roleData.companyId;
-      console.log('🔵 [RoleController.create] userId:', userId);
-      console.log('🔵 [RoleController.create] companyId:', companyId);
-      console.log('🔵 [RoleController.create] companyId type:', typeof companyId);
-
       const dataToCreate = { ...roleData, companyId };
-      console.log('🔵 [RoleController.create] dataToCreate:', JSON.stringify(dataToCreate, null, 2));
 
-      const role = await this.roleService.createRole(
-        dataToCreate as any,
-        userId
-      );
-
-      console.log('🔵 [RoleController.create] role created:', JSON.stringify(role, null, 2));
+      const role = await this.roleService.createRole(dataToCreate, userId);
 
       res.status(201).json({
         success: true,
         data: role,
-        message: 'Role created successfully'
+        message: 'Role created successfully',
       });
     } catch (error) {
-      console.error('🔴 [RoleController.create] ERROR:', error);
-      console.error('🔴 [RoleController.create] ERROR stack:', error instanceof Error ? error.stack : 'No stack');
       next(error);
     }
   }
@@ -78,7 +60,7 @@ export class RoleController {
 
       res.json({
         success: true,
-        data: role
+        data: role,
       });
     } catch (error) {
       next(error);
@@ -100,7 +82,7 @@ export class RoleController {
       res.json({
         success: true,
         data: role,
-        message: 'Role updated successfully'
+        message: 'Role updated successfully',
       });
     } catch (error) {
       next(error);
@@ -120,7 +102,7 @@ export class RoleController {
 
       res.json({
         success: true,
-        message: 'Role deleted successfully'
+        message: 'Role deleted successfully',
       });
     } catch (error) {
       next(error);
@@ -138,7 +120,7 @@ export class RoleController {
       const filters = validateData(roleFiltersSchema, {
         ...req.query,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
       });
 
       // Si no se especifica companyId, usar el del usuario actual
@@ -155,10 +137,9 @@ export class RoleController {
           total: result.total,
           page: result.page,
           limit: result.limit,
-          pages: result.pages
-        }
+          pages: result.pages,
+        },
       });
-
     } catch (error) {
       next(error);
     }
@@ -171,7 +152,7 @@ export class RoleController {
   async getCompanyRoles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Obtener companyId de query params o del usuario autenticado
-      const companyId = req.query.companyId as string || req.user?.companyId;
+      const companyId = (req.query.companyId as string) || req.user?.companyId;
 
       if (!companyId) {
         throw new Error('Company ID is required');
@@ -181,9 +162,8 @@ export class RoleController {
 
       res.json({
         success: true,
-        data: roles
+        data: roles,
       });
-
     } catch (error) {
       next(error);
     }
@@ -199,9 +179,8 @@ export class RoleController {
 
       res.json({
         success: true,
-        data: roles
+        data: roles,
       });
-
     } catch (error) {
       next(error);
     }
@@ -218,15 +197,15 @@ export class RoleController {
       const roleId = req.params.id;
       const assignData = validateData(assignPermissionsSchema, {
         ...req.body,
-        roleId
+        roleId,
       });
       const userId = req.user!.id;
 
-      await this.roleService.assignPermissions(assignData as any, userId);
+      await this.roleService.assignPermissions(assignData, userId);
 
       res.json({
         success: true,
-        message: `Permissions ${assignData.mode}d successfully`
+        message: `Permissions ${assignData.mode}d successfully`,
       });
     } catch (error) {
       next(error);
@@ -244,7 +223,7 @@ export class RoleController {
 
       res.json({
         success: true,
-        data: permissions
+        data: permissions,
       });
     } catch (error) {
       next(error);
@@ -261,7 +240,7 @@ export class RoleController {
 
       res.json({
         success: true,
-        data: permissions
+        data: permissions,
       });
     } catch (error) {
       next(error);
@@ -277,13 +256,13 @@ export class RoleController {
   async getRoleUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const roleId = req.params.id;
-      const companyId = req.query.companyId as string || req.user?.companyId;
+      const companyId = (req.query.companyId as string) || req.user?.companyId;
 
       const users = await this.roleService.getRoleUsers(roleId, companyId);
 
       res.json({
         success: true,
-        data: users
+        data: users,
       });
     } catch (error) {
       next(error);
@@ -309,7 +288,7 @@ export class RoleController {
 
       res.json({
         success: true,
-        message: 'Role assigned to user successfully'
+        message: 'Role assigned to user successfully',
       });
     } catch (error) {
       next(error);
@@ -326,16 +305,11 @@ export class RoleController {
       const removedBy = req.user!.id;
       const targetCompanyId = companyId || req.user!.companyId;
 
-      await this.roleService.removeRoleFromUser(
-        userId,
-        roleId,
-        targetCompanyId,
-        removedBy
-      );
+      await this.roleService.removeRoleFromUser(userId, roleId, targetCompanyId, removedBy);
 
       res.json({
         success: true,
-        message: 'Role removed from user successfully'
+        message: 'Role removed from user successfully',
       });
     } catch (error) {
       next(error);
@@ -349,13 +323,13 @@ export class RoleController {
   async getUserRoles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.params.userId;
-      const companyId = req.query.companyId as string || req.user?.companyId;
+      const companyId = (req.query.companyId as string) || req.user?.companyId;
 
       const roles = await this.roleService.getUserRoles(userId, companyId);
 
       res.json({
         success: true,
-        data: roles
+        data: roles,
       });
     } catch (error) {
       next(error);
@@ -373,19 +347,15 @@ export class RoleController {
       const { name, companyId, excludeId } = req.body;
       const targetCompanyId = companyId || req.user?.companyId;
 
-      const isValid = await this.roleService.validateRoleName(
-        name,
-        targetCompanyId,
-        excludeId
-      );
+      const isValid = await this.roleService.validateRoleName(name, targetCompanyId, excludeId);
 
       res.json({
         success: true,
         data: {
           name,
           isValid,
-          message: isValid ? 'Name is available' : 'Name is already taken'
-        }
+          message: isValid ? 'Name is available' : 'Name is already taken',
+        },
       });
     } catch (error) {
       next(error);
@@ -405,10 +375,10 @@ export class RoleController {
         success: true,
         data: {
           canDelete,
-          message: canDelete 
-            ? 'Role can be deleted' 
-            : 'Role cannot be deleted (system role or has users assigned)'
-        }
+          message: canDelete
+            ? 'Role can be deleted'
+            : 'Role cannot be deleted (system role or has users assigned)',
+        },
       });
     } catch (error) {
       next(error);
@@ -428,17 +398,12 @@ export class RoleController {
       const clonedBy = req.user!.id;
       const targetCompanyId = companyId || req.user?.companyId;
 
-      const clonedRole = await this.roleService.cloneRole(
-        roleId,
-        name,
-        targetCompanyId,
-        clonedBy
-      );
+      const clonedRole = await this.roleService.cloneRole(roleId, name, targetCompanyId, clonedBy);
 
       res.status(201).json({
         success: true,
         data: clonedRole,
-        message: 'Role cloned successfully'
+        message: 'Role cloned successfully',
       });
     } catch (error) {
       next(error);
@@ -464,7 +429,7 @@ export class RoleController {
       res.status(201).json({
         success: true,
         data: importedRoles,
-        message: `Successfully imported ${importedRoles.length} roles from template`
+        message: `Successfully imported ${importedRoles.length} roles from template`,
       });
     } catch (error) {
       next(error);
@@ -477,12 +442,12 @@ export class RoleController {
    */
   async export(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const companyId = req.query.companyId as string || req.user?.companyId;
+      const companyId = (req.query.companyId as string) || req.user?.companyId;
       const exportData = await this.roleService.exportRoles(companyId);
 
       res.json({
         success: true,
-        data: exportData
+        data: exportData,
       });
     } catch (error) {
       next(error);

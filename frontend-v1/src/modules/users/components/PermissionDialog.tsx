@@ -73,7 +73,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Services
-import { roleService } from '@modules/users/services/roleService';
+import { roleService } from '@/modules/roles/services/roleService';
 import { userService } from '@modules/users/services/userService';
 
 // Hooks
@@ -81,7 +81,9 @@ import { useUIStore } from '@/shared/store/uiStore';
 import { useAuthStore } from '@/shared/store/authStore';
 
 // Types
-import type { User, Role, Permission, PermissionCategory } from '@modules/users/types';
+import type { User } from '@modules/users/types';
+import type { Role, Permission } from '@/modules/roles/types';
+import { PermissionCategory } from '@/modules/roles/types';
 
 interface PermissionDialogProps {
   open: boolean;

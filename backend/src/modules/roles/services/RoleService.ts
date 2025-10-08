@@ -262,13 +262,19 @@ export class RoleService implements IRoleService {
   // ==================== CONSULTAS Y LISTADOS ====================
 
   async getRoles(filters: RoleFiltersDto): Promise<RolePaginationDto> {
-
     const result = await this.roleRepository.findWithPagination({
       companyId: filters.companyId,
       isSystemRole: filters.isSystemRole,
       status: filters.status,
       page: filters.page || 1,
       limit: filters.limit || 10
+    });
+
+    this.logger.info('Fetching roles with filters', {
+      rolesCount: result.roles?.length,
+      total: result.total,
+      page: result.page,
+      limit: result.limit
     });
 
     // Formatear roles y obtener permisos

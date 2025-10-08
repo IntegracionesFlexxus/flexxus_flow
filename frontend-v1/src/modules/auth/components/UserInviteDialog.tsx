@@ -51,7 +51,8 @@ import * as Yup from 'yup';
 
 // Services
 import { invitationService, SendInvitationData } from '@modules/auth/services/invitationService';
-import { roleService, Role } from '@modules/auth/services/roleService';
+import type { Role } from '@/modules/roles/types';
+import { roleService } from '@/modules/roles/services/roleService';
 
 // Hooks
 import { useAuthStore } from '@/shared/store/authStore';
@@ -114,11 +115,12 @@ export const UserInviteDialog: React.FC<UserInviteDialogProps> = ({
   const effectiveCompanyId = companyId || currentCompany?.id;
 
   // Fetch roles
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+  const { data: rolesData, isLoading: rolesLoading } = useQuery({
     queryKey: ['roles', effectiveCompanyId],
-    queryFn: () => roleService.getRoles(effectiveCompanyId),
+    queryFn: () => roleService.getRoles(effectiveCompanyId ? { companyId: effectiveCompanyId } : undefined),
     enabled: open && !!effectiveCompanyId
   });
+  const roles = rolesData?.roles || [];
 
   // Send invitation mutation
   const sendInvitationMutation = useMutation({

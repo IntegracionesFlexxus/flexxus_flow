@@ -5,7 +5,7 @@
  */
 
 import { api } from '@/shared/services/api';
-import { Permission } from './roleService';
+import type { Permission } from '@/modules/roles/types';
 
 export interface User {
   id: string;

@@ -25,7 +25,7 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LoadingOverlay } from '@/components/ui/Loading';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { roleService } from '@/modules/auth/services/roleService';
+import { roleService } from '@/modules/roles/services/roleService';
 import { permissionService } from '@/modules/auth/services/permissionService';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useDebounce } from '@/shared/hooks/useDebounce';

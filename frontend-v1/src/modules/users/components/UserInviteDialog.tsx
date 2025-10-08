@@ -51,7 +51,7 @@ import * as yup from 'yup';
 
 // Services & Stores
 import { invitationService } from '@modules/users/services/invitationService';
-import { roleService } from '@modules/users/services/roleService';
+import { roleService } from '@/modules/roles/services/roleService';
 import { useUIStore } from '@/shared/store/uiStore';
 
 // Types
@@ -285,9 +285,9 @@ export const UserInviteDialog: React.FC<UserInviteDialogProps> = ({
 
   // Memoized values
   const isSubmitting = inviteSingleMutation.isLoading || inviteBulkMutation.isLoading;
-  
-  const availableRoles = useMemo(() => 
-    roles.filter(role => !role.isSystemRole || role.name !== 'super_admin'),
+
+  const availableRoles = useMemo(() =>
+    roles.filter(role => role.code !== 'super_admin'),
     [roles]
   );
 

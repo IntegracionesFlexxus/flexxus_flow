@@ -203,6 +203,33 @@ export const optionalAuthentication = async (
 };
 
 /**
+ * Mapeo de roles en español a códigos en inglés (para usuarios legacy)
+ */
+const ROLE_NAME_TO_CODE_MAP: Record<string, string> = {
+  'super admin': 'super_admin',
+  'superadmin': 'super_admin',
+  'administrador': 'admin',
+  'administrator': 'admin',
+  'gerente': 'manager',
+  'manager': 'manager',
+  'usuario': 'user',
+  'user': 'user',
+  'viewer': 'viewer',
+  'visualizador': 'viewer',
+  'editor': 'editor',
+  'owner': 'owner',
+  'propietario': 'owner'
+};
+
+/**
+ * Normalizar nombre de rol a código
+ */
+function normalizeRoleToCode(role: string): string {
+  const normalized = role.toLowerCase().trim();
+  return ROLE_NAME_TO_CODE_MAP[normalized] || normalized;
+}
+
+/**
  * Role-based authorization middleware
  */
 export const requireRole = (allowedRoles: string | string[], options?: {
@@ -218,11 +245,11 @@ export const requireRole = (allowedRoles: string | string[], options?: {
     console.log('📋 [Backend RequireRole] Method:', req.method);
     console.log('🎯 [Backend RequireRole] Required roles:', roles);
     console.log('👤 [Backend RequireRole] User context:', req.user);
-    
+
     if (!req.user) {
       console.log('❌ [Backend RequireRole] No user context - authentication required');
       console.log('========================================\n');
-      
+
       res.status(401).json({
         success: false,
         message: 'Authentication required',
@@ -231,24 +258,26 @@ export const requireRole = (allowedRoles: string | string[], options?: {
       return;
     }
 
-    const userRole = req.user.role?.toLowerCase() || '';
-    const normalizedRoles = roles.map(role => role.toLowerCase());
-    
-    console.log('🔍 [Backend RequireRole] User role:', req.user.role);
-    console.log('🔍 [Backend RequireRole] Normalized user role:', userRole);
-    console.log('🔍 [Backend RequireRole] Normalized required roles:', normalizedRoles);
-    console.log('🔍 [Backend RequireRole] Role check result:', normalizedRoles.includes(userRole));
+    // Normalizar rol del usuario usando el mapeo de fallback
+    const userRoleCode = normalizeRoleToCode(req.user.role || '');
+    const normalizedRoles = roles.map(role => normalizeRoleToCode(role));
 
-    if (!normalizedRoles.includes(userRole)) {
+    console.log('🔍 [Backend RequireRole] User role (original):', req.user.role);
+    console.log('🔍 [Backend RequireRole] User role (normalized to code):', userRoleCode);
+    console.log('🔍 [Backend RequireRole] Required roles (normalized):', normalizedRoles);
+    console.log('🔍 [Backend RequireRole] Role check result:', normalizedRoles.includes(userRoleCode));
+
+    if (!normalizedRoles.includes(userRoleCode)) {
       console.log('❌ [Backend RequireRole] AUTHORIZATION FAILED');
-      console.log('  User role:', userRole);
-      console.log('  Required roles:', normalizedRoles);
+      console.log('  User role code:', userRoleCode);
+      console.log('  Required role codes:', normalizedRoles);
       console.log('========================================\n');
-      
+
       const logger = container.get<Logger>(TYPES.Logger);
       logger.warn('Authorization failed - insufficient role', {
         userId: req.user.id,
         userRole: req.user.role,
+        userRoleCode,
         requiredRoles: roles,
         path: req.path,
         method: req.method

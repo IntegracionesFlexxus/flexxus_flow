@@ -51,7 +51,8 @@ import * as Yup from 'yup';
 
 // Services
 import { userService, User, UpdateUserData } from '@modules/auth/services/userService';
-import { roleService, Role } from '@modules/auth/services/roleService';
+import type { Role } from '@/modules/roles/types';
+import { roleService } from '@/modules/roles/services/roleService';
 
 // Hooks
 import { useUIStore } from '@/shared/store/uiStore';
@@ -119,11 +120,12 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   const queryClient = useQueryClient();
 
   // Fetch roles
-  const { data: roles = [] } = useQuery({
+  const { data: rolesData } = useQuery({
     queryKey: ['roles'],
     queryFn: () => roleService.getRoles(),
     enabled: open
   });
+  const roles = rolesData?.roles || [];
 
   // Fetch user activity
   const { data: userActivity = [] } = useQuery({

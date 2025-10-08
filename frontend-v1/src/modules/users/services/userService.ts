@@ -42,12 +42,12 @@ class UserService {
    * Clean Code: función pura sin efectos secundarios
    */
   async getCompanyUsers(
-    companyId: string, 
+    companyId: string,
     filters?: UserFilters,
     pagination?: PaginationParams
   ): Promise<PaginatedResponse<User>> {
     const params = new URLSearchParams();
-    
+
     // Agregar filtros
     if (filters) {
       if (filters.search) params.append('search', filters.search);
@@ -56,7 +56,7 @@ class UserService {
       if (filters.startDate) params.append('startDate', filters.startDate.toISOString());
       if (filters.endDate) params.append('endDate', filters.endDate.toISOString());
     }
-    
+
     // Agregar paginación
     if (pagination) {
       params.append('page', pagination.page.toString());
@@ -64,13 +64,13 @@ class UserService {
       if (pagination.sortBy) params.append('sortBy', pagination.sortBy);
       if (pagination.sortOrder) params.append('sortOrder', pagination.sortOrder);
     }
-    
-    const response = await api.get<PaginatedResponse<User>>(
-      `${this.baseUrl}/company/${companyId}?${params.toString()}`
-    );
 
+    const url = `${this.baseUrl}/company/${companyId}?${params.toString()}`;
+    const response = await api.get<{ success: boolean; data: PaginatedResponse<User> }>(url);
 
-    return response.data;
+    // El backend devuelve { success: true, data: { users: [...], total: X } }
+    // Necesitamos extraer solo el contenido de 'data'
+    return response.data.data;
   }
 
   /**

@@ -2,6 +2,8 @@
  * User Service Interface - Sprint 2
  * Siguiendo lineamientos nivel 2: inversión de dependencias para UserController
  */
+import { IAuthenticatedUser } from '../types';
+
 export interface IUserService {
   /**
    * Get users by company with pagination and filters
@@ -52,12 +54,15 @@ export interface IUserService {
     firstName: string;
     lastName: string;
     role: string;
+    companies?: string[];
     avatar?: string;
     phone?: string;
+    status?: string;
     isActive?: boolean;
     companyId: string;
     createdBy: string;
-  }): Promise<{
+    password?: string;
+  }, authenticatedUser: IAuthenticatedUser): Promise<{
     id: string;
     email: string;
     firstName: string;
@@ -75,10 +80,11 @@ export interface IUserService {
     firstName?: string;
     lastName?: string;
     role?: string;
+    companies?: string[];
     avatar?: string;
     phone?: string;
     isActive?: boolean;
-  }): Promise<{
+  }, authenticatedUser: IAuthenticatedUser): Promise<{
     id: string;
     email: string;
     firstName: string;
@@ -133,7 +139,7 @@ export interface IUserService {
   /**
    * Assign user to company with role
    */
-  assignUserToCompany(userId: string, companyId: string, role: string): Promise<boolean>;
+  assignUserToCompany(userId: string, companyId: string, role: string, authenticatedUser: IAuthenticatedUser): Promise<boolean>;
   /**
    * Remove user from company
    */

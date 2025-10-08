@@ -53,7 +53,7 @@ import {
 } from 'lucide-react';
 
 // Types
-import type { Role, Permission } from '@/modules/users/types';
+import type { Role, Permission } from '@/modules/roles/types';
 
 interface RolePermissionsDialogProps {
   open: boolean;
@@ -114,7 +114,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
     const term = searchTerm.toLowerCase();
     return role.permissions.filter(p =>
       p.name.toLowerCase().includes(term) ||
-      p.displayName.toLowerCase().includes(term) ||
+      (p.displayName || '').toLowerCase().includes(term) ||
       p.description?.toLowerCase().includes(term) ||
       p.module?.toLowerCase().includes(term)
     );
@@ -130,7 +130,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
       ...group,
       permissions: group.permissions.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     })).filter(group => group.permissions.length > 0);
@@ -220,7 +220,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
     if (!role) return;
 
     const text = role.permissions
-      .map(p => `- ${p.displayName} (${p.module || 'General'})`)
+      .map(p => `- ${(p.displayName || p.name)} (${p.module || 'General'})`)
       .join('\n');
     
     navigator.clipboard.writeText(text);
@@ -270,10 +270,10 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
                   <ListItemText
                     primary={
                       <Typography variant="body2">
-                        {permission.displayName}
+                        {permission.displayName || permission.name}
                         {permission.critical && (
                           <Tooltip title="Permiso crítico">
-                            <AlertCircle 
+                            <AlertCircle
                               size={14} 
                               color="#ff9800"
                               style={{ marginLeft: 4, verticalAlign: 'middle' }}
@@ -327,7 +327,7 @@ export const RolePermissionsDialog: React.FC<RolePermissionsDialogProps> = ({
               primary={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" fontWeight={500}>
-                    {permission.displayName}
+                    {permission.displayName || permission.name}
                   </Typography>
                   <Chip
                     label={permission.module || 'General'}

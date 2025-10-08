@@ -89,10 +89,10 @@ export class UserCompanyRepository implements IUserCompanyRepository {
   async getUserCompanies(userId: string): Promise<ICompanyWithRole[]> {
     try {
       const query = `
-        SELECT 
+        SELECT
           c.id as company_id,
           c.name,
-          uc.role,
+          COALESCE(r.code, uc.role) as role,
           COALESCE(ur.role_id::text, uc.role) as role_id,
           uc.is_default,
           uc.status,
@@ -100,7 +100,8 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         FROM ${this.tableName} uc
         INNER JOIN companies c ON uc.company_id = c.id
         LEFT JOIN user_roles ur ON ur.user_id = uc.user_id AND ur.company_id = uc.company_id
-        WHERE uc.user_id = $1 
+        LEFT JOIN roles r ON r.id = ur.role_id
+        WHERE uc.user_id = $1
           AND c.deleted_at IS NULL
         ORDER BY uc.is_default DESC, c.name ASC
       `;
@@ -124,10 +125,10 @@ export class UserCompanyRepository implements IUserCompanyRepository {
    */
   async getDefaultCompany(userId: string): Promise<ICompanyWithRole | null> {
     const query = `
-      SELECT 
+      SELECT
         c.id as company_id,
         c.name,
-        uc.role,
+        COALESCE(r.code, uc.role) as role,
         COALESCE(ur.role_id::text, uc.role) as role_id,
         uc.is_default,
         uc.status,
@@ -135,7 +136,8 @@ export class UserCompanyRepository implements IUserCompanyRepository {
       FROM ${this.tableName} uc
       INNER JOIN companies c ON uc.company_id = c.id
       LEFT JOIN user_roles ur ON ur.user_id = uc.user_id AND ur.company_id = uc.company_id
-      WHERE uc.user_id = $1 
+      LEFT JOIN roles r ON r.id = ur.role_id
+      WHERE uc.user_id = $1
         AND uc.is_default = true
         AND c.deleted_at IS NULL
       LIMIT 1
@@ -210,13 +212,14 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         u.avatar,
         u.status,
         u.email_verified_at,
-        uc.role,
+        COALESCE(r.code, uc.role) as role,
         COALESCE(ur.role_id::text, uc.role) as role_id,
         uc.created_at as joined_at,
         u.last_login_at as last_active_at
       FROM ${this.tableName} uc
       INNER JOIN users u ON uc.user_id = u.id
       LEFT JOIN user_roles ur ON ur.user_id = uc.user_id AND ur.company_id = uc.company_id
+      LEFT JOIN roles r ON r.id = ur.role_id
       WHERE uc.company_id = $1
         AND u.deleted_at IS NULL
     `;
@@ -516,11 +519,11 @@ export class UserCompanyRepository implements IUserCompanyRepository {
    */
   async getUserCompanyRelation(userId: string, companyId: string): Promise<IUserCompanyRelation | null> {
     const query = `
-      SELECT 
+      SELECT
         uc.user_id,
         uc.company_id,
         COALESCE(ur.role_id::text, uc.role) as role_id,
-        uc.role,
+        COALESCE(r.code, uc.role) as role,
         uc.is_default,
         uc.status,
         uc.permissions,
@@ -528,8 +531,9 @@ export class UserCompanyRepository implements IUserCompanyRepository {
         uc.updated_at
       FROM ${this.tableName} uc
       LEFT JOIN user_roles ur ON ur.user_id = uc.user_id AND ur.company_id = uc.company_id
-      WHERE uc.user_id = $1 
-        AND uc.company_id = $2 
+      LEFT JOIN roles r ON r.id = ur.role_id
+      WHERE uc.user_id = $1
+        AND uc.company_id = $2
     `;
     const result = await this.db.query<any>(query, [userId, companyId]);
     if (result.rows.length === 0) {
@@ -560,9 +564,10 @@ export class UserCompanyRepository implements IUserCompanyRepository {
     const query = `
       SELECT
         COALESCE(ur.role_id::text, uc.role) as role_id,
-        uc.role
+        COALESCE(r.code, uc.role) as role
       FROM ${this.tableName} uc
       LEFT JOIN user_roles ur ON ur.user_id = uc.user_id AND ur.company_id = uc.company_id
+      LEFT JOIN roles r ON r.id = ur.role_id
       WHERE uc.user_id = $1
         AND uc.company_id = $2
         AND uc.status = 'active'
@@ -611,32 +616,67 @@ export class UserCompanyRepository implements IUserCompanyRepository {
   }
   /**
    * Update user's role in a company
+   * Acepta UUID, name o code (auto-detección)
    */
   async updateUserRoleInCompany(userId: string, companyId: string, newRoleId: string): Promise<void> {
     await this.db.transaction(async (trx) => {
-      // Update user_companies
+      // Auto-detectar si es UUID o name/code
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUID = uuidRegex.test(newRoleId);
+
+      let resolvedRoleId: string;
+      let resolvedRoleName: string;
+
+      if (isUUID) {
+        // Es UUID directo
+        const roleQuery = await trx.query(
+          `SELECT id, name FROM roles WHERE id = $1`,
+          [newRoleId]
+        );
+        if (roleQuery.rows.length === 0) {
+          throw new Error(`Role with ID ${newRoleId} not found`);
+        }
+        resolvedRoleId = roleQuery.rows[0].id;
+        resolvedRoleName = roleQuery.rows[0].name;
+      } else {
+        // Es name o code, buscar el UUID
+        const roleQuery = await trx.query(
+          `SELECT id, name FROM roles
+           WHERE LOWER(name) = LOWER($1)
+              OR LOWER(code) = LOWER($1)
+           LIMIT 1`,
+          [newRoleId]
+        );
+        if (roleQuery.rows.length === 0) {
+          throw new Error(`Role '${newRoleId}' not found`);
+        }
+        resolvedRoleId = roleQuery.rows[0].id;
+        resolvedRoleName = roleQuery.rows[0].name;
+      }
+
+      // Update user_companies (guardar name)
       const ucQuery = `
-        UPDATE ${this.tableName} uc
-        SET 
-          role = (SELECT name FROM roles WHERE id = $3),
+        UPDATE ${this.tableName}
+        SET
+          role = $3,
           updated_at = NOW()
-        WHERE uc.user_id = $1 
-          AND uc.company_id = $2 
+        WHERE user_id = $1
+          AND company_id = $2
       `;
-      await trx.query(ucQuery, [userId, companyId, newRoleId]);
-      
-      // Update or insert user_roles
+      await trx.query(ucQuery, [userId, companyId, resolvedRoleName]);
+
+      // Update user_roles (guardar UUID)
       const urQuery = `
         INSERT INTO user_roles (
-          user_id, company_id, role_id, 
+          user_id, company_id, role_id,
           created_at, updated_at
         ) VALUES ($1, $2, $3, NOW(), NOW())
-        ON CONFLICT (user_id, company_id) 
-        DO UPDATE SET 
+        ON CONFLICT (user_id, company_id)
+        DO UPDATE SET
           role_id = EXCLUDED.role_id,
           updated_at = NOW()
       `;
-      await trx.query(urQuery, [userId, companyId, newRoleId]);
+      await trx.query(urQuery, [userId, companyId, resolvedRoleId]);
     });
   }
 }

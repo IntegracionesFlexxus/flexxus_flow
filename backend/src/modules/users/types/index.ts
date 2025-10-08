@@ -108,3 +108,15 @@ export interface ISessionInfo {
   active: boolean;
   companyId?: string;
 }
+
+/**
+ * Authenticated User Context
+ * Represents the user making the request for authorization checks
+ */
+export interface IAuthenticatedUser {
+  id: string;
+  email: string;
+  companyId: string;
+  role: string;
+  permissions?: string[];
+}

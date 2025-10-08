@@ -197,7 +197,7 @@ export class UserController {
 
       // Check if email already exists
       const emailExists = await this.userService.emailExistsInCompany(
-        createUserDto.email, 
+        createUserDto.email,
         req.user.companyId
       );
 
@@ -210,11 +210,63 @@ export class UserController {
         return;
       }
 
+      // SECURITY VALIDATION: Validar permisos para asignar empresas
+      if (createUserDto.companies && createUserDto.companies.length > 0) {
+        const userRole = req.user?.role;
+        const isSuperAdmin = ['super_admin', 'SUPER_ADMIN'].includes(userRole);
+
+        // Si NO es Super Admin, solo puede asignar a su propia empresa
+        if (!isSuperAdmin) {
+          const requestedCompanies = createUserDto.companies;
+          const userCompanyId = req.user.companyId;
+
+          // Verificar que todas las empresas solicitadas sean la empresa del usuario
+          const hasUnauthorizedCompany = requestedCompanies.some(
+            companyId => companyId !== userCompanyId
+          );
+
+          if (hasUnauthorizedCompany) {
+            this.logger.warn('Unauthorized company assignment attempt', {
+              userId: req.user.id,
+              userRole,
+              userCompanyId,
+              requestedCompanies,
+              timestamp: new Date().toISOString()
+            });
+
+            res.status(403).json({
+              success: false,
+              message: 'No tienes permisos para asignar usuarios a otras empresas. Solo puedes asignar usuarios a tu empresa.'
+            });
+            return;
+          }
+
+          this.logger.info('Company assignment validated for non-super-admin', {
+            userId: req.user.id,
+            userRole,
+            userCompanyId,
+            requestedCompanies
+          });
+        } else {
+          this.logger.info('Company assignment allowed for super admin', {
+            userId: req.user.id,
+            userRole,
+            requestedCompanies: createUserDto.companies
+          });
+        }
+      }
+
       // Create user
       const user = await this.userService.createUser({
         ...createUserDto,
         companyId: req.user.companyId,
         createdBy: req.user.id
+      }, {
+        id: req.user.id,
+        email: req.user.email,
+        companyId: req.user.companyId,
+        role: req.user.role,
+        permissions: req.user.permissions
       });
 
       this.logger.info('User created successfully', {
@@ -258,7 +310,7 @@ export class UserController {
       const errors = await validate(updateUserDto);
 
       if (errors.length > 0) {
-        const errorMessages = errors.map(error => 
+        const errorMessages = errors.map(error =>
           Object.values(error.constraints || {}).join(', ')
         );
 
@@ -270,8 +322,75 @@ export class UserController {
         return;
       }
 
+      // SECURITY VALIDATION: Validar permisos para asignar empresas
+      if (updateUserDto.companies && updateUserDto.companies.length > 0) {
+        const userRole = req.user?.role;
+        const isSuperAdmin = ['super_admin', 'SUPER_ADMIN'].includes(userRole);
+
+        // Si NO es Super Admin, solo puede asignar a su propia empresa
+        if (!isSuperAdmin) {
+          const requestedCompanies = updateUserDto.companies;
+          const userCompanyId = req.user?.companyId;
+
+          if (!userCompanyId) {
+            this.logger.error('User company ID not found in request context', {
+              userId: req.user?.id,
+              userRole
+            });
+            res.status(400).json({
+              success: false,
+              message: 'No se pudo determinar la empresa del usuario'
+            });
+            return;
+          }
+
+          // Verificar que todas las empresas solicitadas sean la empresa del usuario
+          const hasUnauthorizedCompany = requestedCompanies.some(
+            companyId => companyId !== userCompanyId
+          );
+
+          if (hasUnauthorizedCompany) {
+            this.logger.warn('Unauthorized company assignment attempt in update', {
+              userId: req.user?.id,
+              userRole,
+              userCompanyId,
+              requestedCompanies,
+              targetUserId: id,
+              timestamp: new Date().toISOString()
+            });
+
+            res.status(403).json({
+              success: false,
+              message: 'No tienes permisos para asignar usuarios a otras empresas. Solo puedes asignar usuarios a tu empresa.'
+            });
+            return;
+          }
+
+          this.logger.info('Company assignment validated for non-super-admin in update', {
+            userId: req.user?.id,
+            userRole,
+            userCompanyId,
+            requestedCompanies,
+            targetUserId: id
+          });
+        } else {
+          this.logger.info('Company assignment allowed for super admin in update', {
+            userId: req.user?.id,
+            userRole,
+            requestedCompanies: updateUserDto.companies,
+            targetUserId: id
+          });
+        }
+      }
+
       const companyId = req.user?.companyId || '1';
-      const user = await this.userService.updateUser(id, companyId, updateUserDto);
+      const user = await this.userService.updateUser(id, companyId, updateUserDto, {
+        id: req.user?.id || '',
+        email: req.user?.email || '',
+        companyId: req.user?.companyId || '',
+        role: req.user?.role || '',
+        permissions: req.user?.permissions
+      });
 
       if (!user) {
         res.status(404).json({
@@ -338,7 +457,13 @@ export class UserController {
       }
 
       const companyId = req.user?.companyId || '1';
-      const user = await this.userService.updateUser(userId, companyId, updateUserDto);
+      const user = await this.userService.updateUser(userId, companyId, updateUserDto, {
+        id: req.user?.id || '',
+        email: req.user?.email || '',
+        companyId: req.user?.companyId || '',
+        role: req.user?.role || '',
+        permissions: req.user?.permissions
+      });
 
       if (!user) {
         res.status(404).json({
@@ -490,7 +615,13 @@ export class UserController {
         return;
       }
 
-      await this.userService.assignUserToCompany(id, companyId, roleId);
+      await this.userService.assignUserToCompany(id, companyId, roleId, {
+        id: req.user?.id || '',
+        email: req.user?.email || '',
+        companyId: req.user?.companyId || '',
+        role: req.user?.role || '',
+        permissions: req.user?.permissions
+      });
 
       this.logger.info('User assigned to company', {
         userId: id,

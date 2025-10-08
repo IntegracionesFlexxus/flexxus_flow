@@ -87,8 +87,8 @@ export const LoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'juan.perez@test.agrosoft.com',
+      password: 'Test123456!',
       rememberMe: false
     },
     mode: 'onBlur' // Validar en blur para mejor UX

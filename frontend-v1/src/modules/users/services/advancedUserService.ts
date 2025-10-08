@@ -5,7 +5,8 @@
  */
 
 import { BaseService, PaginationParams, FilterParams, ApiError } from '@/shared/services/BaseService';
-import type { User, Permission, Role, UserStatus } from '@modules/users/types';
+import type { User, UserStatus } from '@modules/users/types';
+import type { Permission, Role } from '@/modules/roles/types';
 
 /**
  * User creation data

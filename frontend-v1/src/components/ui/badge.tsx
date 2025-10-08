@@ -1,18 +1,32 @@
 import React from 'react';
 import { Chip, ChipProps } from '@mui/material';
 
-export interface BadgeProps extends Omit<ChipProps, 'variant'> {
+export interface BadgeProps {
   variant?: 'default' | 'secondary' | 'destructive' | 'outline';
   children?: React.ReactNode;
+  label?: React.ReactNode;
+  size?: ChipProps['size'];
+  className?: string;
+  onClick?: () => void;
+  onDelete?: () => void;
+  icon?: React.ReactElement;
+  deleteIcon?: React.ReactElement;
+  sx?: ChipProps['sx'];
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   variant = 'default',
   children,
   label,
-  ...props
+  size = 'small',
+  className,
+  onClick,
+  onDelete,
+  icon,
+  deleteIcon,
+  sx
 }) => {
-  const getColor = () => {
+  const getColor = (): ChipProps['color'] => {
     switch (variant) {
       case 'secondary':
         return 'secondary';
@@ -25,7 +39,7 @@ export const Badge: React.FC<BadgeProps> = ({
     }
   };
 
-  const getVariant = () => {
+  const getVariant = (): ChipProps['variant'] => {
     return variant === 'outline' ? 'outlined' : 'filled';
   };
 
@@ -34,8 +48,13 @@ export const Badge: React.FC<BadgeProps> = ({
       label={label || children}
       color={getColor()}
       variant={getVariant()}
-      size="small"
-      {...props}
+      size={size}
+      className={className}
+      onClick={onClick}
+      onDelete={onDelete}
+      icon={icon}
+      deleteIcon={deleteIcon}
+      sx={sx}
     />
   );
 };

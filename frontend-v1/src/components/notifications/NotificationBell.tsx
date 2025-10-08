@@ -40,9 +40,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 }) => {
   const theme = useTheme();
   const { notifications } = useUIStore();
-  
-  // Contar notificaciones no leídas
-  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Contar notificaciones activas
+  const unreadCount = notifications.length;
   const hasNotifications = unreadCount > 0;
   
   // Manejar click en la campana

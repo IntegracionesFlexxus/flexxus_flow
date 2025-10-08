@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsOptional, IsEnum, MinLength, MaxLength, IsBoolean, IsObject, ValidateNested } from 'class-validator';
+import { IsEmail, IsString, IsOptional, IsEnum, MinLength, MaxLength, IsBoolean, IsObject, ValidateNested, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class NotificationPreferences {
@@ -40,6 +40,11 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   role?: string; // Can be role name or UUID
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  companies?: string[]; // Array de company IDs
 
   @IsString()
   @IsOptional()

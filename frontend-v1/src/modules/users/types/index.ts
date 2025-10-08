@@ -108,36 +108,13 @@ export interface BulkInviteRequest {
   expirationDays?: number;
 }
 
-// Permisos
-export interface Permission {
-  id: string;
-  name: string;
-  description?: string;
-  resource: string;
-  action: string;
-  category: PermissionCategory;
-}
+// Importar tipos de roles y permisos para uso local
+import type { Permission, Role } from '@/modules/roles/types';
+import { PermissionCategory } from '@/modules/roles/types';
 
-export enum PermissionCategory {
-  USER_MANAGEMENT = 'user_management',
-  ROLE_MANAGEMENT = 'role_management',
-  COMPANY_MANAGEMENT = 'company_management',
-  SYSTEM = 'system',
-  REPORTING = 'reporting',
-  BILLING = 'billing'
-}
-
-// Rol con permisos
-export interface Role {
-  id: string;
-  name: string;
-  description?: string;
-  permissions: Permission[];
-  isSystemRole: boolean;
-  isDefault?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Re-exportar para que otros módulos puedan importarlos desde aquí
+export type { Permission, Role };
+export { PermissionCategory };
 
 // Filtros y paginación
 export interface UserFilters {

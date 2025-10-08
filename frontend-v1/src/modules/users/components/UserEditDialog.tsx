@@ -22,9 +22,15 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Autocomplete
+  Autocomplete,
+  Tooltip
 } from '@mui/material';
-import { Close as CloseIcon, Save as SaveIcon } from '@mui/icons-material';
+import {
+  Close as CloseIcon,
+  Save as SaveIcon,
+  Info as InfoIcon,
+  Business as BusinessIcon
+} from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
@@ -38,6 +44,7 @@ interface UserEditDialogProps {
   companies?: Array<{ id: string; name: string }>;
   mode?: 'create' | 'edit';
   companyId?: string;
+  isSuperAdmin?: boolean;
 }
 
 interface FormData {
@@ -64,14 +71,16 @@ const getValidationSchema = (mode: 'create' | 'edit') => Yup.object({
     .required('Apellido es requerido'),
   role: Yup.string().required('Rol es requerido'),
   status: Yup.string().required('Estado es requerido'),
-  password: mode === 'create' 
+  phone: Yup.string().notRequired(),
+  emailVerified: Yup.boolean().default(false),
+  password: mode === 'create'
     ? Yup.string()
         .min(8, 'Mínimo 8 caracteres')
         .matches(
           /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])/,
           'Debe contener mayúsculas, minúsculas, números y al menos un carácter especial (@$!%*?&#)'
         )
-        .test('no-weak-patterns', 'No debe contener patrones débiles (123, abc, qwerty, etc.)', 
+        .test('no-weak-patterns', 'No debe contener patrones débiles (123, abc, qwerty, etc.)',
           (value) => {
             if (!value) return true;
             const weakPatterns = ['123', '234', '345', 'abc', 'qwerty', 'password', '111', '000'];
@@ -119,23 +128,9 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   roles = [],
   companies = [],
   mode = 'create',
-  companyId
+  companyId,
+  isSuperAdmin = false
 }) => {
-  // Debug logs para edición
-  // console.log('📝 [UserEditDialog] Dialog abierto:', { open, mode });
-  // console.log('👤 [UserEditDialog] Usuario recibido:', user);
-  // console.log('🔑 [UserEditDialog] Propiedades del usuario:', user ? Object.keys(user) : 'No user');
-  // console.log('📧 [UserEditDialog] Datos del usuario:', {
-  //   id: user?.id,
-  //   email: user?.email,
-  //   firstName: user?.firstName,
-  //   lastName: user?.lastName,
-  //   role: user?.role,
-  //   roleId: user?.roleId,
-  //   status: user?.status
-  // });
-  // console.log('🏭 [UserEditDialog] Company ID:', companyId);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -164,24 +159,14 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
 
   // Effect para resetear el formulario cuando se abre el dialog o cambia el usuario
   useEffect(() => {
-    // console.log('🔄 [UserEditDialog.useEffect] Estado cambió:', { open, mode, hasUser: !!user });
-
     if (open) {
       if (user && mode === 'edit') {
-        // console.log('📋 [UserEditDialog.useEffect] Modo edición - Reseteando con datos del usuario:', {
-        //   email: user.email,
-        //   firstName: user.firstName,
-        //   lastName: user.lastName,
-        //   role: user.role,
-        //   status: user.status
-        // });
-
         // Resetear el formulario con los datos del usuario
         reset({
           email: user.email || '',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
-          role: user.roleId || user.role || '',  // Usar roleId si está disponible
+          role: user.roleId || user.role || '',
           status: user.status || 'active',
           password: '',
           confirmPassword: '',
@@ -190,23 +175,14 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
         });
 
         // Establecer las empresas seleccionadas
-        // Si no hay empresas en el usuario, usar la empresa actual
-        // console.log('🏭 [UserEditDialog.useEffect] User companies:', user.companies);
-        // console.log('🆔 [UserEditDialog.useEffect] CompanyId prop:', companyId);
-
         if (user.companies?.length > 0) {
-          // console.log('✅ [UserEditDialog.useEffect] Setting user companies:', user.companies.map((c: any) => c.id));
           setSelectedCompanies(user.companies.map((c: any) => c.id));
         } else if (companyId) {
-          // console.log('✅ [UserEditDialog.useEffect] Setting current company:', [companyId]);
           setSelectedCompanies([companyId]);
         } else {
-          // console.log('⚠️ [UserEditDialog.useEffect] No companies to set');
           setSelectedCompanies([]);
         }
       } else if (mode === 'create') {
-        // console.log('📋 [UserEditDialog.useEffect] Modo creación - Reseteando formulario vacío');
-
         // Resetear con valores por defecto para crear nuevo usuario
         reset({
           email: '',
@@ -220,56 +196,42 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           emailVerified: false
         });
 
-        setSelectedCompanies([]);
+        // Pre-selección automática para usuarios no-Super-Admin
+        if (!isSuperAdmin && companyId) {
+          // Si no es Super Admin, pre-seleccionar su empresa automáticamente
+          setSelectedCompanies([companyId]);
+        } else {
+          setSelectedCompanies([]);
+        }
       }
     }
-  }, [user, open, mode, reset]);
+  }, [user, open, mode, reset, companyId, isSuperAdmin]);
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);
     setError(null);
     try {
-      // console.log('🎯 [UserEditDialog] Original form values:', values);
-      // console.log('🎯 [UserEditDialog] Original role value:', values.role);
-      // console.log('🎯 [UserEditDialog] Available roles:', roles);
-      
-      // Map role UUID to role name
-      let roleValue = values.role;
-      if (roleValue) {
-        // Find the role object by UUID
-        const selectedRole = roles.find(r => r.id === roleValue);
-        // console.log('🎯 [UserEditDialog] Found role object:', selectedRole);
-        if (selectedRole) {
-          // Use the role name instead of UUID
-          roleValue = selectedRole.name.toLowerCase(); // Ensure lowercase (admin, manager, user, viewer)
-          // console.log('🎯 [UserEditDialog] Mapped role to name:', roleValue);
-        } else {
-          // console.log('⚠️ [UserEditDialog] Role not found in roles array, keeping original:', roleValue);
-        }
-      }
-      
+      // Enviar roleId directamente como UUID (no convertir a name)
       const userData = {
         ...values,
-        role: roleValue, // Use the mapped role name
+        roleId: values.role,  // Enviar UUID directamente
         companies: selectedCompanies,
         mode
       };
-      
-      // console.log('🎯 [UserEditDialog] Final userData before removing passwords:', userData);
-      
+
+      // Eliminar el campo 'role' para evitar confusión
+      delete (userData as any).role;
+
       // Remove password fields if not set
       if (!userData.password) {
         delete userData.password;
         delete userData.confirmPassword;
       }
-      
-      // console.log('🎯 [UserEditDialog] Final userData to send:', userData);
-      
+
       if (onSave) {
         await onSave(userData);
         handleClose();
       } else {
-        // console.error('onSave callback not provided');
         setError('Error: Función de guardado no configurada');
       }
     } catch (err: any) {
@@ -525,40 +487,107 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
               </Grid>
               
               <Grid item xs={12}>
-                {(() => {
-                  // console.log('🏢 [Autocomplete] Available companies:', companies);
-                  // console.log('📋 [Autocomplete] Selected company IDs:', selectedCompanies);
-                  // console.log('✅ [Autocomplete] Filtered companies:', companies.filter(c => selectedCompanies.includes(c.id)));
-                  return null;
-                })()}
+                {/* Badge de restricción */}
+                {!isSuperAdmin && (
+                  <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      icon={<InfoIcon />}
+                      label="Solo tu empresa"
+                      size="small"
+                      color="info"
+                      variant="outlined"
+                      sx={{
+                        borderStyle: 'dashed',
+                        fontWeight: 500
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Como administrador de empresa, solo puedes gestionar usuarios de tu organización
+                    </Typography>
+                  </Box>
+                )}
+
                 <Autocomplete
                   multiple
                   id="companies"
-                  options={companies}
+                  options={
+                    isSuperAdmin
+                      ? companies
+                      : companies.filter(c => c.id === companyId)
+                  }
                   getOptionLabel={(option) => option.name}
                   value={companies.filter(c => selectedCompanies.includes(c.id))}
                   onChange={(event, newValue) => {
-                    // console.log('🔄 [Autocomplete] onChange - New value:', newValue);
-                    setSelectedCompanies(newValue.map(v => v.id));
+                    if (!isSuperAdmin) {
+                      // Solo permitir la empresa del usuario
+                      const validCompanies = newValue.filter(company => company.id === companyId);
+                      setSelectedCompanies(validCompanies.map(v => v.id));
+                    } else {
+                      setSelectedCompanies(newValue.map(v => v.id));
+                    }
                   }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Empresas Asignadas"
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          Empresas Asignadas
+                          {!isSuperAdmin && (
+                            <Tooltip
+                              title="Solo puedes asignar usuarios a tu empresa. Los Super Administradores pueden gestionar múltiples empresas."
+                              arrow
+                              placement="top"
+                            >
+                              <InfoIcon
+                                sx={{
+                                  fontSize: 16,
+                                  color: 'action.active',
+                                  cursor: 'help'
+                                }}
+                              />
+                            </Tooltip>
+                          )}
+                        </Box>
+                      }
                       placeholder="Seleccionar empresas"
+                      helperText={
+                        !isSuperAdmin ? (
+                          <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <InfoIcon sx={{ fontSize: 14, color: 'info.main' }} />
+                            <span style={{ color: '#0288d1', fontWeight: 500 }}>
+                              Como administrador de empresa, solo puedes asignar usuarios a tu empresa actual
+                            </span>
+                          </Box>
+                        ) : (
+                          "Puedes asignar el usuario a una o más empresas"
+                        )
+                      }
                     />
                   )}
                   renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        variant="outlined"
-                        label={option.name}
-                        {...getTagProps({ index })}
-                        key={option.id}
-                      />
-                    ))
+                    value.map((option, index) => {
+                      const isUserCompany = option.id === companyId;
+
+                      return (
+                        <Chip
+                          variant={isUserCompany ? "filled" : "outlined"}
+                          label={option.name}
+                          icon={isUserCompany ? <BusinessIcon /> : undefined}
+                          color={isUserCompany ? "primary" : "default"}
+                          {...getTagProps({ index })}
+                          key={option.id}
+                          sx={{
+                            fontWeight: isUserCompany ? 600 : 400,
+                            ...(isUserCompany && {
+                              borderWidth: 2,
+                              borderStyle: 'solid'
+                            })
+                          }}
+                        />
+                      );
+                    })
                   }
-                  disabled={loading}
+                  disabled={loading || !isSuperAdmin}
                 />
               </Grid>
             </Grid>

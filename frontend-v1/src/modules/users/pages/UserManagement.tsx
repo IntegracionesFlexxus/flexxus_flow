@@ -51,7 +51,7 @@ import { LoadingOverlay } from '@/components/ui/Loading';
 // Services & Hooks
 import { userService } from '@modules/users/services/userService';
 import { invitationService } from '@modules/users/services/invitationService';
-import { roleService } from '@modules/auth/services/roleService';
+import { roleService } from '@/modules/roles/services/roleService';
 import { companyService } from '@modules/auth/services/companyService';
 import { useUserManagement } from '@modules/users/hooks/useUserManagement';
 import { useAuthStore } from '@/shared/store/authStore';
@@ -125,10 +125,32 @@ export const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Validación de permisos basada en el rol del usuario - Sincronizado con backend
-  // Incluye roles en inglés y español para compatibilidad
-  const userRole = (currentCompany?.role || currentUser?.role || '').toLowerCase();
-  const allowedRoles = ['admin', 'manager', 'administrador', 'gerente', 'super_admin'];
-  const canManageUsers = allowedRoles.includes(userRole);
+  const userRole = currentCompany?.role || currentUser?.role || '';
+
+  // Identificar si es Super Admin
+  const isSuperAdmin = [
+    UserRole.SUPER_ADMIN,
+    'super_admin',
+    'SUPER_ADMIN'
+  ].includes(userRole as UserRole);
+
+  // Identificar si puede gestionar usuarios
+  const canManageUsers = [
+    UserRole.SUPER_ADMIN,
+    UserRole.COMPANY_ADMIN,
+    UserRole.COMPANY_MANAGER,
+    'admin',          // Legacy
+    'manager',        // Legacy
+    'Admin',          // Legacy
+    'Manager',        // Legacy
+    'Administrador',  // Legacy - Spanish role name
+    'administrador',  // Legacy - Spanish role name lowercase
+    'Gerente',        // Legacy - Spanish role name
+    'gerente',        // Legacy - Spanish role name lowercase
+    'super_admin',    // Legacy
+    'company_admin',  // Legacy
+    'company_manager' // Legacy
+  ].includes(userRole as any);
   const canInviteUsers = canManageUsers; // Sincronizado con canManageUsers para consistencia
   const { isEnabled: canManagePermissions } = useFeatureFlag('permission_management', { defaultValue: true });
 
@@ -159,11 +181,14 @@ export const UserManagement: React.FC = () => {
     queryFn: () => userService.getCompanyUsers(currentCompany!.id, filters),
     enabled: !!currentCompany?.id, // Siempre habilitado si hay empresa
     staleTime: 30000, // 30 seconds
-    gcTime: 5 * 60 * 1000 // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    onError: (error: any) => {
+      console.error('❌ [USERS QUERY ERROR]:', error.response?.status, error.response?.data);
+    }
   });
 
-
   // Query: Fetch invitations
+  // TODO: Habilitar cuando el endpoint /api/v1/invitations/company/:companyId esté implementado en el backend
   const {
     data: invitationsData,
     isLoading: isLoadingInvitations,
@@ -171,40 +196,65 @@ export const UserManagement: React.FC = () => {
   } = useQuery({
     queryKey: ['invitations', currentCompany?.id],
     queryFn: () => invitationService.getCompanyInvitations(currentCompany!.id),
-    enabled: !!currentCompany?.id && canInviteUsers && selectedTab === TABS.INVITATIONS,
+    enabled: false, // Deshabilitado temporalmente - endpoint no implementado (404)
+    // enabled: !!currentCompany?.id && canInviteUsers && selectedTab === TABS.INVITATIONS,
     staleTime: 30000
   });
 
   // Query: Fetch roles
   const {
     data: rolesData,
-    isLoading: isLoadingRoles
+    isLoading: isLoadingRoles,
+    error: rolesError
   } = useQuery({
     queryKey: ['roles', currentCompany?.id],
-    queryFn: () => roleService.getRoles(currentCompany?.id),
+    queryFn: () => roleService.getCompanyRoles(currentCompany!.id),
     enabled: !!currentCompany?.id,
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    onError: (error: any) => {
+      console.error('❌ [ROLES QUERY ERROR] Status:', error.response?.status);
+      console.error('❌ [ROLES QUERY ERROR] Data:', error.response?.data);
+      console.error('❌ [ROLES QUERY ERROR] URL:', error.config?.url);
+      console.error('❌ [ROLES QUERY ERROR] Method:', error.config?.method);
+    }
   });
 
   // Query: Fetch companies
   const {
     data: companiesData,
-    isLoading: isLoadingCompanies
+    isLoading: isLoadingCompanies,
+    error: companiesError
   } = useQuery({
     queryKey: ['companies'],
     queryFn: () => companyService.getUserCompanies(),
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    onError: (error: any) => {
+      console.error('❌ [COMPANIES QUERY ERROR]:', error.response?.status, error.response?.data);
+    }
   });
+
+  // Filtrar empresas según rol del usuario
+  const availableCompanies = useMemo(() => {
+    if (isSuperAdmin) {
+      return companiesData || [];
+    } else {
+      if (!currentCompany) {
+        return [];
+      }
+      return [currentCompany];
+    }
+  }, [isSuperAdmin, companiesData, currentCompany]);
+
+  // Filtrar roles para excluir super_admin
+  const availableRoles = useMemo(() =>
+    (rolesData || []).filter(role => role.code !== 'super_admin'),
+    [rolesData]
+  );
 
   // Mutations
   const deleteUserMutation = useMutation({
-    mutationFn: (userId: string) => {
-      console.log('🔥 [deleteUserMutation] Llamando userService.deleteUser con ID:', userId);
-      console.log('🔍 [deleteUserMutation] Tipo de userId:', typeof userId);
-      return userService.deleteUser(userId);
-    },
+    mutationFn: (userId: string) => userService.deleteUser(userId),
     onSuccess: () => {
-      console.log('✅ [deleteUserMutation] Usuario eliminado exitosamente');
       queryClient.invalidateQueries({ queryKey: ['users'] });
       addNotification({
         type: 'success',
@@ -214,12 +264,6 @@ export const UserManagement: React.FC = () => {
       closeDialog('delete');
     },
     onError: (error: any) => {
-      console.error('❌ [deleteUserMutation] Error al eliminar usuario:', {
-        error,
-        response: error.response,
-        message: error.response?.data?.message,
-        status: error.response?.status
-      });
       addNotification({
         type: 'error',
         title: 'Error al eliminar usuario',
@@ -287,7 +331,6 @@ export const UserManagement: React.FC = () => {
 
   // Handlers (Clean Code: funciones con nombres descriptivos)
   const handleOpenDialog = useCallback((dialog: keyof typeof dialogs) => {
-    console.log('Opening dialog:', dialog);
     setDialogs(prev => ({ ...prev, [dialog]: true }));
   }, []);
 
@@ -300,9 +343,6 @@ export const UserManagement: React.FC = () => {
 
   const handleMenuClick = useCallback((event: React.MouseEvent<HTMLElement>, user: User) => {
     event.stopPropagation();
-    console.log('📌 [handleMenuClick] Usuario recibido para el menú:', user);
-    console.log('🔑 [handleMenuClick] Propiedades del usuario:', Object.keys(user));
-    console.log('🆔 [handleMenuClick] ID del usuario:', user.id);
     setSelectedUser(user);
     setAnchorEl(event.currentTarget);
   }, []);
@@ -312,15 +352,9 @@ export const UserManagement: React.FC = () => {
   }, []);
 
   const handleOpenEditDialog = useCallback(() => {
-    console.log('🖊️ [UserManagement.handleOpenEditDialog] Abriendo diálogo de edición');
-    console.log('👤 [UserManagement.handleOpenEditDialog] Usuario seleccionado para editar:', selectedUser);
-    console.log('🆔 [UserManagement.handleOpenEditDialog] ID del usuario:', selectedUser?.id);
-    console.log('🔑 [UserManagement.handleOpenEditDialog] Propiedades del usuario:', selectedUser ? Object.keys(selectedUser) : 'No user');
-    console.log('📧 [UserManagement.handleOpenEditDialog] Email del usuario:', selectedUser?.email);
-
     handleOpenDialog('edit');
     handleMenuClose();
-  }, [handleOpenDialog, handleMenuClose, selectedUser]);
+  }, [handleOpenDialog, handleMenuClose]);
 
   const handleManagePermissions = useCallback(() => {
     handleOpenDialog('permissions');
@@ -333,32 +367,14 @@ export const UserManagement: React.FC = () => {
   }, [handleOpenDialog, handleMenuClose]);
 
   const handleConfirmDelete = useCallback(() => {
-    // Debug logs para rastrear el problema de eliminación
-    console.log('🗑️ [UserManagement.handleConfirmDelete] Iniciando eliminación de usuario');
-    console.log('👤 [UserManagement.handleConfirmDelete] Usuario seleccionado:', selectedUser);
-    console.log('🆔 [UserManagement.handleConfirmDelete] ID del usuario:', selectedUser?.id);
-    console.log('📧 [UserManagement.handleConfirmDelete] Email del usuario:', selectedUser?.email);
-
     if (selectedUser) {
-      console.log('✅ [UserManagement.handleConfirmDelete] Usuario válido, llamando deleteUserMutation');
       deleteUserMutation.mutate(selectedUser.id);
-    } else {
-      console.error('❌ [UserManagement.handleConfirmDelete] No hay usuario seleccionado');
     }
   }, [selectedUser, deleteUserMutation]);
 
   const handleCreateUser = useCallback(async (userData: any) => {
-    console.log('🚀 [Frontend] Starting user creation...');
-    console.log('📦 [Frontend] User data to send:', userData);
-    console.log('🏢 [Frontend] Current company:', currentCompany);
-    console.log('👤 [Frontend] Current user:', currentUser);
-    console.log('🔐 [Frontend] Access token:', localStorage.getItem('auth_access_token')?.substring(0, 50) + '...');
-    
     try {
-      console.log('📡 [Frontend] Calling userService.createUser...');
       const result = await userService.createUser(currentCompany!.id, userData);
-      console.log('✅ [Frontend] User created successfully:', result);
-      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       addNotification({
         type: 'success',
@@ -367,14 +383,6 @@ export const UserManagement: React.FC = () => {
       });
       closeDialog('create');
     } catch (error: any) {
-      console.error('❌ [Frontend] Error creating user:', {
-        error: error,
-        response: error.response,
-        status: error.response?.status,
-        data: error.response?.data,
-        headers: error.response?.headers
-      });
-      
       addNotification({
         type: 'error',
         title: 'Error al crear usuario',
@@ -382,7 +390,7 @@ export const UserManagement: React.FC = () => {
       });
       throw error;
     }
-  }, [currentCompany, currentUser, queryClient, addNotification]);
+  }, [currentCompany, queryClient, addNotification, closeDialog]);
 
   const handleEditUser = useCallback(async (userData: any) => {
     if (!selectedUser) return;
@@ -477,24 +485,15 @@ export const UserManagement: React.FC = () => {
     {
       key: 'actions',
       header: '',
-      render: (user: User) => {
-        // Debug log para cada usuario en la tabla
-        console.log('🔍 [userColumns.actions] Usuario en la tabla:', {
-          email: user.email,
-          id: user.id,
-          hasId: 'id' in user,
-          allKeys: Object.keys(user)
-        });
-        return (
-          <IconButton
-            size="small"
-            onClick={(e) => handleMenuClick(e, user)}
-            disabled={user.id === currentUser?.id}
-          >
-            <MoreVertical size={16} />
-          </IconButton>
-        );
-      }
+      render: (user: User) => (
+        <IconButton
+          size="small"
+          onClick={(e) => handleMenuClick(e, user)}
+          disabled={user.id === currentUser?.id}
+        >
+          <MoreVertical size={16} />
+        </IconButton>
+      )
     }
   ], [handleMenuClick, currentUser]);
 
@@ -753,22 +752,13 @@ export const UserManagement: React.FC = () => {
         <UserEditDialog
           open={dialogs.edit}
           onClose={() => closeDialog('edit')}
-          user={(() => {
-            console.log('🎭 [UserEditDialog] Pasando usuario al diálogo:', selectedUser);
-            console.log('🆔 [UserEditDialog] ID del usuario:', selectedUser.id);
-            console.log('🔑 [UserEditDialog] Todas las propiedades:', Object.keys(selectedUser));
-            console.log('🆔 [UserEditDialog] Role ID:', selectedUser.roleId);
-            return selectedUser;
-          })()}
+          user={selectedUser}
           mode="edit"
           companyId={currentCompany?.id}
           onSave={handleEditUser}
-          roles={rolesData || []}
-          companies={(() => {
-            console.log('🏢 [UserManagement] Companies data:', companiesData);
-            console.log('🏭 [UserManagement] Current company:', currentCompany);
-            return companiesData || [];
-          })()}
+          roles={availableRoles}
+          companies={availableCompanies}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 
@@ -779,8 +769,9 @@ export const UserManagement: React.FC = () => {
           mode="create"
           companyId={currentCompany?.id || ''}
           onSave={handleCreateUser}
-          roles={rolesData || []}
-          companies={companiesData || []}
+          roles={availableRoles}
+          companies={availableCompanies}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 

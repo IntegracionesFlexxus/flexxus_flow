@@ -41,7 +41,11 @@
       "@navigation/*": ["navigation/*"],
       "@loading-states/*": ["loading-states/*"],
       "@error-handling/*": ["error-handling/*"],
-      "@notifications/*": ["notifications/*"]
+      "@notifications/*": ["notifications/*"],
+
+      // Centralized Roles and Permissions types (can use either alias)
+      "@/modules/roles/types": ["modules/roles/types/index.ts"],
+      "@/types/roles": ["modules/roles/types/index.ts"]
     }
   },
   "include": ["src"],

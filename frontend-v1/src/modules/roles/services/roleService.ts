@@ -14,18 +14,33 @@ export type PermissionResource = string;
 export type PermissionScope = 'own' | 'team' | 'department' | 'company' | 'global';
 
 /**
+ * Permission categories for organizing permissions by functional area
+ */
+export enum PermissionCategory {
+  USER_MANAGEMENT = 'user_management',
+  ROLE_MANAGEMENT = 'role_management',
+  COMPANY_MANAGEMENT = 'company_management',
+  SYSTEM = 'system',
+  REPORTING = 'reporting',
+  BILLING = 'billing'
+}
+
+/**
  * Permission interface
  */
 export interface Permission {
   id: string;
   name: string;
   code: string;
+  displayName?: string;        // Display name for UI (backward compatibility)
   description?: string;
   module: string;
   resource: PermissionResource;
   actions: PermissionAction[];
   scope?: PermissionScope;
+  category?: PermissionCategory; // Functional category for grouping
   dependencies?: string[];
+  critical?: boolean;           // Marks critical permissions
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +53,7 @@ export interface Role {
   id: string;
   name: string;
   code: string;
+  displayName?: string;        // Display name for UI (backward compatibility)
   description?: string;
   level: number;
   isSystem: boolean;
@@ -49,6 +65,16 @@ export interface Role {
   createdAt: Date;
   updatedAt: Date;
   userCount?: number;
+
+  // Campos adicionales para compatibilidad con componentes existentes
+  isActive?: boolean;          // Estado activo/inactivo del rol
+  companyId?: string;          // ID de la empresa a la que pertenece el rol
+  createdBy?: string;          // Usuario que creó el rol
+
+  /**
+   * @deprecated Use isSystem instead. Kept for backward compatibility.
+   */
+  isSystemRole?: boolean;      // Alias de isSystem
 }
 
 /**
@@ -145,6 +171,7 @@ export interface RoleTemplate {
  * Role filters
  */
 export interface RoleFilters extends FilterParams {
+  companyId?: string;
   isSystem?: boolean;
   hasPermission?: string[];
   level?: number[];
@@ -184,6 +211,7 @@ export interface UpdateRoleData {
   permissionIds?: string[];
   inheritsFrom?: string[];
   metadata?: Record<string, any>;
+  isActive?: boolean;
 }
 
 /**
@@ -237,6 +265,9 @@ export class RoleService extends BaseService {
     page: number;
     totalPages: number;
   }> {
+    console.log('🔍 [RoleService.getRoles] Called with params:', params);
+    console.log('🔍 [RoleService.getRoles] Base URL:', this['baseUrl']);
+
     // Llamar al endpoint correcto del backend
     const response = await this.get<{
       success: boolean;

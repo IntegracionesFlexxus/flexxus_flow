@@ -9,7 +9,7 @@ import { getAuthState, getUIState } from '@/shared/store'
 // Configuración principal de Axios - MVP con interceptors básicos
 
 // Obtener URL base de variables de entorno o usar default
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api/v1'
 
 // Crear instancia de axios
 const api: AxiosInstance = axios.create({

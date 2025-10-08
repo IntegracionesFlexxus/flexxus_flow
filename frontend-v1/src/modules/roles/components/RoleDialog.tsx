@@ -78,7 +78,7 @@ import { useUIStore } from '@/shared/store/uiStore';
 import { useAuthStore } from '@/shared/store/authStore';
 
 // Types
-import type { Role, Permission } from '@/modules/users/types';
+import type { Role, Permission } from '@/modules/roles/types';
 
 interface RoleDialogProps {
   open: boolean;
@@ -311,7 +311,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
       ...group,
       permissions: group.permissions.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     })).filter(group => group.permissions.length > 0);
@@ -486,7 +486,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {getActionIcon(permission.name)}
               <Typography variant="body2">
-                {permission.displayName}
+                {permission.displayName || permission.name}
               </Typography>
             </Box>
           }
@@ -789,7 +789,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                         return permission ? (
                           <Chip
                             key={permission.id}
-                            label={permission.displayName}
+                            label={permission.displayName || permission.name}
                             size="small"
                             variant="outlined"
                           />
@@ -877,7 +877,7 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({
                         <Chip
                           key={permission.id}
                           icon={getActionIcon(permission.name)}
-                          label={permission.displayName}
+                          label={permission.displayName || permission.name}
                           size="small"
                           variant="outlined"
                         />

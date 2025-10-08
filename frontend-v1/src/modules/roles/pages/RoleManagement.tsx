@@ -80,7 +80,7 @@ import { useAuthStore } from '@/shared/store/authStore';
 import { useUIStore } from '@/shared/store/uiStore';
 
 // Types
-import type { Role, Permission } from '@/modules/users/types';
+import type { Role, Permission } from '@/modules/roles/types';
 
 interface RoleWithStats extends Role {
   userCount: number;
@@ -142,7 +142,7 @@ export const RoleManagement: React.FC = () => {
       } else if (filterType === 'custom') {
         // Get company roles and filter out system roles (since getCompanyRoles includes both)
         const allCompanyRoles = await roleService.getCompanyRoles(currentCompany.id);
-        rolesList = allCompanyRoles.filter(role => !role.isSystemRole && !role.isSystem);
+        rolesList = allCompanyRoles.filter(role => !role.isSystem);
       } else {
         // 'all' filter - getCompanyRoles already includes system roles, so use it directly
         rolesList = await roleService.getCompanyRoles(currentCompany.id);
@@ -237,7 +237,7 @@ export const RoleManagement: React.FC = () => {
       filtered = filtered.filter(role =>
         role.name.toLowerCase().includes(term) ||
         role.description?.toLowerCase().includes(term) ||
-        role.permissions.some(p => p.displayName.toLowerCase().includes(term))
+        role.permissions.some(p => (p.name || p.displayName || '').toLowerCase().includes(term))
       );
     }
 
@@ -421,7 +421,7 @@ export const RoleManagement: React.FC = () => {
               {role.permissions.slice(0, 5).map(permission => (
                 <Chip
                   key={permission.id}
-                  label={permission.displayName}
+                  label={permission.displayName || permission.name}
                   size="small"
                   sx={{ height: 20, fontSize: '0.7rem' }}
                 />
@@ -589,7 +589,7 @@ export const RoleManagement: React.FC = () => {
             />
           </Grid>
           
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} md={3}>
             <Stack direction="row" spacing={1} justifyContent="flex-end">
               <Button
                 variant="contained"

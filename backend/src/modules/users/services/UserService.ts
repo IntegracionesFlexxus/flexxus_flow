@@ -19,8 +19,10 @@ import {
   IUserActivity,
   IUserCompany,
   IDatabaseUser,
-  ISessionInfo
+  ISessionInfo,
+  IAuthenticatedUser
 } from '@/modules/users/types';
+import { AuthorizationError, ErrorCode } from '@/shared/errors/AppError';
 @injectable()
 export class UserService implements IUserService {
   constructor(
@@ -30,6 +32,66 @@ export class UserService implements IUserService {
     @inject(TYPES.PasswordService) private passwordService: PasswordService,
     @inject(TYPES.Logger) private logger: Logger
   ) {}
+
+  /**
+   * Valida que el usuario autenticado tenga permisos para asignar a las empresas solicitadas
+   * @throws {AuthorizationError} Si el usuario no tiene permisos
+   */
+  private validateCompanyAssignmentPermissions(
+    requestedCompanyIds: string[],
+    authenticatedUser: IAuthenticatedUser
+  ): void {
+    const isSuperAdmin = [
+      'super_admin',
+      'SUPER_ADMIN',
+      'super admin'
+    ].includes(authenticatedUser.role);
+
+    // Super admins pueden asignar a cualquier empresa
+    if (isSuperAdmin) {
+      this.logger.info('[UserService] Company assignment allowed for super admin', {
+        userId: authenticatedUser.id,
+        role: authenticatedUser.role,
+        requestedCompanies: requestedCompanyIds
+      });
+      return;
+    }
+
+    // Usuarios normales solo pueden asignar a su propia empresa
+    const userCompanyId = authenticatedUser.companyId;
+
+    const hasUnauthorizedCompany = requestedCompanyIds.some(
+      companyId => companyId !== userCompanyId
+    );
+
+    if (hasUnauthorizedCompany) {
+      this.logger.warn('[UserService] Unauthorized company assignment attempt', {
+        userId: authenticatedUser.id,
+        userRole: authenticatedUser.role,
+        userCompanyId,
+        requestedCompanies: requestedCompanyIds,
+        timestamp: new Date().toISOString()
+      });
+
+      throw new AuthorizationError(
+        'No tienes permisos para asignar usuarios a otras empresas. Solo puedes asignar usuarios a tu empresa.',
+        ErrorCode.FORBIDDEN,
+        {
+          userCompanyId,
+          requestedCompanies: requestedCompanyIds,
+          operation: 'company_assignment'
+        }
+      );
+    }
+
+    this.logger.info('[UserService] Company assignment validated', {
+      userId: authenticatedUser.id,
+      userRole: authenticatedUser.role,
+      userCompanyId,
+      requestedCompanies: requestedCompanyIds
+    });
+  }
+
   async getUsersByCompany(companyId: string, options?: {
     page?: number;
     limit?: number;
@@ -141,14 +203,25 @@ export class UserService implements IUserService {
     firstName: string;
     lastName: string;
     role: string;
+    companies?: string[];
     avatar?: string;
     phone?: string;
-    status?: boolean;
+    status?: string;
     companyId: string;
     createdBy: string;
     password?: string;
-  }): Promise<IUser> {
+  }, authenticatedUser: IAuthenticatedUser): Promise<IUser> {
     try {
+      // SECURITY VALIDATION: Validar permisos de asignación de empresas
+      if (data.companies && data.companies.length > 0) {
+        this.validateCompanyAssignmentPermissions(data.companies, authenticatedUser);
+      } else {
+        // Si no se especificaron empresas, usar la empresa del usuario autenticado
+        // y validar que tenga permisos para asignar a la companyId solicitada
+        const targetCompanyId = data.companyId || authenticatedUser.companyId;
+        this.validateCompanyAssignmentPermissions([targetCompanyId], authenticatedUser);
+      }
+
       // Generate a temporary password if not provided
       const password = data.password || this.generateTemporaryPassword();
       const passwordHash = await this.passwordService.hashPassword(password);
@@ -194,6 +267,11 @@ export class UserService implements IUserService {
         createdAt: user.created_at
       };
     } catch (error) {
+      // Si es un error de autorización, re-lanzarlo
+      if (error instanceof AuthorizationError) {
+        throw error;
+      }
+
       this.logger.error('Error creating user', {
         error: error,
         email: data.email,
@@ -206,11 +284,17 @@ export class UserService implements IUserService {
     firstName?: string;
     lastName?: string;
     role?: string;
+    companies?: string[];
     avatar?: string;
     phone?: string;
     isActive?: boolean;
-  }): Promise<IUser | null> {
+  }, authenticatedUser: IAuthenticatedUser): Promise<IUser | null> {
     try {
+      // SECURITY VALIDATION: Validar permisos de asignación de empresas
+      if (data.companies && data.companies.length > 0) {
+        this.validateCompanyAssignmentPermissions(data.companies, authenticatedUser);
+      }
+
       // Verify user belongs to company
       const userCompany = await this.userCompanyRepository.getUserRoleInCompany(userId, companyId);
       if (!userCompany) {
@@ -226,9 +310,10 @@ export class UserService implements IUserService {
       if (data.phone !== undefined) updates.phone = data.phone;
       if (data.status !== undefined) updates.status = data.status;
       const user = await this.userRepository.update(userId, updates);
-      // Update role if provided
-      if (data.role && data.role !== userCompany.role) {
-        await this.userCompanyRepository.updateUserRoleInCompany(userId, companyId, data.role);
+      // Update role if provided (acepta roleId o role para backward compatibility)
+      const roleIdentifier = (data as any).roleId || data.role;
+      if (roleIdentifier && roleIdentifier !== userCompany.role && roleIdentifier !== userCompany.roleId) {
+        await this.userCompanyRepository.updateUserRoleInCompany(userId, companyId, roleIdentifier);
       }
       return {
         id: user.id,
@@ -242,6 +327,11 @@ export class UserService implements IUserService {
         updatedAt: user.updated_at
       };
     } catch (error) {
+      // Si es un error de autorización, re-lanzarlo
+      if (error instanceof AuthorizationError) {
+        throw error;
+      }
+
       this.logger.error('Error updating user', {
         error: error.message,
         userId,
@@ -452,16 +542,25 @@ export class UserService implements IUserService {
       throw error;
     }
   }
-  async assignUserToCompany(userId: string, companyId: string, role: string): Promise<boolean> {
+  async assignUserToCompany(userId: string, companyId: string, role: string, authenticatedUser: IAuthenticatedUser): Promise<boolean> {
     try {
+      // SECURITY VALIDATION: Validar permisos para asignar a esta empresa
+      this.validateCompanyAssignmentPermissions([companyId], authenticatedUser);
+
       await this.userCompanyRepository.addUserToCompany(userId, companyId, role);
       this.logger.info('User assigned to company', {
         userId,
         companyId,
-        role
+        role,
+        assignedBy: authenticatedUser.id
       });
       return true;
     } catch (error) {
+      // Si es un error de autorización, re-lanzarlo
+      if (error instanceof AuthorizationError) {
+        throw error;
+      }
+
       this.logger.error('Error assigning user to company', {
         error: error.message,
         userId,

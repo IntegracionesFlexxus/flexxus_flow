@@ -49,7 +49,23 @@ export class ChannelService {
   }
 
   async getActiveChannels(companyId: string): Promise<IChannel[]> {
-    return await this.channelRepo.findActiveChannels(companyId);
+    try {
+      const channels = await this.channelRepo.findActiveChannels(companyId);
+      return channels || []; // Asegurar que siempre devuelva array
+    } catch (error: any) {
+      // Si el error es "no records found" o similar, devolver array vacío
+      if (error.message && (
+        error.message.includes('not found') ||
+        error.message.includes('no records') ||
+        error.message.includes('empty')
+      )) {
+        this.logger.info('No channels found for company, returning empty array', { companyId });
+        return [];
+      }
+      // Para otros errores, relanzar
+      this.logger.error('Error fetching channels', { error: error.message, companyId });
+      throw error;
+    }
   }
 
   async getChannelById(channelId: string, companyId: string): Promise<IChannel | null> {

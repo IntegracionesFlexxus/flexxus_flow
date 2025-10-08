@@ -1,193 +1,153 @@
+/**
+ * ChannelsPage Component
+ * Página principal de gestión de canales de comunicación
+ * Integrada con backend y componentes de Fase 2
+ */
+
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Paper,
   Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
-  Chip,
-  Switch,
-  FormControlLabel,
+  Paper,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  ListItemSecondaryAction
-} from '@mui/material'
+  ListItemSecondaryAction,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  AlertTitle
+} from '@mui/material';
 import {
-  WhatsApp as WhatsAppIcon,
-  Email as EmailIcon,
-  Message as MessageIcon,
-  Facebook as FacebookIcon,
-  Instagram as InstagramIcon,
-  Phone as PhoneIcon,
-  Settings as SettingsIcon,
   CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon
-} from '@mui/icons-material'
+  Add as AddIcon,
+  Business as BusinessIcon
+} from '@mui/icons-material';
+import { ChannelList, ChannelConfigModal } from '../components/channels';
+import { Channel, ChannelType } from '../types';
+import { useUIStore } from '@/shared/store/uiStore';
+import { useAuthStore } from '@/shared/store/authStore';
 
-// Página de Canales - Configuración de canales de comunicación
 function ChannelsPage() {
-  // Mock data para canales disponibles
-  const channels = [
-    {
-      id: 'whatsapp',
-      name: 'WhatsApp Business',
-      icon: <WhatsAppIcon sx={{ fontSize: 40, color: '#25D366' }} />,
-      description: 'Conecta tu cuenta de WhatsApp Business',
-      status: 'connected',
-      enabled: true,
-      stats: {
-        messages: 1234,
-        contacts: 456
-      }
-    },
-    {
-      id: 'email',
-      name: 'Email',
-      icon: <EmailIcon sx={{ fontSize: 40, color: '#EA4335' }} />,
-      description: 'Gestiona correos electrónicos',
-      status: 'connected',
-      enabled: true,
-      stats: {
-        messages: 567,
-        contacts: 123
-      }
-    },
-    {
-      id: 'sms',
-      name: 'SMS',
-      icon: <MessageIcon sx={{ fontSize: 40, color: '#1976d2' }} />,
-      description: 'Envía y recibe mensajes de texto',
-      status: 'disconnected',
-      enabled: false,
-      stats: {
-        messages: 0,
-        contacts: 0
-      }
-    },
-    {
-      id: 'facebook',
-      name: 'Facebook Messenger',
-      icon: <FacebookIcon sx={{ fontSize: 40, color: '#1877F2' }} />,
-      description: 'Conecta tu página de Facebook',
-      status: 'disconnected',
-      enabled: false,
-      stats: {
-        messages: 0,
-        contacts: 0
-      }
-    },
-    {
-      id: 'instagram',
-      name: 'Instagram Direct',
-      icon: <InstagramIcon sx={{ fontSize: 40, color: '#E4405F' }} />,
-      description: 'Conecta tu cuenta de Instagram Business',
-      status: 'disconnected',
-      enabled: false,
-      stats: {
-        messages: 0,
-        contacts: 0
-      }
-    },
-    {
-      id: 'phone',
-      name: 'Telefonía',
-      icon: <PhoneIcon sx={{ fontSize: 40, color: '#34A853' }} />,
-      description: 'Integración con sistema telefónico',
-      status: 'disconnected',
-      enabled: false,
-      stats: {
-        messages: 0,
-        contacts: 0
-      }
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [newChannelModalOpen, setNewChannelModalOpen] = useState(false);
+  const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
+  const { addNotification } = useUIStore();
+  const { currentCompany, user } = useAuthStore();
+
+  // Debug: Log company info
+  useEffect(() => {
+    console.log('ChannelsPage - Current Company:', currentCompany);
+    console.log('ChannelsPage - User:', user);
+    if (!currentCompany) {
+      console.warn('No company selected!');
     }
-  ]
+  }, [currentCompany, user]);
+
+  // Handler para abrir modal de configuración
+  const handleConfigureChannel = (channel: Channel | null) => {
+    setSelectedChannel(channel);
+    setConfigModalOpen(true);
+  };
+
+  // Handler para agregar nuevo canal
+  const handleAddChannel = () => {
+    setNewChannelModalOpen(true);
+  };
+
+  // Handler para seleccionar tipo de canal y abrir configuración
+  const handleSelectChannelType = () => {
+    if (!selectedChannelType) {
+      addNotification({
+        type: 'warning',
+        title: 'Selecciona un tipo de canal',
+        message: 'Debes seleccionar el tipo de canal que deseas configurar'
+      });
+      return;
+    }
+
+    setNewChannelModalOpen(false);
+    setSelectedChannel(null);
+    setConfigModalOpen(true);
+  };
+
+  // Handler cuando se guarda un canal
+  const handleChannelSaved = (channel: Channel) => {
+    addNotification({
+      type: 'success',
+      title: channel.id ? 'Canal actualizado' : 'Canal creado',
+      message: `${channel.name} se ha configurado correctamente`
+    });
+    setConfigModalOpen(false);
+    setSelectedChannelType(null);
+  };
+
+  // Handler cuando se cierra el modal de configuración
+  const handleCloseConfigModal = () => {
+    setConfigModalOpen(false);
+    setSelectedChannel(null);
+    setSelectedChannelType(null);
+  };
+
+  // Validación: Si no hay empresa seleccionada
+  if (!currentCompany) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning" icon={<BusinessIcon />}>
+          <AlertTitle>Selecciona una Empresa</AlertTitle>
+          Por favor selecciona una empresa para gestionar los canales de comunicación.
+          {user && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Usuario actual: {user.email}
+              </Typography>
+            </Box>
+          )}
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Canales de Comunicación
-      </Typography>
+      {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Canales de Comunicación
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Configura y gestiona todos tus canales de comunicación con clientes
+        </Typography>
+        {/* Debug info - remover en producción */}
+        {process.env.NODE_ENV === 'development' && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            Empresa: {currentCompany.name} (ID: {currentCompany.id})
+          </Typography>
+        )}
+      </Box>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Configura y gestiona todos tus canales de comunicación
-      </Typography>
+      {/* Lista de canales */}
+      <ChannelList
+        onConfigureChannel={handleConfigureChannel}
+        onAddChannel={handleAddChannel}
+      />
 
-      <Grid container spacing={3}>
-        {channels.map((channel) => (
-          <Grid item xs={12} sm={6} md={4} key={channel.id}>
-            <Card
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'relative',
-                border: channel.enabled ? '2px solid' : '1px solid',
-                borderColor: channel.enabled ? 'primary.main' : 'divider'
-              }}
-            >
-              <CardContent sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-                  {channel.icon}
-                  <Chip
-                    icon={channel.status === 'connected' ? <CheckCircleIcon /> : <ErrorIcon />}
-                    label={channel.status === 'connected' ? 'Conectado' : 'Desconectado'}
-                    size="small"
-                    color={channel.status === 'connected' ? 'success' : 'default'}
-                  />
-                </Box>
-
-                <Typography variant="h6" gutterBottom>
-                  {channel.name}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {channel.description}
-                </Typography>
-
-                {channel.enabled && (
-                  <List dense>
-                    <ListItem disablePadding>
-                      <ListItemText
-                        primary="Mensajes enviados"
-                        secondary={channel.stats.messages.toLocaleString()}
-                      />
-                    </ListItem>
-                    <ListItem disablePadding>
-                      <ListItemText
-                        primary="Contactos"
-                        secondary={channel.stats.contacts.toLocaleString()}
-                      />
-                    </ListItem>
-                  </List>
-                )}
-              </CardContent>
-
-              <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                <FormControlLabel
-                  control={<Switch checked={channel.enabled} />}
-                  label="Activo"
-                />
-                <Button
-                  size="small"
-                  startIcon={<SettingsIcon />}
-                  variant={channel.enabled ? 'outlined' : 'contained'}
-                >
-                  {channel.status === 'connected' ? 'Configurar' : 'Conectar'}
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Información adicional */}
+      {/* Sección de configuración global */}
       <Paper sx={{ p: 3, mt: 3 }}>
         <Typography variant="h6" gutterBottom>
           Configuración Global
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          Estas configuraciones aplican a todos los canales
         </Typography>
 
         <List>
@@ -200,7 +160,17 @@ function ChannelsPage() {
               secondary="Configura respuestas automáticas para cuando estés fuera de horario"
             />
             <ListItemSecondaryAction>
-              <Button variant="outlined" size="small">Configurar</Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => addNotification({
+                  type: 'info',
+                  title: 'Próximamente',
+                  message: 'Esta funcionalidad estará disponible pronto'
+                })}
+              >
+                Configurar
+              </Button>
             </ListItemSecondaryAction>
           </ListItem>
 
@@ -213,7 +183,17 @@ function ChannelsPage() {
               secondary="Define los horarios en los que tu equipo está disponible"
             />
             <ListItemSecondaryAction>
-              <Button variant="outlined" size="small">Configurar</Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => addNotification({
+                  type: 'info',
+                  title: 'Próximamente',
+                  message: 'Esta funcionalidad estará disponible pronto'
+                })}
+              >
+                Configurar
+              </Button>
             </ListItemSecondaryAction>
           </ListItem>
 
@@ -226,13 +206,111 @@ function ChannelsPage() {
               secondary="Configura reglas para asignar conversaciones automáticamente"
             />
             <ListItemSecondaryAction>
-              <Button variant="outlined" size="small">Configurar</Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => addNotification({
+                  type: 'info',
+                  title: 'Próximamente',
+                  message: 'Esta funcionalidad estará disponible pronto'
+                })}
+              >
+                Configurar
+              </Button>
+            </ListItemSecondaryAction>
+          </ListItem>
+
+          <ListItem>
+            <ListItemIcon>
+              <CheckCircleIcon color="success" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Plantillas de mensajes"
+              secondary="Crea plantillas reutilizables para respuestas rápidas"
+            />
+            <ListItemSecondaryAction>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => addNotification({
+                  type: 'info',
+                  title: 'Próximamente',
+                  message: 'Esta funcionalidad estará disponible pronto'
+                })}
+              >
+                Configurar
+              </Button>
             </ListItemSecondaryAction>
           </ListItem>
         </List>
       </Paper>
+
+      {/* Modal para seleccionar tipo de canal */}
+      <Dialog
+        open={newChannelModalOpen}
+        onClose={() => setNewChannelModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Agregar Nuevo Canal
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Selecciona el tipo de canal que deseas configurar
+          </Typography>
+
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Tipo de Canal</InputLabel>
+            <Select
+              value={selectedChannelType || ''}
+              label="Tipo de Canal"
+              onChange={(e) => setSelectedChannelType(e.target.value as ChannelType)}
+            >
+              <MenuItem value={ChannelType.WHATSAPP}>
+                WhatsApp Business
+              </MenuItem>
+              <MenuItem value={ChannelType.EMAIL}>
+                Email
+              </MenuItem>
+              <MenuItem value={ChannelType.SMS}>
+                SMS
+              </MenuItem>
+              <MenuItem value={ChannelType.INSTAGRAM}>
+                Instagram Direct
+              </MenuItem>
+              <MenuItem value={ChannelType.FACEBOOK}>
+                Facebook Messenger
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewChannelModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSelectChannelType}
+            disabled={!selectedChannelType}
+            startIcon={<AddIcon />}
+          >
+            Continuar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de configuración de canal */}
+      <ChannelConfigModal
+        open={configModalOpen}
+        channel={selectedChannel}
+        isNewChannel={!selectedChannel}
+        channelType={selectedChannelType || undefined}
+        onClose={handleCloseConfigModal}
+        onSave={handleChannelSaved}
+      />
     </Box>
-  )
+  );
 }
 
-export default ChannelsPage
+export default ChannelsPage;

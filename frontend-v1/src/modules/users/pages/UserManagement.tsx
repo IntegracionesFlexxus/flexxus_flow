@@ -305,8 +305,19 @@ export const UserManagement: React.FC = () => {
 
   // Memoized values (Performance optimization)
   const users = useMemo(() => {
-    // La respuesta es PaginatedResponse<User> con estructura { data: User[], total, page, limit, totalPages }
-    const usersList = Array.isArray(usersData?.data) ? usersData.data : [];
+    // El backend devuelve { users: User[], total } - actualizado para coincidir con la respuesta real
+    const usersList = Array.isArray(usersData?.users) ? usersData.users : [];
+
+    // Debug log temporal - eliminar después de verificar
+    if (import.meta.env.DEV && usersData) {
+      console.log('📊 [UserManagement] Datos de usuarios recibidos:', {
+        usersData,
+        hasUsers: !!usersData?.users,
+        usersCount: usersList.length,
+        firstUser: usersList[0]
+      });
+    }
+
     return usersList;
   }, [usersData]);
   const invitations = useMemo(() => invitationsData || [], [invitationsData]);

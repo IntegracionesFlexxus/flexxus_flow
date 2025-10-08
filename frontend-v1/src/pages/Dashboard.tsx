@@ -20,9 +20,9 @@ function Dashboard() {
 
 
   // La respuesta del backend es { success: true, data: { users: [...], total: number } }
-  // Pero el servicio retorna response.data, que ya es { success: true, data: {...} }
-  // Por lo tanto accedemos a usersData.data.total
-  const userCount = usersData?.data?.total || 0
+  // El servicio retorna response.data.data que ya es { users: [...], total: number }
+  // Por lo tanto accedemos directamente a usersData.total
+  const userCount = usersData?.total || 0
 
   // Cards de módulos con navegación
   const modules = [

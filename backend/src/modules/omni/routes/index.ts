@@ -99,6 +99,11 @@ router.get('/channels/:id/health',
   (req, res) => channelController.checkHealth(req, res)
 );
 
+router.post('/channels/validate',
+  validateRequest,
+  (req, res) => channelController.validateCredentials(req, res)
+);
+
 // =======================
 // CONVERSATION ROUTES
 // =======================

@@ -16,7 +16,7 @@ import {
   RolePaginationDto,
   RoleFiltersDto,
   AssignPermissionsDto
-} from '@/modules/roles/interfaces/IRoleService';
+} from '@/modules/auth/interfaces/IRoleService';
 import { IRoleRepository } from '@/modules/auth/interfaces/IRoleRepository';
 import { IPermissionRepository } from '@/modules/auth/interfaces/IPermissionRepository';
 import { AuditService } from '@/shared/services/audit/AuditService';
@@ -269,12 +269,6 @@ export class RoleService implements IRoleService {
       status: filters.status,
       page: filters.page || 1,
       limit: filters.limit || 10
-    });
-
-      rolesCount: result.roles?.length,
-      total: result.total,
-      page: result.page,
-      limit: result.limit
     });
 
     // Formatear roles y obtener permisos

@@ -20,8 +20,10 @@ import {
   Lock
 } from '@mui/icons-material';
 import { useAuthStore } from '@/shared/store/authStore';
+import { authService } from '@/modules/auth/services/authService';
 
-// Formulario de login - MVP Nivel 1
+// Formulario de login con integración a API real
+// Incluye valores por defecto para pruebas
 // TODO: En Nivel 2 agregar OAuth, 2FA, captcha
 
 interface LoginFormData {
@@ -43,8 +45,8 @@ export function LoginForm() {
     setError
   } = useForm<LoginFormData>({
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'juan.perez@test.agrosoft.com',
+      password: 'Test123456!',
       rememberMe: false
     }
   });
@@ -52,47 +54,53 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setApiError(null);
-      
-      // TODO: Reemplazar con llamada real a API
-      // Simulación de login
-      if (data.email === 'admin@flexxus.com' && data.password === 'admin123') {
-        // Mock user and companies data
-        const mockUser = {
-          id: '550e8400-e29b-41d4-a716-446655440000',
-          email: data.email,
-          firstName: 'Admin',
-          lastName: 'Usuario',
-          role: 'admin'
-        };
 
-        const mockCompanies = [{
-          id: '12345678-1234-1234-1234-123456789012',
-          name: 'Flexxus Demo Company',
-          plan: 'professional',
-          features: {
-            omni: true,
-            crm: true,
-            workflow: true,
-            analytics: true
-          }
-        }];
+      // Llamada real a la API de autenticación
+      const response = await authService.login({
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe
+      });
 
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        
-        login(mockUser, mockToken, mockCompanies);
-        navigate('/dashboard');
+      if (response.success && response.data) {
+        // Almacenar datos del usuario y empresas en el store
+        login(
+          response.data.user,
+          response.data.accessToken,
+          response.data.companies
+        );
+
+        // Redirigir según el contexto
+        if (response.data.companies && response.data.companies.length > 1) {
+          // Usuario multi-empresa - redirigir a selector de empresa
+          navigate('/auth/company-selector', {
+            state: { companies: response.data.companies }
+          });
+        } else {
+          // Usuario con una empresa - ir directo al dashboard
+          navigate('/dashboard');
+        }
       } else {
-        throw new Error('Credenciales inválidas');
+        throw new Error(response.message || 'Error en la autenticación');
       }
     } catch (error: any) {
       const message = error?.response?.data?.message || error.message || 'Error al iniciar sesión';
-      
-      // Manejo de errores específicos
+
+      // Manejo de errores específicos según código de estado HTTP
       if (error?.response?.status === 401) {
         setError('email', { message: 'Email o contraseña incorrectos' });
         setError('password', { message: 'Email o contraseña incorrectos' });
+        setApiError('Credenciales inválidas. Por favor verifica tu email y contraseña.');
+      } else if (error?.response?.status === 423) {
+        setApiError('Tu cuenta está bloqueada. Por favor contacta al administrador.');
       } else if (error?.response?.status === 429) {
         setApiError('Demasiados intentos. Por favor espera unos minutos.');
+      } else if (error?.response?.status === 404) {
+        setApiError('Usuario no encontrado. Por favor verifica tu email.');
+      } else if (error?.response?.status === 400) {
+        setApiError('Datos de entrada inválidos. Por favor verifica tu información.');
+      } else if (error?.response?.status >= 500) {
+        setApiError('Error del servidor. Por favor intenta más tarde.');
       } else {
         setApiError(message);
       }
@@ -225,7 +233,7 @@ export function LoginForm() {
       {import.meta.env.DEV && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="caption">
-            <strong>Demo:</strong> admin@flexxus.com / admin123
+            <strong>Credenciales de prueba:</strong> juan.perez@test.agrosoft.com / Test123456!
           </Typography>
         </Alert>
       )}

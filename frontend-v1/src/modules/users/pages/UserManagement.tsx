@@ -125,7 +125,10 @@ export const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Validación de permisos basada en el rol del usuario - Sincronizado con backend
-  const canManageUsers = ['admin', 'manager', 'Admin', 'Manager'].includes(currentCompany?.role || currentUser?.role || '');
+  // Incluye roles en inglés y español para compatibilidad
+  const userRole = (currentCompany?.role || currentUser?.role || '').toLowerCase();
+  const allowedRoles = ['admin', 'manager', 'administrador', 'gerente', 'super_admin'];
+  const canManageUsers = allowedRoles.includes(userRole);
   const canInviteUsers = canManageUsers; // Sincronizado con canManageUsers para consistencia
   const { isEnabled: canManagePermissions } = useFeatureFlag('permission_management', { defaultValue: true });
 
@@ -137,11 +140,13 @@ export const UserManagement: React.FC = () => {
     clearSelection
   } = useUserManagement();
 
-  // Debug logs
-  console.log('🏢 Current Company:', currentCompany);
-  console.log('👤 Current User:', currentUser);
-  console.log('🚦 Can Manage Users:', canManageUsers);
-  console.log('📝 Dialogs state:', dialogs);
+  // Debug logs - Solo en desarrollo
+  if (import.meta.env.DEV) {
+    console.log('🏢 Current Company:', currentCompany);
+    console.log('👤 Current User:', currentUser);
+    console.log('🎭 User Role:', userRole);
+    console.log('🚦 Can Manage Users:', canManageUsers);
+  }
 
   // Query: Fetch users
   const {
@@ -151,19 +156,12 @@ export const UserManagement: React.FC = () => {
     refetch: refetchUsers
   } = useQuery({
     queryKey: ['users', currentCompany?.id, filters],
-    queryFn: () => {
-      console.log('📡 Fetching users for company:', currentCompany?.id);
-      return userService.getCompanyUsers(currentCompany!.id, filters);
-    },
-    enabled: !!currentCompany?.id && canManageUsers,
+    queryFn: () => userService.getCompanyUsers(currentCompany!.id, filters),
+    enabled: !!currentCompany?.id, // Siempre habilitado si hay empresa
     staleTime: 30000, // 30 seconds
     gcTime: 5 * 60 * 1000 // 5 minutes
   });
 
-  // Log query results
-  console.log('📊 Users Data:', usersData);
-  console.log('⏳ Loading Users:', isLoadingUsers);
-  console.log('❌ Users Error:', usersError);
 
   // Query: Fetch invitations
   const {
@@ -263,12 +261,8 @@ export const UserManagement: React.FC = () => {
 
   // Memoized values (Performance optimization)
   const users = useMemo(() => {
-    const usersList = usersData?.data?.users || [];
-    // Debug log para verificar la estructura de los usuarios
-    if (usersList.length > 0) {
-      console.log('🔍 [UserManagement] Estructura del primer usuario:', usersList[0]);
-      console.log('🔑 [UserManagement] Propiedades del primer usuario:', Object.keys(usersList[0]));
-    }
+    // La respuesta es PaginatedResponse<User> con estructura { data: User[], total, page, limit, totalPages }
+    const usersList = Array.isArray(usersData?.data) ? usersData.data : [];
     return usersList;
   }, [usersData]);
   const invitations = useMemo(() => invitationsData || [], [invitationsData]);

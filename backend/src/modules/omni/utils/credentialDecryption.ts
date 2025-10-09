@@ -35,9 +35,23 @@ export function decryptCredential(encryptedValue: string | null | undefined): st
 
     // Desencriptar
     const decrypted = CryptoJS.AES.decrypt(encrypted, encryptionKey);
-    const result = decrypted.toString(CryptoJS.enc.Utf8);
+    let result = decrypted.toString(CryptoJS.enc.Utf8);
 
     if (result && result.length > 0) {
+      // ⚠️ PROTECCIÓN CONTRA DOBLE ENCRIPTACIÓN
+      // Si el resultado TODAVÍA tiene el prefijo __encrypted__, desencriptar de nuevo
+      if (result.startsWith(ENCRYPTION_PREFIX)) {
+        console.warn('[credentialDecryption] ⚠️  DOBLE ENCRIPTACIÓN DETECTADA - Desencriptando segunda vez');
+        const doubleEncrypted = result.substring(ENCRYPTION_PREFIX.length);
+        const secondDecryption = CryptoJS.AES.decrypt(doubleEncrypted, encryptionKey);
+        const secondResult = secondDecryption.toString(CryptoJS.enc.Utf8);
+
+        if (secondResult && secondResult.length > 0) {
+          console.warn('[credentialDecryption] ✅ Doble desencriptación exitosa - RECOMIENDA RECREAR EL CANAL');
+          return secondResult;
+        }
+      }
+
       return result;
     }
 

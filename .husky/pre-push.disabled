@@ -1,20 +1,5 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# TEMPORALMENTE DESHABILITADO - Jest necesita configuración para TypeScript
-# echo '🧪 Ejecutando tests antes del push...'
-#
-# # Test frontend
-# echo '📦 Testing frontend...'
-# cd frontend-v1 && npm test -- --passWithNoTests
-# cd ..
-#
-# # Test backend
-# echo '📦 Testing backend...'
-# cd backend && npm test -- --passWithNoTests
-# cd ..
-#
-# echo '✅ Tests completados!'
-
-echo '⚠️  Pre-push hook temporalmente deshabilitado - Jest necesita configuración TypeScript'
+# Hook deshabilitado temporalmente
 exit 0

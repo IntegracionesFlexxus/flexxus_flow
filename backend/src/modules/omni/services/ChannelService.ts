@@ -396,14 +396,34 @@ export class ChannelService {
     details?: any;
   }> {
     try {
+      console.log('═══════════════════════════════════════════════════════════════════');
+      console.log('🔍 [testEmailConnection] INICIANDO PRUEBA DE CONEXIÓN EMAIL');
+      console.log('⏰ Timestamp:', new Date().toISOString());
+      console.log('═══════════════════════════════════════════════════════════════════');
+
       if (config.provider === 'smtp' || details?.provider === 'smtp') {
         // Test SMTP connection
         const nodemailer = require('nodemailer');
 
+        // LOG 1: Contraseña recibida (ANTES de desencriptar)
+        console.log('📦 [testEmailConnection] Contraseña RECIBIDA:');
+        console.log('   - Tipo:', typeof details.smtp_password);
+        console.log('   - Longitud:', details.smtp_password?.length || 0);
+        console.log('   - Primeros 50 chars:', details.smtp_password?.substring(0, 50));
+        console.log('   - Está encriptada?:', details.smtp_password?.startsWith('__encrypted__'));
+
         // IMPORTANTE: Desencriptar la contraseña antes de usarla
         const smtpPassword = decryptCredential(details.smtp_password);
 
+        // LOG 2: Resultado de desencriptación
+        console.log('🔓 [testEmailConnection] Contraseña DESENCRIPTADA:');
+        console.log('   - Tipo:', typeof smtpPassword);
+        console.log('   - Longitud:', smtpPassword?.length || 0);
+        console.log('   - Valor completo:', smtpPassword);
+        console.log('   - Es la App Password correcta?:', smtpPassword === 'amjmfzmioeiwfbiv');
+
         if (!smtpPassword) {
+          console.error('❌ [testEmailConnection] FALLO EN DESENCRIPTACIÓN');
           return {
             success: false,
             message: 'No se pudo desencriptar la contraseña SMTP. Por favor, reconfigura el canal.',
@@ -413,6 +433,13 @@ export class ChannelService {
             }
           };
         }
+
+        // LOG 3: Configuración SMTP que se usará
+        console.log('🌐 [testEmailConnection] Configuración SMTP:');
+        console.log('   - Host:', details.smtp_host);
+        console.log('   - Port:', details.smtp_port);
+        console.log('   - User:', details.smtp_user);
+        console.log('   - Secure:', details.smtp_port === 465);
 
         this.logger.debug('Testing SMTP connection', {
           host: details.smtp_host,
@@ -430,8 +457,15 @@ export class ChannelService {
           }
         });
 
+        // LOG 4: Intentando verificar conexión
+        console.log('🔌 [testEmailConnection] Verificando conexión SMTP...');
+
         // Verify connection
         await transporter.verify();
+
+        // LOG 5: Conexión exitosa
+        console.log('✅ [testEmailConnection] CONEXIÓN SMTP EXITOSA!');
+        console.log('═══════════════════════════════════════════════════════════════════\n');
 
         return {
           success: true,
@@ -445,6 +479,8 @@ export class ChannelService {
       } else {
         // For API providers (SendGrid, Mailgun, etc.), just validate config
         // Real API test would require actual API calls
+        console.log('ℹ️ [testEmailConnection] Provider no SMTP, validación básica');
+        console.log('═══════════════════════════════════════════════════════════════════\n');
         return {
           success: true,
           message: `${config.provider} configuration valid (API test pending)`,
@@ -456,6 +492,13 @@ export class ChannelService {
         };
       }
     } catch (error: any) {
+      // LOG 6: Error en conexión
+      console.error('❌ [testEmailConnection] ERROR EN CONEXIÓN SMTP:');
+      console.error('   - Mensaje:', error.message);
+      console.error('   - Código:', error.code);
+      console.error('   - Stack:', error.stack);
+      console.log('═══════════════════════════════════════════════════════════════════\n');
+
       return {
         success: false,
         message: `Email connection failed: ${error.message}`,

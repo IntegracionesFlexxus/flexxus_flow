@@ -142,6 +142,11 @@ export const configService = {
    * Sanitizar configuración antes de guardar (eliminar espacios, encriptar datos sensibles)
    */
   sanitizeConfig: (config: any): any => {
+    console.log('═══════════════════════════════════════════════════════════════════');
+    console.log('🔐 [configService.sanitizeConfig] INICIANDO SANITIZACIÓN Y ENCRIPTACIÓN');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.log('═══════════════════════════════════════════════════════════════════');
+
     const sanitized: any = {};
 
     // Primero, limpiar espacios y sanitizar entradas
@@ -150,13 +155,33 @@ export const configService = {
       if (typeof value === 'string') {
         // Sanitizar input para prevenir XSS
         sanitized[key] = securityService.sanitizeInput(value.trim());
+
+        // Log especial para contraseña SMTP
+        if (key === 'smtpPassword') {
+          console.log('📧 [sanitizeConfig] smtpPassword ANTES de encriptar:');
+          console.log('   - Valor:', value);
+          console.log('   - Longitud:', value.length);
+        }
       } else {
         sanitized[key] = value;
       }
     });
 
+    console.log('📦 [sanitizeConfig] Config sanitizada (antes de encriptar):');
+    console.log(JSON.stringify(sanitized, null, 2));
+
     // Luego, encriptar campos sensibles
-    return securityService.encryptSensitiveFields(sanitized);
+    const encrypted = securityService.encryptSensitiveFields(sanitized);
+
+    console.log('🔒 [sanitizeConfig] Config encriptada (después de encriptar):');
+    if (encrypted.smtpPassword) {
+      console.log('   - smtpPassword encriptada (primeros 100 chars):', encrypted.smtpPassword.substring(0, 100));
+      console.log('   - Longitud total:', encrypted.smtpPassword.length);
+      console.log('   - Comienza con __encrypted__?:', encrypted.smtpPassword.startsWith('__encrypted__'));
+    }
+    console.log('═══════════════════════════════════════════════════════════════════\n');
+
+    return encrypted;
   },
 
   /**

@@ -113,10 +113,18 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
 
       // Inicializar formData con configuración existente o por defecto
       if (channel) {
+        // IMPORTANTE: Desencriptar la configuración antes de cargarla en el formulario
+        // para evitar doble encriptación al guardar
+        const decryptedConfig = configService.decryptConfig(channel.configuration);
+        console.log('🔓 [ChannelConfigModal] Cargando canal existente con config desencriptada:', {
+          channelId: channel.id,
+          channelName: channel.name
+        });
+
         setFormData({
           name: channel.name,
           description: channel.description,
-          configuration: channel.configuration
+          configuration: decryptedConfig
         });
       } else if (channelType) {
         const defaultConfig = configService.getDefaultConfig(channelType);

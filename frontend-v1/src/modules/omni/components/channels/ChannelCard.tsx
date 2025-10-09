@@ -32,7 +32,8 @@ import {
   Error as ErrorIcon,
   Warning as WarningIcon,
   Refresh as RefreshIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  PlayArrow as TestIcon
 } from '@mui/icons-material';
 import { Channel, ChannelType, ChannelHealthStatus } from '../../types';
 
@@ -42,8 +43,10 @@ interface ChannelCardProps {
   onConfigure: (channel: Channel) => void;
   onDelete?: (channel: Channel) => void;
   onRefreshHealth?: (channel: Channel) => void;
+  onTestConnection?: (channel: Channel) => void;
   isToggling?: boolean;
   isDeleting?: boolean;
+  isTesting?: boolean;
 }
 
 export const ChannelCard: React.FC<ChannelCardProps> = ({
@@ -52,8 +55,10 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   onConfigure,
   onDelete,
   onRefreshHealth,
+  onTestConnection,
   isToggling = false,
-  isDeleting = false
+  isDeleting = false,
+  isTesting = false
 }) => {
   // Obtener icono según el tipo de canal
   const getChannelIcon = () => {
@@ -149,6 +154,22 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
           {getChannelIcon()}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             {getHealthChip()}
+            {onTestConnection && (
+              <Tooltip title="Probar conexión">
+                <IconButton
+                  size="small"
+                  onClick={() => onTestConnection(channel)}
+                  disabled={isToggling || isTesting}
+                  color="primary"
+                >
+                  {isTesting ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <TestIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </Tooltip>
+            )}
             {onRefreshHealth && (
               <Tooltip title="Verificar estado">
                 <IconButton

@@ -58,14 +58,17 @@ export class SecurityService {
 
   /**
    * Deriva una clave de encriptación basada en el entorno
+   * IMPORTANTE: Esta clave debe ser FIJA y NO cambiar con el tiempo o dispositivo
+   * para que las credenciales encriptadas puedan ser desencriptadas posteriormente
    */
   private deriveEncryptionKey(): string {
     // En producción, esto debería venir del backend o estar configurado en el entorno
     const baseKey = process.env.REACT_APP_ENCRYPTION_KEY || 'flexxus_flow_omni_2024';
-    const userAgent = navigator.userAgent;
-    const timestamp = new Date().toISOString().split('T')[0];
 
-    return CryptoJS.SHA256(`${baseKey}_${userAgent}_${timestamp}`).toString();
+    // FIXED: Removido timestamp y userAgent para que la clave sea consistente
+    // La clave ahora es la misma independientemente de la fecha o dispositivo
+    // Esto permite al backend desencriptar las credenciales guardadas
+    return CryptoJS.SHA256(baseKey).toString();
   }
 
   /**

@@ -19,12 +19,47 @@ export class ChannelRepository extends BaseOmniRepository<IChannel> {
     const client = await this.beginTransaction();
 
     try {
-      // Create base channel
-      const channel = await this.create({
-        ...data,
-        health_status: ChannelHealthStatus.UNKNOWN,
-        is_active: true
-      } as Partial<IChannel>, companyId);
+      // Get channel_type_id from channel_types table
+      const channelTypeQuery = `
+        SELECT id FROM channel_types WHERE name = $1 AND is_active = true
+      `;
+      const channelTypeResult = await client.query(channelTypeQuery, [data.channel_type]);
+
+      if (channelTypeResult.rows.length === 0) {
+        throw new Error(`Invalid channel type: ${data.channel_type}`);
+      }
+
+      const channel_type_id = channelTypeResult.rows[0].id;
+
+      // Get user ID from context (will be set by middleware)
+      const created_by = companyId; // TODO: Get actual user ID from request context
+
+      // Create base channel with manual INSERT to include channel_type_id
+      // Status 'active' and health_status 'healthy' since credentials were validated
+      const insertQuery = `
+        INSERT INTO ${this.tableName}
+        (company_id, channel_type_id, channel_type, name, description, configuration,
+         is_active, health_status, status, business_verification_status, created_by, metadata, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING *
+      `;
+
+      const channelResult = await client.query(insertQuery, [
+        companyId,
+        channel_type_id,
+        data.channel_type,
+        data.name,
+        data.description || null,
+        JSON.stringify(data.configuration),
+        true, // is_active
+        ChannelHealthStatus.HEALTHY, // health_status - validated credentials
+        'active', // status
+        'verified', // business_verification_status
+        created_by,
+        data.metadata ? JSON.stringify(data.metadata) : null
+      ]);
+
+      const channel = channelResult.rows[0] as IChannel;
 
       // Create type-specific configuration
       switch (data.channel_type) {
@@ -68,13 +103,26 @@ export class ChannelRepository extends BaseOmniRepository<IChannel> {
    * Get active channels
    */
   async findActiveChannels(companyId: string): Promise<IChannel[]> {
+    const startTime = Date.now();
+    console.log('⏱️ [ChannelRepository.findActiveChannels] Query starting at:', new Date().toISOString());
+    console.log('🔍 [ChannelRepository.findActiveChannels] CompanyId:', companyId);
+
     const query = `
       SELECT * FROM ${this.tableName}
       WHERE company_id = $1 AND is_active = true
       ORDER BY channel_type, name
     `;
 
+    const queryStartTime = Date.now();
     const result = await this.executeQuery(query, [companyId], companyId);
+    const queryEndTime = Date.now();
+
+    console.log('✅ [ChannelRepository.findActiveChannels] SQL query took:', queryEndTime - queryStartTime, 'ms');
+    console.log('📊 [ChannelRepository.findActiveChannels] Rows returned:', result.rowCount);
+
+    const totalTime = Date.now() - startTime;
+    console.log('🏁 [ChannelRepository.findActiveChannels] Total repository time:', totalTime, 'ms');
+
     return result.rows as IChannel[];
   }
 

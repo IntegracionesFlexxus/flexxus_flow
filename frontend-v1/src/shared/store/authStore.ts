@@ -277,13 +277,21 @@ export const useAuthStore = create<AuthState>()(
             state.currentCompany = companies[0] || null
             state.isAuthenticated = true
             state.error = null
+
+            // LOG: Cuando se establece currentCompany
+            console.log('🏢 [authStore.setAuth] currentCompany establecida:', {
+              companyId: state.currentCompany?.id,
+              companyName: state.currentCompany?.name,
+              timestamp: new Date().toISOString()
+            });
           }),
-          
+
         switchCompany: (company) =>
           set((state) => {
             state.currentCompany = company
             localStorage.setItem('company_id', company.id)
-            console.log('Compañía cambiada a:', company.name)
+            console.log('🏢 [authStore.switchCompany] Compañía cambiada a:', company.name);
+            console.log('⏰ [authStore.switchCompany] Timestamp:', new Date().toISOString());
           }),
 
         clearAuth: () =>
@@ -345,15 +353,29 @@ export const useAuthStore = create<AuthState>()(
         }),
         // Validar datos al hidratar
         onRehydrateStorage: () => (state) => {
+          console.log('💾 [authStore.onRehydrateStorage] Iniciando rehidratación del store...');
+          console.log('⏰ [authStore.onRehydrateStorage] Timestamp:', new Date().toISOString());
+
           if (state && state.token) {
+            console.log('🔑 [authStore.onRehydrateStorage] Token encontrado en localStorage');
+
             // Verificar que el token sigue siendo válido
             if (!tokenService.isTokenValid()) {
+              console.warn('⚠️ [authStore.onRehydrateStorage] Token inválido o expirado - limpiando estado');
               state.isAuthenticated = false
               state.token = null
               state.user = null
               state.companies = []
               state.currentCompany = null
+            } else {
+              console.log('✅ [authStore.onRehydrateStorage] Token válido');
+              console.log('🏢 [authStore.onRehydrateStorage] currentCompany restaurada:', {
+                companyId: state.currentCompany?.id,
+                companyName: state.currentCompany?.name
+              });
             }
+          } else {
+            console.log('❌ [authStore.onRehydrateStorage] No hay token en localStorage');
           }
         }
       }

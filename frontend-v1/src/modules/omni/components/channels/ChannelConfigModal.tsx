@@ -1,6 +1,6 @@
 /**
  * ChannelConfigModal Component
- * Modal principal para configuración de canales
+ * Modal principal para configuración de canales con flujos diferenciados
  */
 
 import React, { useState, useEffect } from 'react';
@@ -48,7 +48,42 @@ interface ChannelConfigModalProps {
   onSave?: (channel: Channel) => void;
 }
 
-const steps = ['Configuración', 'Validación', 'Webhooks'];
+// Funciones helper para determinar el flujo según el tipo de canal
+const getStepsForChannel = (channelType: ChannelType | undefined) => {
+  if (!channelType) return ['Configuración', 'Validación'];
+
+  // Canales que requieren webhook obligatorio
+  const webhookRequiredChannels = [
+    ChannelType.WHATSAPP,
+    ChannelType.FACEBOOK,
+    ChannelType.INSTAGRAM
+  ];
+
+  // Canales con webhook opcional
+  const webhookOptionalChannels = [
+    ChannelType.EMAIL,
+    ChannelType.SMS
+  ];
+
+  if (webhookRequiredChannels.includes(channelType)) {
+    return ['Configuración', 'Validación', 'Webhooks'];
+  } else if (webhookOptionalChannels.includes(channelType)) {
+    return ['Configuración', 'Validación', 'Webhooks (Opcional)'];
+  }
+
+  return ['Configuración', 'Validación'];
+};
+
+const isWebhookRequired = (channelType: ChannelType | undefined) => {
+  if (!channelType) return false;
+  return [ChannelType.WHATSAPP, ChannelType.FACEBOOK, ChannelType.INSTAGRAM]
+    .includes(channelType);
+};
+
+const isWebhookOptional = (channelType: ChannelType | undefined) => {
+  if (!channelType) return false;
+  return [ChannelType.EMAIL, ChannelType.SMS].includes(channelType);
+};
 
 export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
   open,
@@ -66,6 +101,7 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
   const [formData, setFormData] = useState<any>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [webhookConfig, setWebhookConfig] = useState<any>(null);
+  const [showOptionalWebhook, setShowOptionalWebhook] = useState(false);
 
   // Resetear estado cuando se abre el modal
   useEffect(() => {
@@ -73,6 +109,7 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
       setActiveStep(0);
       setActiveTab(0);
       setValidationErrors([]);
+      setShowOptionalWebhook(false);
 
       // Inicializar formData con configuración existente o por defecto
       if (channel) {
@@ -98,20 +135,40 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
   // Mutation para crear canal
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('🆕 [CreateMutation] Iniciando creación de canal:', data);
       const channelData = {
         channel_type: currentChannelType!,
         name: data.name,
         description: data.description,
         configuration: configService.sanitizeConfig(data.configuration)
       };
-      return channelService.createChannel(channelData);
+      console.log('📤 [CreateMutation] Enviando al backend:', channelData);
+      const result = await channelService.createChannel(channelData);
+      console.log('✅ [CreateMutation] Canal creado exitosamente:', result);
+      return result;
     },
     onSuccess: (newChannel) => {
+      console.log('🎉 [CreateMutation] onSuccess ejecutado:', newChannel);
       queryClient.invalidateQueries({ queryKey: ['channels'] });
       if (onSave) onSave(newChannel);
+
+      // Notificación de éxito
+      addNotification({
+        type: 'success',
+        title: 'Canal creado exitosamente',
+        message: `El canal ${newChannel.name} ha sido configurado correctamente`
+      });
+
       handleClose();
     },
     onError: (error: any) => {
+      console.error('❌ [CreateMutation] Error al crear canal:', error);
+      console.error('❌ [CreateMutation] Error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       const errorMessage = error.response?.data?.message || error.message || 'Error al crear el canal';
       setValidationErrors([errorMessage]);
       addNotification({
@@ -136,6 +193,14 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
     onSuccess: (updatedChannel) => {
       queryClient.invalidateQueries({ queryKey: ['channels'] });
       if (onSave) onSave(updatedChannel);
+
+      // Notificación de éxito
+      addNotification({
+        type: 'success',
+        title: 'Canal actualizado',
+        message: `El canal ${updatedChannel.name} ha sido actualizado correctamente`
+      });
+
       handleClose();
     },
     onError: (error: any) => {
@@ -149,27 +214,91 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
     }
   });
 
-  // Mutation para validar credenciales
+  // Mutation para validar credenciales con lógica diferenciada
   const validateMutation = useMutation({
     mutationFn: async (config: any) => {
+      console.log('🔍 [ChannelConfigModal] Iniciando validación de credenciales:', {
+        channelType: currentChannelType,
+        hasConfig: !!config
+      });
       if (!currentChannelType) throw new Error('Tipo de canal no definido');
       return channelService.validateCredentials(currentChannelType, config);
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
+      console.log('✅ [ChannelConfigModal] Validación exitosa:', result);
+
       if (result.valid) {
-        setActiveStep(2); // Ir a configuración de webhooks
-        // Generar configuración de webhook
-        const webhookInstructions = webhookService.getWebhookSetupInstructions(
-          currentChannelType!,
-          channel?.id || 'new',
-          formData.configuration.webhookVerifyToken
-        );
-        setWebhookConfig(webhookInstructions);
+        // Para canales con webhook opcional (Email, SMS), guardar inmediatamente
+        if (isWebhookOptional(currentChannelType)) {
+          console.log('📝 [ChannelConfigModal] Canal con webhook opcional, guardando automáticamente...');
+
+          // Guardar el canal directamente
+          const saveData = {
+            ...formData,
+            configuration: configService.sanitizeConfig(formData.configuration)
+          };
+
+          console.log('💾 [ChannelConfigModal] Datos a guardar:', saveData);
+
+          if (isNewChannel) {
+            console.log('🆕 [ChannelConfigModal] Creando nuevo canal...');
+            createMutation.mutate(saveData);
+          } else {
+            console.log('✏️ [ChannelConfigModal] Actualizando canal existente...');
+            updateMutation.mutate(saveData);
+          }
+
+          // Mostrar opción de configurar webhooks
+          setShowOptionalWebhook(true);
+
+          // Notificar éxito
+          addNotification({
+            type: 'success',
+            title: 'Validación exitosa',
+            message: 'Las credenciales han sido validadas. El canal se está guardando.'
+          });
+
+        } else if (isWebhookRequired(currentChannelType)) {
+          // Para canales con webhook requerido, ir al paso 3
+          setActiveStep(2);
+
+          // Generar token si no existe
+          const verifyToken = formData.configuration?.webhookVerifyToken ||
+                            webhookService.generateVerifyToken();
+
+          // Actualizar formData con el token
+          setFormData({
+            ...formData,
+            configuration: {
+              ...formData.configuration,
+              webhookVerifyToken: verifyToken
+            }
+          });
+
+          // Obtener instrucciones de webhook
+          const webhookInstructions = webhookService.getWebhookSetupInstructions(
+            currentChannelType!,
+            channel?.id || 'new',
+            verifyToken
+          );
+          setWebhookConfig(webhookInstructions);
+
+        } else {
+          // Para otros canales, guardar directamente
+          handleSave();
+        }
       } else {
         setValidationErrors(result.errors || ['Credenciales inválidas']);
       }
     },
     onError: (error: any) => {
+      console.error('❌ [ChannelConfigModal] Error en validación:', error);
+      console.error('❌ [ChannelConfigModal] Error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       setValidationErrors([error.message || 'Error al validar credenciales']);
     }
   });
@@ -212,7 +341,20 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
     setFormData(null);
     setValidationErrors([]);
     setWebhookConfig(null);
+    setShowOptionalWebhook(false);
     onClose();
+  };
+
+  const handleOptionalWebhookSetup = () => {
+    // Generar configuración de webhook opcional
+    const verifyToken = webhookService.generateVerifyToken();
+    const webhookInstructions = webhookService.getWebhookSetupInstructions(
+      currentChannelType!,
+      channel?.id || 'new',
+      verifyToken
+    );
+    setWebhookConfig(webhookInstructions);
+    setActiveStep(2);
   };
 
   // Renderizar formulario según el tipo de canal
@@ -242,6 +384,7 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending || validateMutation.isPending;
+  const steps = getStepsForChannel(currentChannelType);
 
   return (
     <Dialog
@@ -265,7 +408,7 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
       </DialogTitle>
 
       <DialogContent dividers>
-        {/* Stepper de progreso */}
+        {/* Stepper de progreso dinámico */}
         <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
           {steps.map((label, index) => {
             const stepProps: { completed?: boolean; error?: boolean } = {};
@@ -277,9 +420,19 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
               stepProps.completed = true;
             }
 
+            // Marcar webhook como opcional visualmente
+            const isOptionalStep = label.includes('Opcional');
+
             return (
               <Step key={label} {...stepProps}>
-                <StepLabel>{label}</StepLabel>
+                <StepLabel
+                  optional={isOptionalStep ?
+                    <Typography variant="caption">Opcional</Typography> :
+                    undefined
+                  }
+                >
+                  {label.replace(' (Opcional)', '')}
+                </StepLabel>
               </Step>
             );
           })}
@@ -377,9 +530,48 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
                 <Typography variant="h6" gutterBottom>
                   Credenciales válidas
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" paragraph>
                   La configuración ha sido validada exitosamente
                 </Typography>
+
+                {/* Mostrar mensaje según el tipo de canal */}
+                {isWebhookOptional(currentChannelType) && (
+                  <>
+                    <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+                      <Typography variant="body2">
+                        El canal se está guardando. Los webhooks son opcionales y puedes
+                        configurarlos más tarde si deseas recibir notificaciones de eventos
+                        {currentChannelType === ChannelType.EMAIL &&
+                          ' como rebotes, aperturas y clicks.'}
+                        {currentChannelType === ChannelType.SMS &&
+                          ' como confirmaciones de entrega y respuestas.'}
+                      </Typography>
+                    </Alert>
+
+                    {/* Opción de configurar webhook opcional */}
+                    {showOptionalWebhook && !createMutation.isPending && !updateMutation.isPending && (
+                      <Box sx={{ mt: 3 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleOptionalWebhookSetup}
+                        >
+                          Configurar Webhooks (Opcional)
+                        </Button>
+                        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                          Configura webhooks para recibir notificaciones de eventos
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
+
+                {isWebhookRequired(currentChannelType) && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      Redirigiendo a configuración de webhooks (requerido)...
+                    </Typography>
+                  </Alert>
+                )}
               </>
             )}
             {validationErrors.length > 0 && (
@@ -392,6 +584,7 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
                   variant="outlined"
                   onClick={() => {
                     setActiveStep(0);
+                    setActiveTab(1);
                     setValidationErrors([]);
                   }}
                   sx={{ mt: 2 }}
@@ -407,7 +600,20 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
           <WebhookSetup
             config={webhookConfig}
             channelType={currentChannelType!}
-            onComplete={() => handleSave()}
+            onComplete={() => {
+              if (isWebhookRequired(currentChannelType)) {
+                // Para webhooks requeridos, guardar el canal
+                handleSave();
+              } else {
+                // Para webhooks opcionales, solo cerrar
+                handleClose();
+                addNotification({
+                  type: 'success',
+                  title: 'Webhooks configurados',
+                  message: 'Los webhooks han sido configurados correctamente'
+                });
+              }
+            }}
           />
         )}
       </DialogContent>
@@ -416,13 +622,42 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
         <Button onClick={handleClose} disabled={isLoading}>
           Cancelar
         </Button>
-        {activeStep === 2 && (
+
+        {/* Botón para saltar webhooks opcionales */}
+        {activeStep === 2 && isWebhookOptional(currentChannelType) && (
+          <Button
+            onClick={() => {
+              handleClose();
+              addNotification({
+                type: 'info',
+                title: 'Configuración completada',
+                message: 'Puedes configurar webhooks más tarde desde la configuración del canal'
+              });
+            }}
+          >
+            Omitir Webhooks
+          </Button>
+        )}
+
+        {/* Botón de guardar para webhooks requeridos */}
+        {activeStep === 2 && isWebhookRequired(currentChannelType) && (
           <Button
             onClick={handleSave}
             variant="contained"
             disabled={isLoading}
           >
             {isLoading ? 'Guardando...' : 'Guardar Canal'}
+          </Button>
+        )}
+
+        {/* Botón para cerrar cuando el canal ya fue guardado (canales con webhook opcional) */}
+        {activeStep === 1 && isWebhookOptional(currentChannelType) &&
+         (createMutation.isSuccess || updateMutation.isSuccess) && (
+          <Button
+            onClick={handleClose}
+            variant="contained"
+          >
+            Finalizar
           </Button>
         )}
       </DialogActions>

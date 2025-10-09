@@ -18,8 +18,9 @@ import roleRoutes from '@/modules/roles';
 import companyRoutes from '@/modules/companies';
 // Import CRM routes (Sprint 15)
 import crmRoutes, { initializeCRMModule, shutdownCRMModule } from '@/modules/crm';
+// Import Omni routes (Sprint 05-06)
+import omniRoutes from '@/modules/omni/routes';
 // TODO: Importar rutas de otros módulos cuando estén implementadas
-// import omniRoutes from '@/modules/omni/routes';
 // import workflowRoutes from '@/modules/workflow/routes';
 // import analyticsRoutes from '@/modules/analytics/routes';
 // Middleware imports
@@ -119,11 +120,11 @@ class App {
     // CRM module routes (Sprint 15)
     apiV1Router.use('/crm', crmRoutes(container));
 
+    // Omni module routes (Sprint 05-06)
+    apiV1Router.use('/omni', omniRoutes);
+
     // Placeholder routes for other modules
-    // TODO: Reemplazar con implementaciones reales en Sprint 2
-    apiV1Router.get('/omni/health', (req, res) => {
-      res.json({ module: 'omni', status: 'not_implemented' });
-    });
+    // TODO: Reemplazar con implementaciones reales
     apiV1Router.get('/workflow/health', (req, res) => {
       res.json({ module: 'workflow', status: 'not_implemented' });
     });

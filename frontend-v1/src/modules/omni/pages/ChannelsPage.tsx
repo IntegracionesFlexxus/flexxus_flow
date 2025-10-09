@@ -37,6 +37,9 @@ import { useUIStore } from '@/shared/store/uiStore';
 import { useAuthStore } from '@/shared/store/authStore';
 
 function ChannelsPage() {
+  // Medir tiempo de montaje de la página
+  const pageLoadTime = React.useRef(Date.now());
+
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [newChannelModalOpen, setNewChannelModalOpen] = useState(false);
@@ -44,12 +47,29 @@ function ChannelsPage() {
   const { addNotification } = useUIStore();
   const { currentCompany, user } = useAuthStore();
 
+  // Log cuando se monta la página
+  useEffect(() => {
+    const mountDuration = Date.now() - pageLoadTime.current;
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📄 [ChannelsPage] PÁGINA MONTADA');
+    console.log('⏱️  Tiempo de montaje:', mountDuration, 'ms');
+    console.log('⏰  Timestamp:', new Date().toISOString());
+    console.log('═══════════════════════════════════════════════════════');
+
+    return () => {
+      console.log('🔴 [ChannelsPage] Página desmontada');
+    };
+  }, []);
+
   // Debug: Log company info
   useEffect(() => {
-    console.log('ChannelsPage - Current Company:', currentCompany);
-    console.log('ChannelsPage - User:', user);
+    console.log('🏢 [ChannelsPage] Current Company:', currentCompany);
+    console.log('👤 [ChannelsPage] User:', user);
     if (!currentCompany) {
-      console.warn('No company selected!');
+      console.warn('⚠️  [ChannelsPage] No company selected!');
+    } else {
+      const timeSinceMount = Date.now() - pageLoadTime.current;
+      console.log('⏱️  [ChannelsPage] Tiempo desde montaje hasta tener company:', timeSinceMount, 'ms');
     }
   }, [currentCompany, user]);
 

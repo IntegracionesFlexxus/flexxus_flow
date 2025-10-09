@@ -4,10 +4,10 @@
  */
 
 import { Router } from 'express';
-import { container } from '@/container/inversify.config';
+import { container } from '@/container/container';
 import { TYPES } from '@/container/types';
 import { AnalyticsController } from '../controllers/AnalyticsController';
-import { authenticate } from '@/shared/middleware/auth';
+import { authMiddleware as authenticate } from '@/modules/auth/middleware/authMiddleware';
 import { validateRequest } from '@/shared/middleware/validation';
 import { body, param, query } from 'express-validator';
 

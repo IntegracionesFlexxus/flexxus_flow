@@ -35,41 +35,64 @@ export class ChannelController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
+      console.log('🔍 [ChannelController.create] Request info:', {
+        companyId,
+        userId: (req as any).userId,
+        body: req.body
+      });
+
       if (!companyId) {
+        console.error('❌ [ChannelController.create] Company ID not found');
         res.status(401).json(apiResponse(false, null, 'Company ID not found'));
         return;
       }
 
+      console.log('💾 [ChannelController.create] Creating channel...');
       const channel = await this.channelService.createChannel(req.body, companyId);
+      console.log('✅ [ChannelController.create] Channel created successfully:', channel);
       res.status(201).json(apiResponse(true, channel, 'Channel created successfully'));
     } catch (error: any) {
+      console.error('❌ [ChannelController.create] Error:', error);
       res.status(400).json(apiResponse(false, null, error.message));
     }
   }
 
   async list(req: Request, res: Response): Promise<void> {
+    const startTime = Date.now();
+    console.log('⏱️ [ChannelController.list] Request received at:', new Date().toISOString());
+
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
+      console.log('🔍 [ChannelController.list] CompanyId:', companyId);
+
       if (!companyId) {
-        // Si no hay companyId, devolver array vacío en lugar de error
+        console.log('⚠️ [ChannelController.list] No companyId, returning empty array');
         res.json(apiResponse(true, []));
         return;
       }
 
+      const serviceStartTime = Date.now();
       const channels = await this.channelService.getActiveChannels(companyId) || [];
-      res.json(apiResponse(true, channels)); // Siempre devolver success con array
+      const serviceEndTime = Date.now();
+
+      console.log('✅ [ChannelController.list] Service completed in:', serviceEndTime - serviceStartTime, 'ms');
+      console.log('📊 [ChannelController.list] Channels found:', channels.length);
+
+      res.json(apiResponse(true, channels));
+
+      const totalTime = Date.now() - startTime;
+      console.log('🏁 [ChannelController.list] Total request time:', totalTime, 'ms');
     } catch (error: any) {
-      // Solo devolver error 500 para errores reales del servidor
-      console.error('Error fetching channels:', error);
-      // Aún en caso de error, intentar devolver array vacío para no bloquear el UI
+      const errorTime = Date.now() - startTime;
+      console.error('❌ [ChannelController.list] Error after', errorTime, 'ms:', error);
       res.json(apiResponse(true, [], 'Error fetching channels, returning empty list'));
     }
   }
 
   async getById(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const channel = await this.channelService.getChannelById(id, companyId);
@@ -86,7 +109,7 @@ export class ChannelController {
 
   async update(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const channel = await this.channelService.updateChannel(id, req.body, companyId);
@@ -103,7 +126,7 @@ export class ChannelController {
 
   async delete(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const deleted = await this.channelService.deleteChannel(id, companyId);
@@ -120,7 +143,7 @@ export class ChannelController {
 
   async checkHealth(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const health = await this.channelService.checkChannelHealth(id, companyId);
@@ -138,6 +161,27 @@ export class ChannelController {
   async validateCredentials(req: Request, res: Response): Promise<void> {
     try {
       const { channel_type, configuration } = req.body;
+      const companyId = (req as any).companyId || (req as any).user?.companyId;
+
+      // Log para debugging
+      console.log('🔍 Validate credentials request:', {
+        channel_type,
+        hasConfiguration: !!configuration,
+        companyId,
+        userId: (req as any).userId,
+        hasAuthHeader: !!req.headers.authorization
+      });
+
+      // Validación básica de datos requeridos
+      if (!channel_type) {
+        res.status(400).json(apiResponse(false, null, 'Channel type is required'));
+        return;
+      }
+
+      if (!configuration) {
+        res.status(400).json(apiResponse(false, null, 'Configuration is required'));
+        return;
+      }
 
       // Por ahora, validación básica
       // TODO: Implementar validación real con los proveedores
@@ -159,7 +203,9 @@ export class ChannelController {
             message: 'Mock validation - real API check pending',
             details: ['Using test mode', 'Real validation will be implemented']
           }
-        ]
+        ],
+        // Incluir companyId si está disponible para referencia
+        companyId: companyId || null
       };
 
       // Validación simple según tipo
@@ -173,9 +219,37 @@ export class ChannelController {
         result.errors = ['From email is required'];
       }
 
+      console.log('✅ Validation result:', { valid: result.valid, errors: result.errors });
       res.json(apiResponse(true, result));
     } catch (error: any) {
+      console.error('❌ Validation error:', error);
       res.status(400).json(apiResponse(false, null, error.message));
+    }
+  }
+
+  async testConnection(req: Request, res: Response): Promise<void> {
+    try {
+      const companyId = (req as any).companyId;
+      const { id } = req.params;
+
+      console.log('🧪 [ChannelController.testConnection] Testing channel:', {
+        channelId: id,
+        companyId
+      });
+
+      if (!companyId) {
+        res.status(401).json(apiResponse(false, null, 'Company ID not found'));
+        return;
+      }
+
+      const result = await this.channelService.testConnection(id, companyId);
+
+      console.log('✅ [ChannelController.testConnection] Test result:', result);
+
+      res.json(apiResponse(result.success, result));
+    } catch (error: any) {
+      console.error('❌ [ChannelController.testConnection] Error:', error);
+      res.status(500).json(apiResponse(false, null, error.message));
     }
   }
 }
@@ -191,7 +265,7 @@ export class ConversationController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const conversation = await this.conversationService.createConversation(req.body, companyId);
       res.status(201).json(apiResponse(true, conversation, 'Conversation created successfully'));
     } catch (error: any) {
@@ -201,7 +275,7 @@ export class ConversationController {
 
   async list(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const filters = req.query as any;
 
       const conversations = await this.conversationService.getConversations(filters, companyId);
@@ -213,7 +287,7 @@ export class ConversationController {
 
   async getById(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const conversation = await this.conversationService.getConversationById(id, companyId);
@@ -230,7 +304,7 @@ export class ConversationController {
 
   async update(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const conversation = await this.conversationService.updateConversation(id, req.body, companyId);
@@ -247,7 +321,7 @@ export class ConversationController {
 
   async assign(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const conversation = await this.conversationService.assignConversation(id, req.body, companyId);
@@ -264,7 +338,7 @@ export class ConversationController {
 
   async resolve(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const conversation = await this.conversationService.resolveConversation(id, companyId);
@@ -276,7 +350,7 @@ export class ConversationController {
 
   async reopen(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const conversation = await this.conversationService.reopenConversation(id, companyId);
@@ -288,7 +362,7 @@ export class ConversationController {
 
   async markAsRead(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       await this.conversationService.markAsRead(id, companyId);
@@ -300,7 +374,7 @@ export class ConversationController {
 
   async getStats(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const stats = await this.conversationService.getConversationStats(companyId);
       res.json(apiResponse(true, stats));
     } catch (error: any) {
@@ -320,7 +394,7 @@ export class MessageController {
 
   async send(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const message = await this.messageService.sendMessage(req.body, companyId);
       res.status(201).json(apiResponse(true, message, 'Message sent successfully'));
     } catch (error: any) {
@@ -330,7 +404,7 @@ export class MessageController {
 
   async getByConversation(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
       const { limit = 50 } = req.query;
 
@@ -347,7 +421,7 @@ export class MessageController {
 
   async updateStatus(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
       const { status } = req.body;
 
@@ -365,7 +439,7 @@ export class MessageController {
 
   async markAsRead(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { conversationId } = req.body;
 
       const count = await this.messageService.markMessagesAsRead(conversationId, companyId);
@@ -377,7 +451,7 @@ export class MessageController {
 
   async search(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { q } = req.query;
 
       if (!q) {
@@ -394,7 +468,7 @@ export class MessageController {
 
   async retry(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const message = await this.messageService.retryFailedMessage(id, companyId);
@@ -421,7 +495,7 @@ export class CustomerController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const customer = await this.customerService.createCustomer(req.body, companyId);
       res.status(201).json(apiResponse(true, customer, 'Customer created successfully'));
     } catch (error: any) {
@@ -431,7 +505,7 @@ export class CustomerController {
 
   async search(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const customers = await this.customerService.searchCustomers(req.query as any, companyId);
       res.json(apiResponse(true, customers));
     } catch (error: any) {
@@ -441,7 +515,7 @@ export class CustomerController {
 
   async getById(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const customer = await this.customerService.getCustomerById(id, companyId);
@@ -458,7 +532,7 @@ export class CustomerController {
 
   async update(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const customer = await this.customerService.updateCustomer(id, req.body, companyId);
@@ -475,7 +549,7 @@ export class CustomerController {
 
   async merge(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { primaryId, duplicateId } = req.body;
 
       const success = await this.customerService.mergeCustomers(primaryId, duplicateId, companyId);
@@ -492,7 +566,7 @@ export class CustomerController {
 
   async getStats(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const stats = await this.customerService.getCustomerStats(id, companyId);
@@ -504,7 +578,7 @@ export class CustomerController {
 
   async addTags(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
       const { tags } = req.body;
 
@@ -517,7 +591,7 @@ export class CustomerController {
 
   async removeTags(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
       const { tags } = req.body;
 
@@ -540,7 +614,7 @@ export class TemplateController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const template = await this.templateService.createTemplate(req.body, companyId);
       res.status(201).json(apiResponse(true, template, 'Template created successfully'));
     } catch (error: any) {
@@ -550,7 +624,7 @@ export class TemplateController {
 
   async list(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { channelType } = req.query;
 
       if (!channelType) {
@@ -567,7 +641,7 @@ export class TemplateController {
 
   async getById(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const template = await this.templateService.getTemplateById(id, companyId);
@@ -584,7 +658,7 @@ export class TemplateController {
 
   async update(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const template = await this.templateService.updateTemplate(id, req.body, companyId);
@@ -601,7 +675,7 @@ export class TemplateController {
 
   async delete(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { id } = req.params;
 
       const deleted = await this.templateService.deleteTemplate(id, companyId);
@@ -618,7 +692,7 @@ export class TemplateController {
 
   async getMostUsed(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const templates = await this.templateService.getMostUsedTemplates(companyId);
       res.json(apiResponse(true, templates));
     } catch (error: any) {
@@ -628,7 +702,7 @@ export class TemplateController {
 
   async search(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).user?.companyId;
+      const companyId = (req as any).companyId;
       const { q, channelType } = req.query;
 
       if (!q) {

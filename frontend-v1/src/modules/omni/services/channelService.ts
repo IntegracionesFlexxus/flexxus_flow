@@ -27,30 +27,55 @@ export const channelService = {
    * Listar todos los canales
    */
   getChannels: async (companyId?: string): Promise<Channel[]> => {
+    const startTime = Date.now();
+    console.log('⏱️ [channelService.getChannels] Request starting at:', new Date().toISOString());
+    console.log('🔍 [channelService.getChannels] CompanyId:', companyId);
+
     try {
       const params = companyId ? { companyId } : {};
+
+      const apiStartTime = Date.now();
       const response = await api.get('/omni/channels', { params });
+      const apiEndTime = Date.now();
+
+      console.log('✅ [channelService.getChannels] API request took:', apiEndTime - apiStartTime, 'ms');
+      console.log('📦 [channelService.getChannels] Response received:', {
+        status: response.status,
+        hasData: !!response.data,
+        dataKeys: response.data ? Object.keys(response.data) : []
+      });
 
       // Manejar diferentes formatos de respuesta
       const data = response.data?.data || response.data;
 
       // Asegurar que siempre devuelva array
+      let result: Channel[] = [];
       if (Array.isArray(data)) {
-        return data;
+        result = data;
       } else if (!data) {
-        return [];
+        console.warn('⚠️ [channelService.getChannels] No data received');
+        result = [];
       } else if (data.success === false) {
-        // Si el backend devuelve un error, devolver array vacío
-        console.warn('Backend returned error, returning empty array:', data.message);
-        return [];
+        console.warn('⚠️ [channelService.getChannels] Backend returned error:', data.message);
+        result = [];
       } else {
-        console.warn('Unexpected response format:', data);
-        return [];
+        console.warn('⚠️ [channelService.getChannels] Unexpected response format:', data);
+        result = [];
       }
+
+      const totalTime = Date.now() - startTime;
+      console.log('🏁 [channelService.getChannels] Total time:', totalTime, 'ms');
+      console.log('📊 [channelService.getChannels] Channels returned:', result.length);
+
+      return result;
     } catch (error: any) {
-      console.error('Error fetching channels:', error);
-      // En caso de error de red o similar, devolver array vacío
-      // para no bloquear la UI
+      const errorTime = Date.now() - startTime;
+      console.error('❌ [channelService.getChannels] Error after', errorTime, 'ms:', error);
+      console.error('❌ [channelService.getChannels] Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
       return [];
     }
   },
@@ -67,8 +92,20 @@ export const channelService = {
    * Crear un nuevo canal
    */
   createChannel: async (data: ChannelCreateData): Promise<Channel> => {
-    const response = await api.post('/omni/channels', data);
-    return response.data.data || response.data;
+    console.log('🆕 [channelService] createChannel - Iniciando:', data);
+    try {
+      const response = await api.post('/omni/channels', data);
+      console.log('✅ [channelService] createChannel - Respuesta:', response.data);
+      return response.data.data || response.data;
+    } catch (error: any) {
+      console.error('❌ [channelService] createChannel - Error:', error);
+      console.error('❌ [channelService] createChannel - Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw error;
+    }
   },
 
   /**
@@ -123,12 +160,20 @@ export const channelService = {
     checks?: any[];
   }> => {
     try {
+      console.log('🔍 [channelService] validateCredentials - Iniciando:', {
+        channelType,
+        configuration
+      });
+
       const response = await api.post('/omni/channels/validate', {
         channel_type: channelType,
         configuration
       });
+
+      console.log('✅ [channelService] validateCredentials - Respuesta:', response.data);
       return response.data.data || response.data;
     } catch (error: any) {
+      console.error('❌ [channelService] validateCredentials - Error:', error);
       return {
         valid: false,
         message: error.response?.data?.message || 'Error al validar credenciales',
@@ -146,12 +191,16 @@ export const channelService = {
     details?: any;
   }> => {
     try {
+      console.log('🧪 [channelService] testConnection - Iniciando:', channelId);
       const response = await api.post(`/omni/channels/${channelId}/test`);
+      console.log('✅ [channelService] testConnection - Respuesta:', response.data);
       return response.data.data || response.data;
     } catch (error: any) {
+      console.error('❌ [channelService] testConnection - Error:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Error al probar conexión'
+        message: error.response?.data?.message || 'Error al probar conexión',
+        details: error.response?.data?.details
       };
     }
   }

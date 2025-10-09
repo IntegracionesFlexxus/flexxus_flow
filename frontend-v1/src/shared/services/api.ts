@@ -58,32 +58,47 @@ api.interceptors.response.use(
   },
   async (error) => {
     const { addNotification } = getUIState()
-    const { logout } = getAuthState()
-    
+    const { clearAuth } = getAuthState()
+
+    console.log('🔴 [API Interceptor] Error capturado:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    })
+
     // Ignorar errores de solicitudes canceladas
     if (error.code === 'ERR_CANCELED' || error.message === 'canceled') {
       return Promise.reject(error)
     }
-    
+
     // Manejar diferentes códigos de error
     if (error.response) {
       const { status, data } = error.response
-      
+
       switch (status) {
         case 401: // Unauthorized
+          console.log('🔴 [API Interceptor] Error 401 detectado:', {
+            url: error.config?.url,
+            isLoginRoute: error.config?.url?.includes('/auth/login')
+          })
+
           // Solo hacer logout si no es la ruta de login
           if (!error.config?.url?.includes('/auth/login')) {
             // Try to refresh token before logging out
             const refreshToken = localStorage.getItem('refreshToken')
             if (refreshToken && !error.config._retry) {
               error.config._retry = true
-              
+              console.log('🔄 [API Interceptor] Intentando refrescar token...')
+
               try {
                 // Import authService to refresh token
                 const { authService } = await import('@/modules/auth/services/authService')
                 const refreshResult = await authService.refreshToken()
-                
+
                 if (refreshResult.success) {
+                  console.log('✅ [API Interceptor] Token refrescado exitosamente')
                   // Update the authorization header with new token
                   const newToken = localStorage.getItem('accessToken')
                   if (newToken) {
@@ -94,12 +109,13 @@ api.interceptors.response.use(
                   }
                 }
               } catch (refreshError) {
-                console.error('Token refresh failed:', refreshError)
+                console.error('❌ [API Interceptor] Token refresh failed:', refreshError)
               }
             }
-            
-            // If refresh fails, logout
-            logout()
+
+            // If refresh fails, clear auth
+            console.error('🚪 [API Interceptor] Limpiando autenticación y redirigiendo al login')
+            clearAuth()
             window.location.href = '/auth/login'
             addNotification({
               type: 'warning',

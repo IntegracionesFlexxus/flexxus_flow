@@ -36,11 +36,46 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onConfigureChannel,
   onAddChannel
 }) => {
+  // Medir tiempo de montaje del componente
+  const componentMountTime = React.useRef(Date.now());
+
+  React.useEffect(() => {
+    const mountDuration = Date.now() - componentMountTime.current;
+    console.log('📦 [ChannelList] Componente montado en:', mountDuration, 'ms');
+    console.log('⏰ [ChannelList] Timestamp de montaje:', new Date().toISOString());
+
+    return () => {
+      console.log('🔴 [ChannelList] Componente desmontado');
+    };
+  }, []);
+
   const queryClient = useQueryClient();
   const { currentCompany } = useAuthStore();
   const { addNotification } = useUIStore();
   const [togglingChannelId, setTogglingChannelId] = useState<string | null>(null);
   const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
+  const [testingChannelId, setTestingChannelId] = useState<string | null>(null);
+
+  // Log cuando currentCompany esté disponible
+  React.useEffect(() => {
+    if (currentCompany?.id) {
+      console.log('✅ [ChannelList] currentCompany disponible:', currentCompany.id);
+      console.log('⏱️ [ChannelList] Tiempo desde montaje hasta tener company:', Date.now() - componentMountTime.current, 'ms');
+    } else {
+      console.log('⏳ [ChannelList] Esperando currentCompany...');
+    }
+  }, [currentCompany]);
+
+  // Verificar estado de enabled antes de la query
+  const isQueryEnabled = !!currentCompany?.id;
+  React.useEffect(() => {
+    console.log('🔑 [ChannelList] Query enabled status:', isQueryEnabled);
+    if (isQueryEnabled) {
+      console.log('✅ [ChannelList] Query HABILITADA - la query puede ejecutarse');
+    } else {
+      console.log('⛔ [ChannelList] Query DESHABILITADA - esperando currentCompany');
+    }
+  }, [isQueryEnabled]);
 
   // Query para obtener canales
   const {
@@ -52,23 +87,51 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   } = useQuery({
     queryKey: ['channels', currentCompany?.id],
     queryFn: async () => {
+      const queryStartTime = Date.now();
+      const timeSinceMount = Date.now() - componentMountTime.current;
+      console.log('⏱️ [ChannelList useQuery] Query function starting at:', new Date().toISOString());
+      console.log('⏰ [ChannelList useQuery] Tiempo desde montaje del componente:', timeSinceMount, 'ms');
+      console.log('🔍 [ChannelList useQuery] Current company:', currentCompany?.id);
+
       try {
+        const serviceStartTime = Date.now();
         const result = await channelService.getChannels(currentCompany?.id);
+        const serviceEndTime = Date.now();
+
+        console.log('✅ [ChannelList useQuery] Service call took:', serviceEndTime - serviceStartTime, 'ms');
+
+        const totalTime = Date.now() - queryStartTime;
+        console.log('🏁 [ChannelList useQuery] Total query time:', totalTime, 'ms');
+        console.log('📊 [ChannelList useQuery] Channels loaded:', result?.length || 0);
+        console.log('⏰ [ChannelList useQuery] Tiempo total desde montaje:', Date.now() - componentMountTime.current, 'ms');
+
         return result || [];
       } catch (err) {
-        console.error('Error fetching channels, using empty array:', err);
-        return []; // Siempre devolver array vacío en caso de error
+        const errorTime = Date.now() - queryStartTime;
+        console.error('❌ [ChannelList useQuery] Error after', errorTime, 'ms:', err);
+        return [];
       }
     },
-    enabled: !!currentCompany?.id,
+    enabled: isQueryEnabled,
     refetchInterval: 60000, // Refrescar cada minuto
     retry: 1, // Reducir reintentos para fallar más rápido
     retryDelay: 1000,
-    initialData: [], // Datos iniciales para evitar undefined
+    // REMOVED: initialData - Esto causaba que React Query esperara 60s antes de ejecutar
+    // La query ahora se ejecuta INMEDIATAMENTE cuando enabled=true
     onError: (err) => {
-      console.error('Query error, will use empty array:', err);
+      console.error('❌ [ChannelList useQuery] Query error:', err);
     }
   });
+
+  // Log de cambios en el estado de la query
+  React.useEffect(() => {
+    console.log('📊 [ChannelList] Query state changed:', {
+      isLoading,
+      isFetching,
+      hasData: channels.length > 0,
+      hasError: !!error
+    });
+  }, [isLoading, isFetching, channels.length, error]);
 
   // Mutation para toggle de activación
   const toggleMutation = useMutation({
@@ -147,6 +210,39 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     }
   });
 
+  // Mutation para probar conexión
+  const testConnectionMutation = useMutation({
+    mutationFn: async (channel: Channel) => {
+      setTestingChannelId(channel.id);
+      return channelService.testConnection(channel.id);
+    },
+    onSuccess: (result, channel) => {
+      queryClient.invalidateQueries({ queryKey: ['channels'] });
+
+      addNotification({
+        type: result.success ? 'success' : 'error',
+        title: result.success ? 'Conexión exitosa' : 'Error en conexión',
+        message: result.message || (result.success ? 'El canal está funcionando correctamente' : 'No se pudo conectar al canal'),
+        autoClose: !result.success ? false : true
+      });
+
+      // Log details for debugging
+      if (result.details) {
+        console.log('Test details:', result.details);
+      }
+    },
+    onError: (error: any, channel) => {
+      addNotification({
+        type: 'error',
+        title: 'Error al probar conexión',
+        message: `No se pudo probar el canal ${channel.name}`
+      });
+    },
+    onSettled: () => {
+      setTestingChannelId(null);
+    }
+  });
+
   // Handlers
   const handleToggleChannel = (channel: Channel) => {
     toggleMutation.mutate({ channel });
@@ -158,6 +254,10 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
   const handleRefreshHealth = (channel: Channel) => {
     healthCheckMutation.mutate(channel);
+  };
+
+  const handleTestConnection = (channel: Channel) => {
+    testConnectionMutation.mutate(channel);
   };
 
   const handleRefreshAll = () => {
@@ -295,8 +395,10 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               onConfigure={onConfigureChannel}
               onDelete={handleDeleteChannel}
               onRefreshHealth={handleRefreshHealth}
+              onTestConnection={handleTestConnection}
               isToggling={togglingChannelId === channel.id}
               isDeleting={deletingChannelId === channel.id}
+              isTesting={testingChannelId === channel.id}
             />
           </Grid>
         ))}

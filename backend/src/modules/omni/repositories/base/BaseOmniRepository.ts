@@ -45,11 +45,7 @@ export abstract class BaseOmniRepository<T extends BaseEntity> {
     companyId?: string
   ): Promise<QueryResult> {
     try {
-      // Set the company_id in the session for RLS
-      if (companyId) {
-        await this.pool.query('SET LOCAL app.current_company_id TO $1', [companyId]);
-      }
-
+      // Company_id filtering is done in the SQL queries themselves
       const result = await this.pool.query(query, params);
       this.logger.debug(`Query executed: ${query.substring(0, 100)}...`, {
         rowCount: result.rowCount

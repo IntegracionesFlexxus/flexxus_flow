@@ -19,6 +19,14 @@ declare global {
       companyId?: string;
       userRole?: string;
       token?: string;
+      user?: {
+        id: string;
+        email?: string;
+        companyId?: string;
+        role?: string;
+        permissions?: string[];
+        sessionId?: string;
+      };
     }
   }
 }
@@ -65,6 +73,14 @@ export const authMiddleware = async (
     req.companyId = decoded.companyId;
     req.userRole = decoded.role;
     req.token = token;
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email,
+      companyId: decoded.companyId,
+      role: decoded.role,
+      permissions: decoded.permissions || sessionValidation.permissions,
+      sessionId: decoded.sessionId
+    };
     
     // Log de acceso
     logAccess(req, decoded, logger);
@@ -124,6 +140,14 @@ export const optionalAuth = async (
         req.companyId = decoded.companyId;
         req.userRole = decoded.role;
         req.token = token;
+        req.user = {
+          id: decoded.userId,
+          email: decoded.email,
+          companyId: decoded.companyId,
+          role: decoded.role,
+          permissions: decoded.permissions || sessionValidation.permissions,
+          sessionId: decoded.sessionId
+        };
       }
     }
     next();

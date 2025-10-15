@@ -50,7 +50,6 @@ const getController = <T>(type: symbol): T => {
   try {
     return container.get<T>(type);
   } catch (error) {
-    console.error(`Failed to get controller for ${type.toString()}:`, error);
     throw error;
   }
 };

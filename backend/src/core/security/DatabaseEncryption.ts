@@ -182,13 +182,14 @@ export class DatabaseEncryption implements IDatabaseEncryption {
       let offset = 0;
       let hasMore = true;
       while (hasMore) {
-        const rows = await connection.query<any>(`
+        const queryResult = await connection.query<any>(`
           SELECT id, ${column} 
           FROM ${table} 
           WHERE ${column} IS NOT NULL 
           LIMIT ${batchSize} OFFSET ${offset}
         `, []);
-        if (rows.rows.length === 0) {
+        const rows = queryResult.rows;
+        if (rows.length === 0) {
           hasMore = false;
           break;
         }
@@ -241,7 +242,7 @@ export class DatabaseEncryption implements IDatabaseEncryption {
         FROM information_schema.columns 
         WHERE table_name = $1 AND column_name = $2
       `, [table, `${column}_original`]);
-      const dataType = typeResult[0]?.data_type || 'TEXT';
+      const dataType = typeResult.rows[0]?.data_type || 'TEXT';
       await connection.query(`
         ALTER TABLE ${table} 
         ADD COLUMN IF NOT EXISTS ${tempColumn} ${dataType}
@@ -251,13 +252,14 @@ export class DatabaseEncryption implements IDatabaseEncryption {
       let offset = 0;
       let hasMore = true;
       while (hasMore) {
-        const rows = await connection.query<any>(`
+        const queryResult = await connection.query<any>(`
           SELECT id, ${column} 
           FROM ${table} 
           WHERE ${column} IS NOT NULL 
           LIMIT ${batchSize} OFFSET ${offset}
         `, []);
-        if (rows.rows.length === 0) {
+        const rows = queryResult.rows;
+        if (rows.length === 0) {
           hasMore = false;
           break;
         }
@@ -344,12 +346,12 @@ export class DatabaseEncryption implements IDatabaseEncryption {
       const newKey = crypto.randomBytes(32);
       this.encryptionKeys.set(newKeyId, newKey);
       // 3. Re-cifrar columnas con nueva clave
-      const encryptedColumns = await connection.query<any>(`
+      const encryptedColumnsResult = await connection.query<any>(`
         SELECT DISTINCT table_name, column_name 
         FROM column_encryption_registry 
         WHERE is_encrypted = true
       `, []);
-      for (const col of encryptedColumns) {
+      for (const col of encryptedColumnsResult.rows) {
         await this.reEncryptColumn(
           database,
           col.table_name,

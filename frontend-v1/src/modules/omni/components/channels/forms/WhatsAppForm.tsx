@@ -200,19 +200,22 @@ export const WhatsAppForm: React.FC<WhatsAppFormProps> = ({
             <TextField
               fullWidth
               label="Webhook Verify Token"
-              value={generatedToken}
               {...register('webhookVerifyToken')}
+              error={!!errors.webhookVerifyToken}
+              helperText={errors.webhookVerifyToken?.message || "Token para verificar webhooks (puedes editarlo o generar uno nuevo)"}
               InputProps={{
-                readOnly: true,
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={generateNewToken} edge="end">
+                    <IconButton
+                      onClick={generateNewToken}
+                      edge="end"
+                      title="Generar nuevo token"
+                    >
                       <RefreshIcon />
                     </IconButton>
                   </InputAdornment>
                 )
               }}
-              helperText="Token generado automáticamente para verificar webhooks"
             />
 
             <TextField

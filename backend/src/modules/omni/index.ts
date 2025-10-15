@@ -5,15 +5,19 @@
 
 import { Router } from 'express';
 import { container } from '@/container/container';
+import { LoggerFactory } from '@/shared/services/logger/LoggerService';
 import { configureOmniContainer, initializeOmniModule } from './config/omni.container';
 import omniRoutes from './routes';
+
+const logger = LoggerFactory.create({ file: __filename });
 
 // Configure the container with Omni module dependencies
 configureOmniContainer(container);
 
-// Initialize the module (WebSocket handlers, etc.)
+// Initialize the module (WebSocket handlers, message queue, etc.)
 initializeOmniModule(container).catch(error => {
-  console.error('Failed to initialize Omni module:', error);
+  logger.error('❌ CRITICAL: Failed to initialize Omni module', { error });
+  console.error('❌ CRITICAL: Failed to initialize Omni module:', error);
 });
 
 // Create main router

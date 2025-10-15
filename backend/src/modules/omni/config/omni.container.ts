@@ -11,6 +11,8 @@ import { ChannelRepository } from '../repositories/ChannelRepository';
 import { ConversationRepository } from '../repositories/ConversationRepository';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { CustomerRepository } from '../repositories/CustomerRepository';
+import { ContactRepository } from '../repositories/ContactRepository';
+import { ContactIdentityRepository } from '../repositories/ContactIdentityRepository';
 import { TemplateRepository, QuickReplyRepository } from '../repositories/TemplateRepository';
 import { LandingPageRepository } from '../repositories/LandingPageRepository'; // Sprint N+3
 import { EmailEngagementRepository } from '../repositories/EmailEngagementRepository'; // Sprint N+3
@@ -97,6 +99,14 @@ export function configureOmniContainer(container: Container): void {
 
   container.bind<CustomerRepository>(TYPES.OmniCustomerRepository)
     .to(CustomerRepository)
+    .inSingletonScope();
+
+  container.bind<ContactRepository>(TYPES.OmniContactRepository)
+    .to(ContactRepository)
+    .inSingletonScope();
+
+  container.bind<ContactIdentityRepository>(TYPES.OmniContactIdentityRepository)
+    .to(ContactIdentityRepository)
     .inSingletonScope();
 
   container.bind<TemplateRepository>(TYPES.OmniTemplateRepository)
@@ -431,7 +441,6 @@ export function configureOmniContainer(container: Container): void {
   container.bind(TYPES.CognitiveController).to(CognitiveController).inSingletonScope();
   container.bind(TYPES.MLMonitoringController).to(MLMonitoringController).inSingletonScope();
 
-  console.log('✅ Sprint 12 ML/AI services registered (Fases 1-4)');
 
   // ============================================================================
   // SPRINT 13 - ANALYTICS & REPORTING MODULE
@@ -507,14 +516,12 @@ export function configureOmniContainer(container: Container): void {
   container.bind(TYPES.OmniAnalyticsReportController).to(ReportController).inSingletonScope();
   container.bind(TYPES.OmniAnalyticsKpiController).to(KpiController).inSingletonScope();
 
-  console.log('✅ Sprint 13 Analytics & Reporting services registered');
 }
 
 /**
  * Initialize the Omni module
  */
 export async function initializeOmniModule(container: Container): Promise<void> {
-  console.log('🚀 Initializing Omni module...');
 
   // Get WebSocket handler and initialize if WebSocket server is available
   try {
@@ -523,19 +530,15 @@ export async function initializeOmniModule(container: Container): Promise<void> 
 
     if (io) {
       wsHandler.initialize(io);
-      console.log('✅ Omni WebSocket handler initialized');
     }
   } catch (error) {
-    console.log('⚠️  WebSocket server not available for Omni module');
   }
 
   // Initialize message queue
   try {
     const messageQueue = container.get<MessageQueue>(TYPES.OmniMessageQueue);
     await messageQueue.initialize();
-    console.log('✅ Message queue initialized');
   } catch (error) {
-    console.log('⚠️  Failed to initialize message queue:', error);
   }
 
   // Start health monitoring for default company (optional)
@@ -543,87 +546,66 @@ export async function initializeOmniModule(container: Container): Promise<void> 
   try {
     const healthMonitor = container.get<ChannelHealthMonitor>(TYPES.OmniChannelHealthMonitor);
     // Health monitoring would be started per company
-    console.log('✅ Health monitor service ready');
   } catch (error) {
-    console.log('⚠️  Failed to initialize health monitor:', error);
   }
 
   // Initialize Sprint 10 services
   try {
     const performanceOptimizer = container.get<PerformanceOptimizer>('PerformanceOptimizer');
     await performanceOptimizer.startMonitoring();
-    console.log('✅ Performance optimizer started');
   } catch (error) {
-    console.log('⚠️  Failed to start performance optimizer:', error);
   }
 
   try {
     const aiProcessor = container.get<RealTimeAIProcessor>('RealTimeAIProcessor');
     await aiProcessor.start();
-    console.log('✅ Real-time AI processor started');
   } catch (error) {
-    console.log('⚠️  Failed to start AI processor:', error);
   }
 
   try {
     const cacheService = container.get<SmartCacheService>('SmartCacheService');
     // Cache service auto-starts
-    console.log('✅ Smart cache service ready');
   } catch (error) {
-    console.log('⚠️  Failed to initialize cache service:', error);
   }
 
-  console.log('✅ Omni module initialized successfully');
 }
 
 /**
  * Shutdown the Omni module
  */
 export async function shutdownOmniModule(container: Container): Promise<void> {
-  console.log('🔄 Shutting down Omni module...');
 
   // Shutdown message queue
   try {
     const messageQueue = container.get<MessageQueue>(TYPES.OmniMessageQueue);
     await messageQueue.shutdown();
-    console.log('✅ Message queue shutdown');
   } catch (error) {
-    console.log('⚠️  Failed to shutdown message queue:', error);
   }
 
   // Stop health monitoring
   try {
     const healthMonitor = container.get<ChannelHealthMonitor>(TYPES.OmniChannelHealthMonitor);
     healthMonitor.stopMonitoring();
-    console.log('✅ Health monitoring stopped');
   } catch (error) {
-    console.log('⚠️  Failed to stop health monitoring:', error);
   }
 
   // Stop Sprint 10 services
   try {
     const performanceOptimizer = container.get<PerformanceOptimizer>('PerformanceOptimizer');
     await performanceOptimizer.cleanup();
-    console.log('✅ Performance optimizer stopped');
   } catch (error) {
-    console.log('⚠️  Failed to stop performance optimizer:', error);
   }
 
   try {
     const aiProcessor = container.get<RealTimeAIProcessor>('RealTimeAIProcessor');
     await aiProcessor.cleanup();
-    console.log('✅ AI processor stopped');
   } catch (error) {
-    console.log('⚠️  Failed to stop AI processor:', error);
   }
 
   try {
     const cacheService = container.get<SmartCacheService>('SmartCacheService');
     await cacheService.cleanup();
-    console.log('✅ Cache service stopped');
   } catch (error) {
-    console.log('⚠️  Failed to stop cache service:', error);
   }
 
-  console.log('✅ Omni module shutdown complete');
 }

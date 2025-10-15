@@ -24,7 +24,6 @@ const getAIController = (): AIController => {
   try {
     return container.get<AIController>('AIController');
   } catch (error) {
-    console.error('Failed to get AI controller:', error);
     throw error;
   }
 };

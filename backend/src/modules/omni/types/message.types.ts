@@ -10,6 +10,11 @@ export enum MessageSenderType {
   BOT = 'bot'
 }
 
+export enum MessageDirection {
+  INBOUND = 'inbound',
+  OUTBOUND = 'outbound'
+}
+
 export enum MessageContentType {
   TEXT = 'text',
   IMAGE = 'image',
@@ -25,7 +30,8 @@ export enum MessageStatus {
   SENT = 'sent',
   DELIVERED = 'delivered',
   READ = 'read',
-  FAILED = 'failed'
+  FAILED = 'failed',
+  RECEIVED = 'received'
 }
 
 export interface MessageContent {

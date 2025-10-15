@@ -31,8 +31,14 @@ export class ChannelService {
       // Validate channel configuration based on type
       this.validateChannelConfig(data.channel_type, data.configuration);
 
+      // Normalizar configuración para compatibilidad con la base de datos
+      const normalizedConfig = this.normalizeConfiguration(data.channel_type, data.configuration);
+
       // Create channel in database
-      const channel = await this.channelRepository.createChannel(data, companyId);
+      const channel = await this.channelRepository.createChannel({
+        ...data,
+        configuration: normalizedConfig
+      }, companyId);
 
       this.logger.info('Channel created successfully', {
         channelId: channel.id,
@@ -50,25 +56,11 @@ export class ChannelService {
    * Get all active channels for a company
    */
   async getActiveChannels(companyId: string): Promise<IChannel[]> {
-    const startTime = Date.now();
-    console.log('⏱️ [ChannelService.getActiveChannels] Starting at:', new Date().toISOString());
-
     try {
-      const repoStartTime = Date.now();
       const channels = await this.channelRepository.findActiveChannels(companyId);
-      const repoEndTime = Date.now();
-
-      console.log('✅ [ChannelService.getActiveChannels] Repository query took:', repoEndTime - repoStartTime, 'ms');
-      console.log('📊 [ChannelService.getActiveChannels] Channels retrieved:', channels?.length || 0);
-
-      const totalTime = Date.now() - startTime;
-      console.log('🏁 [ChannelService.getActiveChannels] Total service time:', totalTime, 'ms');
-
       return channels || [];
     } catch (error) {
-      const errorTime = Date.now() - startTime;
-      this.logger.error('Failed to get active channels', { error, companyId, timeElapsed: errorTime });
-      console.error('❌ [ChannelService.getActiveChannels] Error after', errorTime, 'ms:', error);
+      this.logger.error('Failed to get active channels', { error, companyId });
       return [];
     }
   }
@@ -119,6 +111,9 @@ export class ChannelService {
       // If configuration is being updated, validate it
       if (data.configuration) {
         this.validateChannelConfig(existingChannel.channel_type, data.configuration);
+
+        // Normalizar configuración para compatibilidad con la base de datos
+        data.configuration = this.normalizeConfiguration(existingChannel.channel_type, data.configuration);
       }
 
       // Update channel
@@ -396,34 +391,19 @@ export class ChannelService {
     details?: any;
   }> {
     try {
-      console.log('═══════════════════════════════════════════════════════════════════');
-      console.log('🔍 [testEmailConnection] INICIANDO PRUEBA DE CONEXIÓN EMAIL');
-      console.log('⏰ Timestamp:', new Date().toISOString());
-      console.log('═══════════════════════════════════════════════════════════════════');
 
       if (config.provider === 'smtp' || details?.provider === 'smtp') {
         // Test SMTP connection
         const nodemailer = require('nodemailer');
 
         // LOG 1: Contraseña recibida (ANTES de desencriptar)
-        console.log('📦 [testEmailConnection] Contraseña RECIBIDA:');
-        console.log('   - Tipo:', typeof details.smtp_password);
-        console.log('   - Longitud:', details.smtp_password?.length || 0);
-        console.log('   - Primeros 50 chars:', details.smtp_password?.substring(0, 50));
-        console.log('   - Está encriptada?:', details.smtp_password?.startsWith('__encrypted__'));
 
         // IMPORTANTE: Desencriptar la contraseña antes de usarla
         const smtpPassword = decryptCredential(details.smtp_password);
 
         // LOG 2: Resultado de desencriptación
-        console.log('🔓 [testEmailConnection] Contraseña DESENCRIPTADA:');
-        console.log('   - Tipo:', typeof smtpPassword);
-        console.log('   - Longitud:', smtpPassword?.length || 0);
-        console.log('   - Valor completo:', smtpPassword);
-        console.log('   - Es la App Password correcta?:', smtpPassword === 'amjmfzmioeiwfbiv');
 
         if (!smtpPassword) {
-          console.error('❌ [testEmailConnection] FALLO EN DESENCRIPTACIÓN');
           return {
             success: false,
             message: 'No se pudo desencriptar la contraseña SMTP. Por favor, reconfigura el canal.',
@@ -435,11 +415,6 @@ export class ChannelService {
         }
 
         // LOG 3: Configuración SMTP que se usará
-        console.log('🌐 [testEmailConnection] Configuración SMTP:');
-        console.log('   - Host:', details.smtp_host);
-        console.log('   - Port:', details.smtp_port);
-        console.log('   - User:', details.smtp_user);
-        console.log('   - Secure:', details.smtp_port === 465);
 
         this.logger.debug('Testing SMTP connection', {
           host: details.smtp_host,
@@ -458,14 +433,11 @@ export class ChannelService {
         });
 
         // LOG 4: Intentando verificar conexión
-        console.log('🔌 [testEmailConnection] Verificando conexión SMTP...');
 
         // Verify connection
         await transporter.verify();
 
         // LOG 5: Conexión exitosa
-        console.log('✅ [testEmailConnection] CONEXIÓN SMTP EXITOSA!');
-        console.log('═══════════════════════════════════════════════════════════════════\n');
 
         return {
           success: true,
@@ -479,8 +451,6 @@ export class ChannelService {
       } else {
         // For API providers (SendGrid, Mailgun, etc.), just validate config
         // Real API test would require actual API calls
-        console.log('ℹ️ [testEmailConnection] Provider no SMTP, validación básica');
-        console.log('═══════════════════════════════════════════════════════════════════\n');
         return {
           success: true,
           message: `${config.provider} configuration valid (API test pending)`,
@@ -493,11 +463,6 @@ export class ChannelService {
       }
     } catch (error: any) {
       // LOG 6: Error en conexión
-      console.error('❌ [testEmailConnection] ERROR EN CONEXIÓN SMTP:');
-      console.error('   - Mensaje:', error.message);
-      console.error('   - Código:', error.code);
-      console.error('   - Stack:', error.stack);
-      console.log('═══════════════════════════════════════════════════════════════════\n');
 
       return {
         success: false,
@@ -577,5 +542,32 @@ export class ChannelService {
         note: 'Full Meta API validation requires actual API call'
       }
     };
+  }
+
+  /**
+   * Normalizar configuración para compatibilidad con la base de datos
+   * Transforma nombres de campos del frontend a los esperados por el trigger de DB
+   */
+  private normalizeConfiguration(channelType: ChannelType, config: any): any {
+    if (!config) return config;
+
+    const normalized = { ...config };
+
+    // Normalización para WhatsApp: accessToken -> api_token
+    if (channelType === ChannelType.WHATSAPP) {
+      if (normalized.accessToken) {
+        normalized.api_token = normalized.accessToken;
+        // Mantener accessToken también para compatibilidad
+      }
+    }
+
+    // Normalización para Instagram: pageAccessToken -> access_token
+    if (channelType === ChannelType.INSTAGRAM) {
+      if (normalized.pageAccessToken && !normalized.access_token) {
+        normalized.access_token = normalized.pageAccessToken;
+      }
+    }
+
+    return normalized;
   }
 }// Force recompile

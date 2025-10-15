@@ -155,8 +155,9 @@ export class DataMapper {
         continue;
       }
       if (typeof targetProperty === 'function') {
-        // Transform function
-        (target as any)[sourceProperty] = targetProperty(sourceValue, source, target);
+        // Transform function explicitly treated as callable mapping
+        const transformFn = targetProperty as TransformFunction;
+        (target as any)[sourceProperty] = transformFn(sourceValue, source, target);
       } else {
         // Direct mapping
         (target as any)[targetProperty] = this.mapValue(sourceValue, options);
@@ -195,7 +196,8 @@ export class DataMapper {
     // Apply target transformations
     for (const [targetProperty, transform] of Object.entries(targetTransforms)) {
       const currentValue = (target as any)[targetProperty];
-      (target as any)[targetProperty] = transform(currentValue, source, target);
+      const transformFn = transform as TransformFunction;
+      (target as any)[targetProperty] = transformFn(currentValue, source, target);
     }
   }
   /**

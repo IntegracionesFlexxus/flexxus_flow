@@ -8,6 +8,7 @@ import { ConversationStatus, ConversationPriority, SLAStatus } from '../types/co
 import { ChannelType } from '../types/channel.types';
 
 export interface IConversation extends BaseEntity {
+  contact_id?: string;
   customer_id?: string;
   channel_id?: string;
   channel_type: ChannelType | string;
@@ -28,6 +29,7 @@ export interface IConversation extends BaseEntity {
 }
 
 export interface IConversationCreate {
+  contact_id?: string;
   customer_id?: string;
   channel_id: string;
   channel_type: ChannelType | string;

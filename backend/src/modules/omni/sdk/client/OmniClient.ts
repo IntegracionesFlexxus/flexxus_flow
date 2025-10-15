@@ -140,11 +140,20 @@ export class OmniClient extends EventEmitter {
     if (this.debug) {
       this.client.interceptors.request.use(
         (config) => {
-          console.log('Request:', config.method?.toUpperCase(), config.url, config.data);
+          this.emit('debug', {
+            stage: 'request',
+            method: config.method?.toUpperCase(),
+            url: config.url,
+            data: config.data
+          });
           return config;
         },
         (error) => {
-          console.error('Request Error:', error);
+          this.emit('debug', {
+            stage: 'request-error',
+            message: error.message,
+            stack: error.stack
+          });
           return Promise.reject(error);
         }
       );
@@ -154,13 +163,24 @@ export class OmniClient extends EventEmitter {
     this.client.interceptors.response.use(
       (response) => {
         if (this.debug) {
-          console.log('Response:', response.status, response.data);
+          this.emit('debug', {
+            stage: 'response',
+            status: response.status,
+            url: response.config?.url,
+            data: response.data
+          });
         }
         return response;
       },
       async (error) => {
         if (this.debug) {
-          console.error('Response Error:', error.response?.status, error.response?.data);
+          this.emit('debug', {
+            stage: 'response-error',
+            status: error.response?.status,
+            url: error.config?.url,
+            data: error.response?.data,
+            message: error.message
+          });
         }
         
         // Retry logic
@@ -510,7 +530,13 @@ export class OmniClient extends EventEmitter {
         const data = JSON.parse(event.data);
         this.emit(data.type, data.payload);
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
+        if (this.debug) {
+          this.emit('debug', {
+            stage: 'websocket-message-error',
+            message: error.message,
+            stack: error.stack
+          });
+        }
       }
     };
     

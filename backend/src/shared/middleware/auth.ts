@@ -28,6 +28,11 @@ declare global {
         sessionId: string;
         permissions?: string[];
       };
+      // Backward compatibility properties for controllers that access directly
+      userId?: string;
+      userEmail?: string;
+      companyId?: string;
+      userRole?: string;
       requestId?: string;
       startTime?: number;
     }
@@ -53,14 +58,26 @@ export const authenticateToken = async (
     if (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') {
       const authHeader = req.headers.authorization;
       if (!authHeader || authHeader === 'Bearer test-token' || authHeader === 'Bearer test-token-123') {
+        const devCompanyId = req.headers['x-company-id'] as string || '0a8e08a1-fdad-4caa-b90e-d8d791fa82ee';
+        const devUserId = '9366a549-ed26-43af-9711-07c214c2d481';
+        const devEmail = 'demo@flexxus.com';
+        const devRole = 'admin';
+
         req.user = {
-          id: '1',
-          email: 'dev@test.com',
-          companyId: req.headers['x-company-id'] as string || '0a8e08a1-fdad-4caa-b90e-d8d791fa82ee',
-          role: 'admin',
+          id: devUserId,
+          email: devEmail,
+          companyId: devCompanyId,
+          role: devRole,
           sessionId: 'dev-session',
           permissions: ['*']
         };
+
+        // Set properties directly for backward compatibility
+        req.userId = devUserId;
+        req.userEmail = devEmail;
+        req.companyId = devCompanyId;
+        req.userRole = devRole;
+
         next();
         return;
       }
@@ -109,7 +126,7 @@ export const authenticateToken = async (
       return;
     }
 
-    // Set user context
+    // Set user context (both in req.user and directly for backward compatibility)
     req.user = {
       id: payload.userId,
       email: payload.email,
@@ -117,6 +134,12 @@ export const authenticateToken = async (
       role: payload.role,
       sessionId: payload.sessionId
     };
+
+    // Set properties directly on req for backward compatibility with existing controllers
+    req.userId = payload.userId;
+    req.userEmail = payload.email;
+    req.companyId = payload.companyId;
+    req.userRole = payload.role;
 
     // Set database context for RLS (Row Level Security)
     try {

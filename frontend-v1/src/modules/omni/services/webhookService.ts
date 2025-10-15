@@ -9,13 +9,24 @@ export const webhookService = {
   /**
    * Obtener la URL del webhook para un canal
    */
-  getWebhookUrl: (channelType: ChannelType, channelId: string): string => {
-    // Usar la URL del backend desde las variables de entorno o window.location
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL ||
+  getWebhookUrl: (channelType: ChannelType, channelId: string = ''): string => {
+    // Usar la URL del backend desde las variables de entorno o configuración
+    // REACT_APP_WEBHOOK_BASE_URL debe ser la URL pública accesible por los proveedores
+    const baseUrl = process.env.REACT_APP_WEBHOOK_BASE_URL ||
+                   process.env.NEXT_PUBLIC_API_URL ||
                    process.env.REACT_APP_API_URL ||
-                   `${window.location.protocol}//${window.location.hostname}:5000/api`;
+                   `${window.location.protocol}//${window.location.hostname}:5000`;
 
-    return `${baseUrl}/omni/webhooks/${channelType}/${channelId}`;
+    // Para WhatsApp, Instagram y Facebook, la URL no incluye channelId
+    // Meta verifica por verify token, no por URL única
+    if (channelType === ChannelType.WHATSAPP ||
+        channelType === ChannelType.INSTAGRAM ||
+        channelType === ChannelType.FACEBOOK) {
+      return `${baseUrl}/api/omni/webhooks/${channelType}`;
+    }
+
+    // Para otros canales (Email, SMS) que pueden necesitar URLs únicas por canal
+    return `${baseUrl}/api/omni/webhooks/${channelType}${channelId ? `/${channelId}` : ''}`;
   },
 
   /**

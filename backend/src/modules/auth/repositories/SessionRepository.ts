@@ -243,7 +243,7 @@ export class SessionRepository implements ISessionRepository {
     }
 
     try {
-      const result = await this.db.query(query, params);
+      const result = await this.db.query<any>(query, params);
 
       // Log the actual result structure for debugging
       this.logger.debug('[SessionRepository.invalidateUserSessions] Query result', {
@@ -256,17 +256,10 @@ export class SessionRepository implements ISessionRepository {
       });
 
       // Handle different result formats
-      let affectedRows = 0;
-      if (result && typeof result === 'object') {
-        if ('rowCount' in result) {
-          affectedRows = (result as any).rowCount || 0;
-        } else if ('affectedRows' in result) {
-          affectedRows = (result as any).affectedRows || 0;
-        } else if (Array.isArray(result)) {
-          // Some drivers return array for UPDATE with RETURNING clause
-          affectedRows = result.rows.length;
-        }
-      }
+      const affectedRows =
+        (result as any)?.rowCount ??
+        (result as any)?.affectedRows ??
+        (Array.isArray((result as any)?.rows) ? (result as any).rows.length : 0);
 
       this.logger.info('[SessionRepository.invalidateUserSessions] Sessions invalidated', {
         userId,

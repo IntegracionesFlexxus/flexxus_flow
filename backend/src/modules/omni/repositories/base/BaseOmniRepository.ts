@@ -120,13 +120,16 @@ export abstract class BaseOmniRepository<T extends BaseEntity> {
    * Create a new record
    */
   async create(data: Partial<T>, companyId: string): Promise<T> {
-    const fields = Object.keys(data);
-    const values = Object.values(data);
-    const placeholders = fields.map((_, index) => `$${index + 2}`).join(', ');
+    const entries = Object.entries(data || {}).filter(([key, value]) => key !== 'company_id' && value !== undefined);
+    const fields = entries.map(([key]) => key);
+    const values = entries.map(([, value]) => value);
+
+    const columns = ['company_id', ...fields];
+    const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
 
     const query = `
-      INSERT INTO ${this.tableName} (company_id, ${fields.join(', ')})
-      VALUES ($1, ${placeholders})
+      INSERT INTO ${this.tableName} (${columns.join(', ')})
+      VALUES (${placeholders})
       RETURNING *
     `;
 

@@ -18,8 +18,8 @@ import roleRoutes from '@/modules/roles';
 import companyRoutes from '@/modules/companies';
 // Import CRM routes (Sprint 15)
 import crmRoutes, { initializeCRMModule, shutdownCRMModule } from '@/modules/crm';
-// Import Omni routes (Sprint 05-06)
-import omniRoutes from '@/modules/omni/routes';
+// Import Omni routes (Sprint 05-06) - import from index to trigger initialization
+import omniRoutes from '@/modules/omni';
 // TODO: Importar rutas de otros módulos cuando estén implementadas
 // import workflowRoutes from '@/modules/workflow/routes';
 // import analyticsRoutes from '@/modules/analytics/routes';

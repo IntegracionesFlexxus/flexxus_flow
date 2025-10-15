@@ -4,38 +4,67 @@
  */
 
 import { BaseEntity } from '../repositories/base/BaseOmniRepository';
-import { MessageSenderType, MessageContentType, MessageStatus } from '../types/message.types';
+import {
+  MessageSenderType,
+  MessageContentType,
+  MessageStatus,
+  MessageDirection
+} from '../types/message.types';
 
 export interface IMessage extends BaseEntity {
   conversation_id: string;
-  customer_id?: string;
   sender_type: MessageSenderType;
   sender_id?: string;
-  recipient_identifier?: string; // Email, phone number, social media handle, etc.
-  content_type: MessageContentType;
+  sender_name?: string;
   content?: string;
+  message_type?: string;
+  content_type?: MessageContentType | string;
   media_url?: string;
   media_type?: string;
-  external_id?: string;
+  media_metadata?: Record<string, any>;
   status: MessageStatus;
   error_message?: string;
+  is_internal?: boolean;
+  is_private?: boolean;
+  reply_to_message_id?: string;
+  external_id?: string;
+  external_message_id?: string;
+  platform_data?: Record<string, any>;
   metadata?: Record<string, any>;
-  is_private: boolean;
+  direction?: MessageDirection;
+  channel_id?: string;
+  recipient_identifier?: string;
+  customer_id?: string;
+  company_id?: string;
   delivered_at?: Date;
   read_at?: Date;
+  sent_at?: Date;
 }
 
 export interface IMessageCreate {
   conversation_id: string;
+  company_id: string;
+  channel_id?: string;
   customer_id?: string;
   sender_type: MessageSenderType;
   sender_id?: string;
-  content_type: MessageContentType;
+  recipient_identifier?: string;
   content?: string;
+  content_type?: MessageContentType | string;
+  message_type?: string;
   media_url?: string;
   media_type?: string;
+  media_metadata?: Record<string, any>;
+  status?: MessageStatus;
+  is_internal?: boolean;
+  reply_to_message_id?: string;
+  external_message_id?: string;
   metadata?: Record<string, any>;
-  is_private?: boolean;
+  direction?: MessageDirection;
+  platform_data?: Record<string, any>;
+  sent_at?: Date;
+  delivered_at?: Date;
+  read_at?: Date;
 }
 
 export interface IMessageUpdate {

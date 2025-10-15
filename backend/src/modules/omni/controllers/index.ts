@@ -24,6 +24,11 @@ const apiResponse = (success: boolean, data: any = null, message: string = '') =
   timestamp: new Date().toISOString()
 });
 
+// Helper to extract companyId from request (supports both auth middleware types)
+const getCompanyId = (req: Request): string | null => {
+  return (req as any).companyId || (req as any).user?.companyId || null;
+};
+
 /**
  * Channel Controller
  */
@@ -36,56 +41,32 @@ export class ChannelController {
   async create(req: Request, res: Response): Promise<void> {
     try {
       const companyId = (req as any).companyId;
-      console.log('🔍 [ChannelController.create] Request info:', {
-        companyId,
-        userId: (req as any).userId,
-        body: req.body
-      });
 
       if (!companyId) {
-        console.error('❌ [ChannelController.create] Company ID not found');
         res.status(401).json(apiResponse(false, null, 'Company ID not found'));
         return;
       }
 
-      console.log('💾 [ChannelController.create] Creating channel...');
       const channel = await this.channelService.createChannel(req.body, companyId);
-      console.log('✅ [ChannelController.create] Channel created successfully:', channel);
       res.status(201).json(apiResponse(true, channel, 'Channel created successfully'));
     } catch (error: any) {
-      console.error('❌ [ChannelController.create] Error:', error);
       res.status(400).json(apiResponse(false, null, error.message));
     }
   }
 
   async list(req: Request, res: Response): Promise<void> {
-    const startTime = Date.now();
-    console.log('⏱️ [ChannelController.list] Request received at:', new Date().toISOString());
-
     try {
       const companyId = (req as any).companyId;
-      console.log('🔍 [ChannelController.list] CompanyId:', companyId);
 
       if (!companyId) {
-        console.log('⚠️ [ChannelController.list] No companyId, returning empty array');
         res.json(apiResponse(true, []));
         return;
       }
 
-      const serviceStartTime = Date.now();
       const channels = await this.channelService.getActiveChannels(companyId) || [];
-      const serviceEndTime = Date.now();
-
-      console.log('✅ [ChannelController.list] Service completed in:', serviceEndTime - serviceStartTime, 'ms');
-      console.log('📊 [ChannelController.list] Channels found:', channels.length);
 
       res.json(apiResponse(true, channels));
-
-      const totalTime = Date.now() - startTime;
-      console.log('🏁 [ChannelController.list] Total request time:', totalTime, 'ms');
     } catch (error: any) {
-      const errorTime = Date.now() - startTime;
-      console.error('❌ [ChannelController.list] Error after', errorTime, 'ms:', error);
       res.json(apiResponse(true, [], 'Error fetching channels, returning empty list'));
     }
   }
@@ -163,15 +144,6 @@ export class ChannelController {
       const { channel_type, configuration } = req.body;
       const companyId = (req as any).companyId || (req as any).user?.companyId;
 
-      // Log para debugging
-      console.log('🔍 Validate credentials request:', {
-        channel_type,
-        hasConfiguration: !!configuration,
-        companyId,
-        userId: (req as any).userId,
-        hasAuthHeader: !!req.headers.authorization
-      });
-
       // Validación básica de datos requeridos
       if (!channel_type) {
         res.status(400).json(apiResponse(false, null, 'Channel type is required'));
@@ -219,10 +191,8 @@ export class ChannelController {
         result.errors = ['From email is required'];
       }
 
-      console.log('✅ Validation result:', { valid: result.valid, errors: result.errors });
       res.json(apiResponse(true, result));
     } catch (error: any) {
-      console.error('❌ Validation error:', error);
       res.status(400).json(apiResponse(false, null, error.message));
     }
   }
@@ -232,11 +202,6 @@ export class ChannelController {
       const companyId = (req as any).companyId;
       const { id } = req.params;
 
-      console.log('🧪 [ChannelController.testConnection] Testing channel:', {
-        channelId: id,
-        companyId
-      });
-
       if (!companyId) {
         res.status(401).json(apiResponse(false, null, 'Company ID not found'));
         return;
@@ -244,11 +209,9 @@ export class ChannelController {
 
       const result = await this.channelService.testConnection(id, companyId);
 
-      console.log('✅ [ChannelController.testConnection] Test result:', result);
 
       res.json(apiResponse(result.success, result));
     } catch (error: any) {
-      console.error('❌ [ChannelController.testConnection] Error:', error);
       res.status(500).json(apiResponse(false, null, error.message));
     }
   }
@@ -394,8 +357,25 @@ export class MessageController {
 
   async send(req: Request, res: Response): Promise<void> {
     try {
-      const companyId = (req as any).companyId;
-      const message = await this.messageService.sendMessage(req.body, companyId);
+      const companyId = getCompanyId(req);
+      if (!companyId) {
+        res.status(401).json(apiResponse(false, null, 'Company ID not found'));
+        return;
+      }
+
+      // Extract user info from authenticated request
+      const user = (req as any).user;
+      const userId = user?.id;
+      const userName = user?.email ? user.email.split('@')[0] : 'Agent';
+
+      // Add sender information to message data
+      const messageData = {
+        ...req.body,
+        sender_id: req.body.sender_id || userId,
+        sender_name: req.body.sender_name || userName
+      };
+
+      const message = await this.messageService.sendMessage(messageData, companyId);
       res.status(201).json(apiResponse(true, message, 'Message sent successfully'));
     } catch (error: any) {
       res.status(400).json(apiResponse(false, null, error.message));

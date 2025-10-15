@@ -382,6 +382,18 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           >
             Actualizar
           </Button>
+
+          {/* Botón para agregar canal también en el header */}
+          {onAddChannel && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={onAddChannel}
+              size="small"
+            >
+              Nuevo Canal
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -413,7 +425,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           sx={{
             position: 'fixed',
             bottom: 24,
-            right: 24
+            right: 24,
+            zIndex: 1000 // Asegurar que esté visible sobre otros elementos
           }}
         >
           <AddIcon />

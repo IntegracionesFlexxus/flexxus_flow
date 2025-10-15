@@ -82,6 +82,8 @@ export interface IErrorHandlerService {
   handleAsync(fn: Function): Function;
   isOperationalError(error: Error): boolean;
   logError(error: Error, context?: any): void;
+  createErrorMiddleware(): (error: Error, req: Request, res: Response, next: NextFunction) => void;
+  createAsyncHandler(): (fn: Function) => (req: Request, res: Response, next: NextFunction) => void;
 }
 // DTOs and supporting interfaces
 export interface IUser {

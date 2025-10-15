@@ -1,89 +1,76 @@
-/**
- * CRM Database Configuration
- * Conexión específica para la base de datos flexxus_crm
- */
-
-import { Pool } from 'pg';
+import { Pool, PoolClient, QueryResult } from 'pg';
 import { injectable } from 'inversify';
 import { IDatabaseConnection } from '@/shared/database/interfaces/IDatabaseConnection';
 
 @injectable()
 export class CRMDatabaseConnection implements IDatabaseConnection {
   private pool: Pool;
-  private isConnected: boolean = false;
+  private connected = false;
 
   constructor() {
-    // Configuración específica para CRM
     this.pool = new Pool({
       host: process.env.CRM_DB_HOST || '10.254.252.91',
-      port: parseInt(process.env.CRM_DB_PORT || '5003'),
+      port: parseInt(process.env.CRM_DB_PORT || '5003', 10),
       database: process.env.CRM_DB_NAME || 'flexxus_crm',
       user: process.env.CRM_DB_USER || 'flexxus',
       password: process.env.CRM_DB_PASSWORD || 'Flexxus2023**',
-      max: 20, // Máximo de conexiones en el pool
+      max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 2000
     });
 
-    // Event listeners
     this.pool.on('error', (err) => {
       console.error('Unexpected error on idle CRM client', err);
     });
 
     this.pool.on('connect', () => {
+      this.connected = true;
       console.log('New client connected to CRM database');
     });
   }
 
-  /**
-   * Connect to CRM database
-   */
-  async connect(): Promise<void> {
-    try {
-      const client = await this.pool.connect();
-      await client.query('SELECT NOW()');
-      client.release();
-      this.isConnected = true;
-      console.log('✅ Connected to CRM database successfully');
-    } catch (error) {
-      console.error('❌ Failed to connect to CRM database:', error);
-      throw error;
-    }
+  async connect(): Promise<PoolClient> {
+    const client = await this.pool.connect();
+    this.connected = true;
+    return client;
   }
 
-  /**
-   * Execute a query
-   */
-  async query(text: string, params?: any[]): Promise<any> {
-    if (!this.isConnected) {
-      await this.connect();
-    }
+  async disconnect(): Promise<void> {
+    await this.pool.end();
+    this.connected = false;
+    console.log('Disconnected from CRM database');
+  }
 
+  async close(): Promise<void> {
+    await this.disconnect();
+  }
+
+  isConnected(): boolean {
+    if (this.connected) {
+      return true;
+    }
+    return this.pool.totalCount > 0;
+  }
+
+  async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
     try {
-      const result = await this.pool.query(text, params);
+      const result = await this.pool.query<T>(text, params);
+      this.connected = true;
       return result;
     } catch (error) {
-      console.error('CRM Query error:', error);
+      console.error('CRM query error:', error);
       throw error;
     }
   }
 
-  /**
-   * Get a client for transactions
-   */
-  async getClient(): Promise<any> {
-    if (!this.isConnected) {
-      await this.connect();
-    }
-    return this.pool.connect();
+  async getClient(): Promise<PoolClient> {
+    const client = await this.pool.connect();
+    this.connected = true;
+    return client;
   }
 
-  /**
-   * Execute transaction
-   */
-  async transaction(callback: (client: any) => Promise<any>): Promise<any> {
-    const client = await this.getClient();
-    
+  async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       const result = await callback(client);
@@ -97,30 +84,23 @@ export class CRMDatabaseConnection implements IDatabaseConnection {
     }
   }
 
-  /**
-   * Close all connections
-   */
-  async disconnect(): Promise<void> {
-    await this.pool.end();
-    this.isConnected = false;
-    console.log('Disconnected from CRM database');
-  }
-
-  /**
-   * Check connection status
-   */
-  async isHealthy(): Promise<boolean> {
+  async healthCheck(): Promise<boolean> {
     try {
-      const result = await this.query('SELECT 1');
+      await this.pool.query('SELECT 1');
       return true;
     } catch (error) {
       return false;
     }
   }
 
-  /**
-   * Get the underlying pool for direct access
-   */
+  getPoolStatus(): { total: number; idle: number; waiting: number } {
+    return {
+      total: this.pool.totalCount,
+      idle: this.pool.idleCount,
+      waiting: this.pool.waitingCount
+    };
+  }
+
   getPool(): Pool {
     return this.pool;
   }

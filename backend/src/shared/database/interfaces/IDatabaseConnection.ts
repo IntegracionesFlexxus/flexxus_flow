@@ -7,6 +7,9 @@ export interface IDatabaseConnection {
   transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T>;
   healthCheck(): Promise<boolean>;
   close(): Promise<void>;
+  connect(): Promise<PoolClient>;
+  disconnect(): Promise<void>;
+  isConnected(): boolean;
   getClient(): Promise<PoolClient>;
   getPoolStatus(): {
     total: number;

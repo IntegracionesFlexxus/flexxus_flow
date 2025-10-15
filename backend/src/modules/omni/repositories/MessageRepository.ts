@@ -33,6 +33,23 @@ export class MessageRepository extends BaseOmniRepository<IMessage> {
   }
 
   /**
+   * Find message by external identifier
+   */
+  async findByExternalId(externalId: string, companyId: string): Promise<IMessage | null> {
+    const query = `
+      SELECT *
+      FROM ${this.tableName}
+      WHERE company_id = $1
+        AND (external_message_id = $2 OR external_id = $2)
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+
+    const result = await this.executeQuery(query, [companyId, externalId], companyId);
+    return result.rows[0] as IMessage || null;
+  }
+
+  /**
    * Get last message of conversation
    */
   async getLastMessage(conversationId: string, companyId: string): Promise<IMessage | null> {
@@ -56,10 +73,11 @@ export class MessageRepository extends BaseOmniRepository<IMessage> {
     // Update conversation's last_message_at
     await this.updateConversationActivity(data.conversation_id, companyId);
 
+    // TODO: Add first_response_at column to conversations table
     // If it's an agent's first response, update first_response_at
-    if (data.sender_type === MessageSenderType.AGENT) {
-      await this.updateFirstResponseTime(data.conversation_id, companyId);
-    }
+    // if (data.sender_type === MessageSenderType.AGENT) {
+    //   await this.updateFirstResponseTime(data.conversation_id, companyId);
+    // }
 
     return message;
   }

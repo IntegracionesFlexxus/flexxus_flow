@@ -41,13 +41,11 @@ export function decryptCredential(encryptedValue: string | null | undefined): st
       // ⚠️ PROTECCIÓN CONTRA DOBLE ENCRIPTACIÓN
       // Si el resultado TODAVÍA tiene el prefijo __encrypted__, desencriptar de nuevo
       if (result.startsWith(ENCRYPTION_PREFIX)) {
-        console.warn('[credentialDecryption] ⚠️  DOBLE ENCRIPTACIÓN DETECTADA - Desencriptando segunda vez');
         const doubleEncrypted = result.substring(ENCRYPTION_PREFIX.length);
         const secondDecryption = CryptoJS.AES.decrypt(doubleEncrypted, encryptionKey);
         const secondResult = secondDecryption.toString(CryptoJS.enc.Utf8);
 
         if (secondResult && secondResult.length > 0) {
-          console.warn('[credentialDecryption] ✅ Doble desencriptación exitosa - RECOMIENDA RECREAR EL CANAL');
           return secondResult;
         }
       }
@@ -56,10 +54,8 @@ export function decryptCredential(encryptedValue: string | null | undefined): st
     }
 
     // Si falla con la nueva clave, intentar con formato antiguo (retrocompatibilidad)
-    console.warn('[credentialDecryption] No se pudo desencriptar con la nueva clave, intentando con formato antiguo');
     return decryptWithLegacyMethod(encrypted);
   } catch (error) {
-    console.error('[credentialDecryption] Error al desencriptar:', error);
     return '';
   }
 }
@@ -92,7 +88,6 @@ function decryptWithLegacyMethod(encrypted: string): string {
         const result = decrypted.toString(CryptoJS.enc.Utf8);
 
         if (result && result.length > 0) {
-          console.warn('[credentialDecryption] ⚠️  Credencial desencriptada con método antiguo - Recomienda re-configurar el canal');
           return result;
         }
       } catch (e) {
@@ -101,7 +96,6 @@ function decryptWithLegacyMethod(encrypted: string): string {
     }
   }
 
-  console.error('[credentialDecryption] No se pudo desencriptar con ningún método');
   return '';
 }
 

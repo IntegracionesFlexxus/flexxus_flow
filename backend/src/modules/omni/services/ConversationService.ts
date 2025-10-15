@@ -46,7 +46,7 @@ export class ConversationService {
    */
   async getConversations(filters: any, companyId: string): Promise<IConversation[]> {
     try {
-      const conversations = await this.conversationRepository.findByFilters(filters, companyId);
+      const conversations = await this.conversationRepository.findWithFilters(companyId, filters);
       return conversations || [];
     } catch (error) {
       this.logger.error('Failed to get conversations', { error, filters, companyId });
@@ -289,7 +289,7 @@ export class ConversationService {
         status: ['active', 'pending']
       };
 
-      const conversations = await this.conversationRepository.findByFilters(filters, companyId);
+      const conversations = await this.conversationRepository.findWithFilters(companyId, filters);
       return conversations || [];
     } catch (error) {
       this.logger.error('Failed to get agent conversations', { error, agentId, companyId });
@@ -307,7 +307,7 @@ export class ConversationService {
         status: ['active', 'pending']
       };
 
-      const conversations = await this.conversationRepository.findByFilters(filters, companyId);
+      const conversations = await this.conversationRepository.findWithFilters(companyId, filters);
       return conversations || [];
     } catch (error) {
       this.logger.error('Failed to get unassigned conversations', { error, companyId });

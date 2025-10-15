@@ -31,6 +31,7 @@ export interface WhatsAppConfig extends BaseChannelConfig {
   businessAccountId?: string;    // ID de la cuenta Business
   accessToken?: string;          // Token de acceso de Meta
   webhookVerifyToken?: string;   // Token para verificación de webhooks
+  webhookUrl?: string;           // URL del webhook para configurar en Meta (generada por el sistema)
   apiVersion?: string;           // Versión de la API (v17.0, v18.0, etc.)
   capabilities?: string[];       // Capacidades habilitadas
   displayPhoneNumber?: string;   // Número para mostrar al usuario

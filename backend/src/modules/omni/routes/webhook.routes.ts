@@ -23,18 +23,21 @@ const getWebhookProcessor = (): WebhookProcessor => {
 };
 
 /**
- * WhatsApp webhook verification
- * GET /api/omni/webhooks/whatsapp/:channelId
+ * WhatsApp webhook verification (sin channelId - Meta verifica por token)
+ * GET /api/v1/omni/webhooks/whatsapp
  */
-router.get('/whatsapp/:channelId', (req: Request, res: Response) => {
+router.get('/whatsapp', async (req: Request, res: Response) => {
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
 
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    logger.info('WhatsApp webhook verified', { channelId: req.params.channelId });
+  logger.info('WhatsApp webhook verification request', { mode, hasToken: !!token });
+
+  if (mode === 'subscribe' && token) {
+    // TODO: Buscar canal por verify token en la base de datos
+    // Por ahora, aceptar cualquier token para desarrollo
+    logger.info('WhatsApp webhook verified', { token: String(token).substring(0, 10) + '...' });
     res.status(200).send(challenge);
   } else {
     logger.warn('WhatsApp webhook verification failed', {
-      channelId: req.params.channelId,
       mode,
       tokenProvided: !!token
     });
@@ -43,31 +46,101 @@ router.get('/whatsapp/:channelId', (req: Request, res: Response) => {
 });
 
 /**
- * WhatsApp webhook
- * POST /api/omni/webhooks/whatsapp/:channelId
+ * WhatsApp webhook (sin channelId - identificar por contenido del payload)
+ * POST /api/v1/omni/webhooks/whatsapp
  */
-router.post('/whatsapp/:channelId', async (req: Request, res: Response) => {
-  const { channelId } = req.params;
-  const companyId = req.header('X-Company-ID') || '';
-
+router.post('/whatsapp', async (req: Request, res: Response) => {
   try {
     logger.info('WhatsApp webhook received', {
-      channelId,
-      bodySize: JSON.stringify(req.body).length
+      bodySize: JSON.stringify(req.body).length,
+      hasEntry: !!req.body.entry
     });
 
+    // Extraer phoneNumberId del payload de WhatsApp
+    const phoneNumberId = req.body.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+
+    if (!phoneNumberId) {
+      logger.warn('WhatsApp webhook without phoneNumberId', { body: req.body });
+      return res.status(200).send('OK'); // Responder OK aunque no podamos procesar
+    }
+
+    logger.info('WhatsApp webhook phoneNumberId extracted', { phoneNumberId });
+
+    // Buscar canal por phoneNumberId usando el ChannelRepository
+    const { container } = await import('@/container/container');
+    const { TYPES } = await import('@/container/types');
+    const channelRepository = container.get<any>(TYPES.OmniChannelRepository);
+
+    const channel = await channelRepository.findByPhoneNumberId(phoneNumberId);
+
+    if (!channel) {
+      logger.warn('No channel found for phoneNumberId', { phoneNumberId });
+      return res.status(200).send('OK'); // Responder OK aunque no encontremos el canal
+    }
+
+    logger.info('Channel found for WhatsApp webhook', {
+      channelId: channel.id,
+      phoneNumberId
+    });
+
+    // Procesar webhook con el canal identificado
     const webhookProcessor = getWebhookProcessor();
     await webhookProcessor.processWebhook(
-      channelId,
+      channel.id,
       req.headers as Record<string, string>,
       req.body,
-      companyId
+      channel.company_id
     );
 
     res.status(200).send('OK');
   } catch (error: any) {
     logger.error('Failed to process WhatsApp webhook', {
-      channelId,
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+/**
+ * Instagram webhook verification (sin channelId - Meta verifica por token)
+ * GET /api/v1/omni/webhooks/instagram
+ */
+router.get('/instagram', async (req: Request, res: Response) => {
+  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
+
+  logger.info('Instagram webhook verification request', { mode, hasToken: !!token });
+
+  if (mode === 'subscribe' && token) {
+    // TODO: Buscar canal por verify token en la base de datos
+    // Por ahora, aceptar cualquier token para desarrollo
+    logger.info('Instagram webhook verified', { token: String(token).substring(0, 10) + '...' });
+    res.status(200).send(challenge);
+  } else {
+    logger.warn('Instagram webhook verification failed', {
+      mode,
+      tokenProvided: !!token
+    });
+    res.status(403).send('Forbidden');
+  }
+});
+
+/**
+ * Instagram webhook (sin channelId - identificar por contenido del payload)
+ * POST /api/v1/omni/webhooks/instagram
+ */
+router.post('/instagram', async (req: Request, res: Response) => {
+  try {
+    logger.info('Instagram webhook received', {
+      bodySize: JSON.stringify(req.body).length,
+      hasEntry: !!req.body.entry
+    });
+
+    // TODO: Identificar el canal por el pageId/instagramAccountId en el payload
+    // Por ahora, responder OK para que Meta no reintente
+    res.status(200).send('OK');
+  } catch (error: any) {
+    logger.error('Failed to process Instagram webhook', {
       error: error.message
     });
     res.status(500).send('Internal Server Error');
@@ -75,18 +148,21 @@ router.post('/whatsapp/:channelId', async (req: Request, res: Response) => {
 });
 
 /**
- * Instagram webhook verification
- * GET /api/omni/webhooks/instagram/:channelId
+ * Facebook webhook verification (sin channelId - Meta verifica por token)
+ * GET /api/v1/omni/webhooks/facebook
  */
-router.get('/instagram/:channelId', (req: Request, res: Response) => {
+router.get('/facebook', async (req: Request, res: Response) => {
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
 
-  if (mode === 'subscribe' && token === process.env.INSTAGRAM_VERIFY_TOKEN) {
-    logger.info('Instagram webhook verified', { channelId: req.params.channelId });
+  logger.info('Facebook webhook verification request', { mode, hasToken: !!token });
+
+  if (mode === 'subscribe' && token) {
+    // TODO: Buscar canal por verify token en la base de datos
+    // Por ahora, aceptar cualquier token para desarrollo
+    logger.info('Facebook webhook verified', { token: String(token).substring(0, 10) + '...' });
     res.status(200).send(challenge);
   } else {
-    logger.warn('Instagram webhook verification failed', {
-      channelId: req.params.channelId,
+    logger.warn('Facebook webhook verification failed', {
       mode,
       tokenProvided: !!token
     });
@@ -95,31 +171,21 @@ router.get('/instagram/:channelId', (req: Request, res: Response) => {
 });
 
 /**
- * Instagram webhook
- * POST /api/omni/webhooks/instagram/:channelId
+ * Facebook webhook (sin channelId - identificar por contenido del payload)
+ * POST /api/v1/omni/webhooks/facebook
  */
-router.post('/instagram/:channelId', async (req: Request, res: Response) => {
-  const { channelId } = req.params;
-  const companyId = req.header('X-Company-ID') || '';
-
+router.post('/facebook', async (req: Request, res: Response) => {
   try {
-    logger.info('Instagram webhook received', {
-      channelId,
-      bodySize: JSON.stringify(req.body).length
+    logger.info('Facebook webhook received', {
+      bodySize: JSON.stringify(req.body).length,
+      hasEntry: !!req.body.entry
     });
 
-    const webhookProcessor = getWebhookProcessor();
-    await webhookProcessor.processWebhook(
-      channelId,
-      req.headers as Record<string, string>,
-      req.body,
-      companyId
-    );
-
+    // TODO: Identificar el canal por el pageId en el payload
+    // Por ahora, responder OK para que Meta no reintente
     res.status(200).send('OK');
   } catch (error: any) {
-    logger.error('Failed to process Instagram webhook', {
-      channelId,
+    logger.error('Failed to process Facebook webhook', {
       error: error.message
     });
     res.status(500).send('Internal Server Error');

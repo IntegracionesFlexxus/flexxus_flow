@@ -103,27 +103,30 @@ export class ChannelRepository extends BaseOmniRepository<IChannel> {
    * Get active channels
    */
   async findActiveChannels(companyId: string): Promise<IChannel[]> {
-    const startTime = Date.now();
-    console.log('⏱️ [ChannelRepository.findActiveChannels] Query starting at:', new Date().toISOString());
-    console.log('🔍 [ChannelRepository.findActiveChannels] CompanyId:', companyId);
-
     const query = `
       SELECT * FROM ${this.tableName}
       WHERE company_id = $1 AND is_active = true
       ORDER BY channel_type, name
     `;
 
-    const queryStartTime = Date.now();
     const result = await this.executeQuery(query, [companyId], companyId);
-    const queryEndTime = Date.now();
-
-    console.log('✅ [ChannelRepository.findActiveChannels] SQL query took:', queryEndTime - queryStartTime, 'ms');
-    console.log('📊 [ChannelRepository.findActiveChannels] Rows returned:', result.rowCount);
-
-    const totalTime = Date.now() - startTime;
-    console.log('🏁 [ChannelRepository.findActiveChannels] Total repository time:', totalTime, 'ms');
 
     return result.rows as IChannel[];
+  }
+
+  /**
+   * Find WhatsApp channel by phone_number_id (used by webhook to identify channel)
+   */
+  async findByPhoneNumberId(phoneNumberId: string): Promise<IChannel | null> {
+    const query = `
+      SELECT c.* FROM ${this.tableName} c
+      INNER JOIN whatsapp_channels wc ON wc.channel_id = c.id
+      WHERE wc.phone_number_id = $1 AND c.is_active = true
+      LIMIT 1
+    `;
+
+    const result = await this.executeQuery(query, [phoneNumberId]);
+    return result.rows[0] || null;
   }
 
   /**

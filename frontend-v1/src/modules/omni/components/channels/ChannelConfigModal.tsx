@@ -177,12 +177,28 @@ export const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
         status: error.response?.status,
         data: error.response?.data
       });
-      const errorMessage = error.response?.data?.message || error.message || 'Error al crear el canal';
-      setValidationErrors([errorMessage]);
+
+      const status = error.response?.status;
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData?.error?.message || error.message || 'Error al crear el canal';
+
+      // Mensajes específicos según el error
+      let userMessage = errorMessage;
+      let errorDetails = [];
+
+      if (status === 401 && errorMessage.includes('Company ID')) {
+        userMessage = 'Error de autenticación: No se encontró el ID de la empresa';
+        errorDetails.push('Tu sesión no tiene un company ID asociado');
+        errorDetails.push('Por favor, cierra sesión y vuelve a iniciar sesión');
+        errorDetails.push('Si el problema persiste, contacta al administrador del sistema');
+      }
+
+      setValidationErrors([userMessage, ...errorDetails]);
       addNotification({
         type: 'error',
         title: 'Error al crear canal',
-        message: errorMessage
+        message: userMessage,
+        autoClose: false
       });
     }
   });

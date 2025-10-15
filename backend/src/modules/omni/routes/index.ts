@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { container } from '@/container/container';
 import { TYPES } from '@/container/types';
-import { authMiddleware } from '@/modules/auth/middleware/authMiddleware';
+import { authenticateToken as authMiddleware } from '@/shared/middleware/auth';
 
 // Import controllers
 import {
@@ -17,10 +17,16 @@ import {
   TemplateController
 } from '../controllers';
 
+// Import webhook routes
+import webhookRoutes from './webhook.routes';
+
 // Create router
 const router = Router();
 
-// Apply auth middleware to all routes
+// Mount webhook routes BEFORE auth middleware (webhooks don't need auth)
+router.use('/webhooks', webhookRoutes);
+
+// Apply auth middleware to all other routes
 router.use(authMiddleware);
 
 // Get controllers from container
@@ -28,7 +34,6 @@ const getController = <T>(type: symbol): T => {
   try {
     return container.get<T>(type);
   } catch (error) {
-    console.error(`Failed to get controller for ${type.toString()}:`, error);
     throw error;
   }
 };

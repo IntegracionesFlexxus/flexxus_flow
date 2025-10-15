@@ -14,6 +14,7 @@ export class DatabaseConnection implements IDatabaseConnection {
   private pool: Pool;
   private logger: winston.Logger;
   private dbName: string;
+  private connected = false;
   constructor(config: PoolConfig & { dbName: string }, logger?: winston.Logger) {
     this.logger = logger || winston.createLogger({
       level: 'info',
@@ -76,6 +77,7 @@ export class DatabaseConnection implements IDatabaseConnection {
   async query<T = any>(text: string, params?: any[]): Promise<import('pg').QueryResult<T>> {
     const client = await this.pool.connect();
     try {
+      this.connected = true;
       const start = Date.now();
       const result = await client.query<T>(text, params);
       const duration = Date.now() - start;
@@ -92,12 +94,32 @@ export class DatabaseConnection implements IDatabaseConnection {
     }
   }
 
+  async connect(): Promise<PoolClient> {
+    const client = await this.pool.connect();
+    this.connected = true;
+    return client;
+  }
+
+  async disconnect(): Promise<void> {
+    await this.close();
+  }
+
+  isConnected(): boolean {
+    if (this.connected) {
+      return true;
+    }
+    return this.pool.totalCount > 0;
+  }
+
   async getClient(): Promise<PoolClient> {
-    return this.pool.connect();
+    const client = await this.pool.connect();
+    this.connected = true;
+    return client;
   }
   async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();
     try {
+      this.connected = true;
       await client.query('BEGIN');
       const result = await callback(client);
       await client.query('COMMIT');
@@ -122,12 +144,16 @@ export class DatabaseConnection implements IDatabaseConnection {
   private setupEventHandlers(): void {
     this.pool.on('connect', () => {
       this.logger.info(`New connection established to ${this.dbName}`);
+      this.connected = true;
     });
     this.pool.on('error', (err) => {
       this.logger.error(`Database pool error for ${this.dbName}:`, err);
     });
     this.pool.on('remove', () => {
       this.logger.debug(`Client removed from pool ${this.dbName}`);
+      if (this.pool.totalCount === 0) {
+        this.connected = false;
+      }
     });
   }
   getPoolStatus() {
@@ -139,6 +165,7 @@ export class DatabaseConnection implements IDatabaseConnection {
   }
   async close(): Promise<void> {
     await this.pool.end();
+    this.connected = false;
     this.logger.info(`Database connection pool closed for ${this.dbName}`);
   }
 }

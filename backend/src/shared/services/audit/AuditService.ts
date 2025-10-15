@@ -1,7 +1,7 @@
-/**
+﻿/**
  * Audit Service
  * Sprint 3 - Backend Team
- * Implementación siguiendo lineamientos Nivel 2: SOLID, Clean Code, Inversión de Dependencias
+ * ImplementaciÃ³n siguiendo lineamientos Nivel 2: SOLID, Clean Code, InversiÃ³n de Dependencias
  */
 
 import { injectable, inject } from 'inversify';
@@ -9,7 +9,7 @@ import { Logger } from 'winston';
 import { TYPES } from '@/container/types';
 import { IAuditRepository } from '@/shared/interfaces/repositories/IAuditRepository';
 
-// DTOs siguiendo principio de responsabilidad única
+// DTOs siguiendo principio de responsabilidad Ãºnica
 export interface AuditLogRequest {
   action: string;
   entityType: string;
@@ -89,11 +89,11 @@ export interface AuditAnalyticsResponse {
 /**
  * AuditService implementa trazabilidad completa del sistema
  * Principios SOLID aplicados:
- * - S: Responsabilidad única para gestión de auditoría
- * - O: Abierto para extensión (nuevos tipos de eventos) cerrado para modificación
- * - L: Sustituible por cualquier implementación que respete la interfaz
- * - I: Segregación de interfaces (específica para auditoría)
- * - D: Inversión de dependencias (inyección de dependencias)
+ * - S: Responsabilidad Ãºnica para gestiÃ³n de auditorÃ­a
+ * - O: Abierto para extensiÃ³n (nuevos tipos de eventos) cerrado para modificaciÃ³n
+ * - L: Sustituible por cualquier implementaciÃ³n que respete la interfaz
+ * - I: SegregaciÃ³n de interfaces (especÃ­fica para auditorÃ­a)
+ * - D: InversiÃ³n de dependencias (inyecciÃ³n de dependencias)
  */
 @injectable()
 export class AuditService {
@@ -104,7 +104,7 @@ export class AuditService {
 
   /**
    * Registrar actividad en el sistema
-   * Clean Code: función con responsabilidad única y nombre descriptivo
+   * Clean Code: funciÃ³n con responsabilidad Ãºnica y nombre descriptivo
    */
   async logActivity(request: AuditLogRequest): Promise<AuditLogResponse> {
     try {
@@ -113,16 +113,16 @@ export class AuditService {
       const auditData = {
         ...request,
         timestamp: new Date(),
-        // Sanitizar metadata para evitar información sensible
+        // Sanitizar metadata para evitar informaciÃ³n sensible
         metadata: this.sanitizeMetadata(request.metadata)
       };
 
 
-      // Persistir el evento de auditoría
+      // Persistir el evento de auditorÃ­a
       const auditLog = await this.auditRepository.create(auditData);
 
       // Log estructurado para observabilidad
-      this.logger.info('Evento de auditoría registrado', {
+      this.logger.info('Evento de auditorÃ­a registrado', {
         auditId: auditLog.id,
         action: request.action,
         entityType: request.entityType,
@@ -136,7 +136,7 @@ export class AuditService {
       return response;
     } catch (error) {
 
-      this.logger.error('Error al registrar evento de auditoría', {
+      this.logger.error('Error al registrar evento de auditorÃ­a', {
         error: error instanceof Error ? error.message : 'Unknown',
         request: {
           ...request,
@@ -148,8 +148,8 @@ export class AuditService {
   }
 
   /**
-   * Registrar múltiples actividades en batch
-   * Optimización para operaciones masivas
+   * Registrar mÃºltiples actividades en batch
+   * OptimizaciÃ³n para operaciones masivas
    */
   async logBatchActivities(requests: AuditLogRequest[]): Promise<AuditLogResponse[]> {
     try {
@@ -161,7 +161,7 @@ export class AuditService {
 
       const auditLogs = await this.auditRepository.createBatch(enrichedRequests);
 
-      this.logger.info('Eventos de auditoría en batch registrados', {
+      this.logger.info('Eventos de auditorÃ­a en batch registrados', {
         count: requests.length
       });
 
@@ -176,7 +176,7 @@ export class AuditService {
   }
 
   /**
-   * Obtener historial de auditoría con filtros
+   * Obtener historial de auditorÃ­a con filtros
    */
   async getAuditHistory(filters: AuditQueryFilters): Promise<{
     logs: AuditLogResponse[];
@@ -187,7 +187,7 @@ export class AuditService {
     try {
       const result = await this.auditRepository.findWithFilters(filters);
 
-      this.logger.debug('Historial de auditoría consultado', {
+      this.logger.debug('Historial de auditorÃ­a consultado', {
         filters,
         resultCount: result.logs.length,
         total: result.total
@@ -200,7 +200,7 @@ export class AuditService {
         limit: filters.limit || 10
       };
     } catch (error) {
-      this.logger.error('Error al obtener historial de auditoría', {
+      this.logger.error('Error al obtener historial de auditorÃ­a', {
         error: error.message,
         filters
       });
@@ -209,7 +209,7 @@ export class AuditService {
   }
 
   /**
-   * Obtener eventos de auditoría para una entidad específica
+   * Obtener eventos de auditorÃ­a para una entidad especÃ­fica
    */
   async getEntityAuditTrail(
     entityType: string,
@@ -219,7 +219,7 @@ export class AuditService {
     try {
       const logs = await this.auditRepository.findByEntity(entityType, entityId, limit);
 
-      this.logger.debug('Trail de auditoría de entidad consultado', {
+      this.logger.debug('Trail de auditorÃ­a de entidad consultado', {
         entityType,
         entityId,
         count: logs.length
@@ -227,7 +227,7 @@ export class AuditService {
 
       return logs.map(log => this.mapToResponse(log));
     } catch (error) {
-      this.logger.error('Error al obtener trail de auditoría de entidad', {
+      this.logger.error('Error al obtener trail de auditorÃ­a de entidad', {
         error: error.message,
         entityType,
         entityId
@@ -237,7 +237,7 @@ export class AuditService {
   }
 
   /**
-   * Obtener actividad de un usuario específico
+   * Obtener actividad de un usuario especÃ­fico
    */
   async getUserActivity(
     userId: string,
@@ -271,20 +271,20 @@ export class AuditService {
   }
 
   /**
-   * Generar analytics de auditoría
+   * Generar analytics de auditorÃ­a
    */
   async getAuditAnalytics(request: AuditAnalyticsRequest): Promise<AuditAnalyticsResponse> {
     try {
       const analytics = await this.auditRepository.getAnalytics(request);
 
-      this.logger.debug('Analytics de auditoría generados', {
+      this.logger.debug('Analytics de auditorÃ­a generados', {
         request,
         totalEvents: analytics.totalEvents
       });
 
       return analytics;
     } catch (error) {
-      this.logger.error('Error al generar analytics de auditoría', {
+      this.logger.error('Error al generar analytics de auditorÃ­a', {
         error: error.message,
         request
       });
@@ -294,7 +294,7 @@ export class AuditService {
 
   /**
    * Detectar actividad sospechosa
-   * Implementación básica - se puede extender con ML
+   * ImplementaciÃ³n bÃ¡sica - se puede extender con ML
    */
   async detectSuspiciousActivity(
     companyId?: string,
@@ -314,12 +314,12 @@ export class AuditService {
         companyId,
         startDate,
         endDate,
-        limit: 10000 // Analizar últimos 10k eventos
+        limit: 10000 // Analizar Ãºltimos 10k eventos
       });
 
       const suspiciousActivities = this.analyzeSuspiciousPatterns(logs.logs);
 
-      this.logger.info('Análisis de actividad sospechosa completado', {
+      this.logger.info('AnÃ¡lisis de actividad sospechosa completado', {
         companyId,
         timeWindowHours,
         eventsAnalyzed: logs.logs.length,
@@ -338,12 +338,12 @@ export class AuditService {
   }
 
   /**
-   * Exportar logs de auditoría
+   * Exportar logs de auditorÃ­a
    */
   async exportAuditLogs(
     filters: AuditQueryFilters,
     format: 'csv' | 'json' | 'xlsx' = 'csv'
-  ): Promise<Buffer> {
+  ): Promise<{ id: string; data: Buffer; recordCount: number; contentType: string }> {
     try {
       const result = await this.auditRepository.findWithFilters({
         ...filters,
@@ -374,9 +374,14 @@ export class AuditService {
         sizeBytes: exportBuffer.length
       });
 
-      return exportBuffer;
+      return {
+        id: `audit_export_${Date.now()}`,
+        data: exportBuffer,
+        recordCount: exportData.length,
+        contentType: this.getContentTypeForFormat(format)
+      };
     } catch (error) {
-      this.logger.error('Error al exportar logs de auditoría', {
+      this.logger.error('Error al exportar logs de auditorÃ­a', {
         error: error.message,
         filters,
         format
@@ -385,10 +390,25 @@ export class AuditService {
     }
   }
 
-  // ==================== MÉTODOS PRIVADOS ====================
+    /**
+   * Obtener estadísticas agregadas de auditoría
+   */
+  async getAuditStatistics(
+    companyId: string | undefined,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    totalEvents: number;
+    uniqueUsers: number;
+    topActions: Array<{ action: string; count: number }>;
+    dailyActivity: Array<{ date: string; count: number }>;
+  }> {
+    return this.auditRepository.getActivityStats(startDate, endDate, companyId);
+  }
+// ==================== MÃ‰TODOS PRIVADOS ====================
 
   /**
-   * Sanitizar metadata para remover información sensible
+   * Sanitizar metadata para remover informaciÃ³n sensible
    */
   private sanitizeMetadata(metadata?: Record<string, any>): Record<string, any> | undefined {
     if (!metadata) {
@@ -429,7 +449,7 @@ export class AuditService {
   }
 
   /**
-   * Analizar patrones sospechosos básicos
+   * Analizar patrones sospechosos bÃ¡sicos
    */
   private analyzeSuspiciousPatterns(logs: any[]): Array<{
     type: string;
@@ -439,7 +459,7 @@ export class AuditService {
   }> {
     const suspicious: any[] = [];
 
-    // Detectar múltiples intentos de login fallidos
+    // Detectar mÃºltiples intentos de login fallidos
     const failedLogins = logs.filter(log => log.action === 'login_failed');
     const loginAttemptsByUser = this.groupBy(failedLogins, 'userId');
 
@@ -488,7 +508,17 @@ export class AuditService {
   /**
    * Generar export CSV
    */
-  private generateCSVExport(data: AuditLogResponse[]): Buffer {
+    private getContentTypeForFormat(format: 'csv' | 'json' | 'xlsx'): string {
+    switch (format) {
+      case 'json':
+        return 'application/json';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      default:
+        return 'text/csv';
+    }
+  }
+private generateCSVExport(data: AuditLogResponse[]): Buffer {
     if (data.length === 0) {
       return Buffer.from('');
     }
@@ -505,11 +535,17 @@ export class AuditService {
   }
 
   /**
-   * Generar export XLSX (implementación básica)
+   * Generar export XLSX (implementaciÃ³n bÃ¡sica)
    */
   private async generateXLSXExport(data: AuditLogResponse[]): Promise<Buffer> {
-    // Implementación básica - en producción usar librería como xlsx
+    // ImplementaciÃ³n bÃ¡sica - en producciÃ³n usar librerÃ­a como xlsx
     const json = JSON.stringify(data, null, 2);
     return Buffer.from(json);
   }
 }
+
+
+
+
+
+

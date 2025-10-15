@@ -322,4 +322,32 @@ export class ConversationRepository extends BaseOmniRepository<IConversation> {
 
     await this.executeQuery(query, [tags, conversationId, companyId], companyId);
   }
+
+  /**
+   * Find conversation by channel and contact ID
+   * Used by webhook processor to find existing conversations
+   */
+  async findByChannelAndCustomer(
+    channelId: string,
+    contactId: string,
+    companyId: string
+  ): Promise<IConversation | null> {
+    const query = `
+      SELECT * FROM ${this.tableName}
+      WHERE company_id = $1
+        AND channel_id = $2
+        AND contact_id = $3
+        AND status NOT IN ('resolved', 'archived')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+
+    const result = await this.executeQuery(
+      query,
+      [companyId, channelId, contactId],
+      companyId
+    );
+
+    return result.rows[0] || null;
+  }
 }

@@ -93,6 +93,8 @@ export const TYPES = {
   OmniConversationRepository: Symbol.for('OmniConversationRepository'),
   OmniMessageRepository: Symbol.for('OmniMessageRepository'),
   OmniCustomerRepository: Symbol.for('OmniCustomerRepository'),
+  OmniContactRepository: Symbol.for('OmniContactRepository'),
+  OmniContactIdentityRepository: Symbol.for('OmniContactIdentityRepository'),
   OmniTemplateRepository: Symbol.for('OmniTemplateRepository'),
   OmniLandingPageRepository: Symbol.for('OmniLandingPageRepository'),
   OmniFormRepository: Symbol.for('OmniFormRepository'),

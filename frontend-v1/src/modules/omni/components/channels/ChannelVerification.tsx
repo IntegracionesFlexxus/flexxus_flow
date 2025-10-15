@@ -36,7 +36,7 @@ import {
   Shield as ShieldIcon
 } from '@mui/icons-material';
 import { useMutation } from '@tanstack/react-query';
-import { channelService } from '../../services';
+import { channelService, webhookService } from '../../services';
 import { Channel, ChannelType } from '../../types';
 import {
   getChannelSchema,
@@ -405,6 +405,191 @@ export const ChannelVerification: React.FC<ChannelVerificationProps> = ({
             {verifying ? 'Verificando...' : 'Verificar Configuración'}
           </Button>
         </Box>
+
+        {/* Información de Webhook para WhatsApp, Instagram y Facebook */}
+        {(type === ChannelType.WHATSAPP || type === ChannelType.INSTAGRAM || type === ChannelType.FACEBOOK) && configuration && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <AlertTitle>Configuración de Webhooks en Meta Business Manager</AlertTitle>
+
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Callback URL (Webhook URL):
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Typography
+                  variant="body2"
+                  component="code"
+                  sx={{
+                    flex: 1,
+                    p: 1,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1,
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all'
+                  }}
+                >
+                  {`${window.location.origin}/api/omni/webhooks/${type === ChannelType.WHATSAPP ? 'whatsapp' : type === ChannelType.INSTAGRAM ? 'instagram' : 'facebook'}`}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    const url = `${window.location.origin}/api/omni/webhooks/${type === ChannelType.WHATSAPP ? 'whatsapp' : type === ChannelType.INSTAGRAM ? 'instagram' : 'facebook'}`;
+                    navigator.clipboard.writeText(url);
+                    alert('URL copiada al portapapeles');
+                  }}
+                >
+                  Copiar
+                </Button>
+              </Box>
+
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Webhook Verify Token:
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="body2"
+                  component="code"
+                  sx={{
+                    flex: 1,
+                    p: 1,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1,
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all'
+                  }}
+                >
+                  {configuration.webhookVerifyToken || '(No configurado)'}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    if (configuration.webhookVerifyToken) {
+                      navigator.clipboard.writeText(configuration.webhookVerifyToken);
+                      alert('Token copiado al portapapeles');
+                    }
+                  }}
+                  disabled={!configuration.webhookVerifyToken}
+                >
+                  Copiar
+                </Button>
+              </Box>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                💡 Copia estos valores y configúralos en Meta Business Manager → {type === ChannelType.WHATSAPP ? 'WhatsApp' : type === ChannelType.INSTAGRAM ? 'Instagram' : 'Facebook'} → Configuración → Webhooks
+              </Typography>
+
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <Typography variant="caption">
+                  ⚠️ Si necesitas editar el Webhook Verify Token, regresa al tab de <strong>Configuración</strong> (primer tab).
+                </Typography>
+              </Alert>
+
+              {/* Advertencia sobre localhost */}
+              {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  <AlertTitle>⚠️ URL de Webhook No Accesible para Meta</AlertTitle>
+                  <Typography variant="body2" paragraph>
+                    La URL actual usa <code>localhost</code> que <strong>no es accesible</strong> desde los servidores de Meta Business Manager.
+                  </Typography>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Soluciones:
+                  </Typography>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      🔧 Para Desarrollo (usando ngrok):
+                    </Typography>
+                    <Box component="ol" sx={{ pl: 2, mb: 0 }}>
+                      <li>
+                        <Typography variant="body2">
+                          Instala ngrok: <code>npm install -g ngrok</code>
+                        </Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">
+                          Ejecuta: <code>ngrok http 5000</code>
+                        </Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">
+                          Copia la URL HTTPS que genera ngrok (ej: <code>https://abc123.ngrok.io</code>)
+                        </Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">
+                          Agrega en tu archivo <code>.env</code>:
+                        </Typography>
+                        <Box
+                          component="pre"
+                          sx={{
+                            mt: 1,
+                            p: 1,
+                            bgcolor: 'grey.900',
+                            color: 'grey.100',
+                            borderRadius: 1,
+                            fontSize: '0.75rem',
+                            overflow: 'auto'
+                          }}
+                        >
+                          REACT_APP_WEBHOOK_BASE_URL=https://abc123.ngrok.io
+                        </Box>
+                      </li>
+                      <li>
+                        <Typography variant="body2">
+                          Reinicia la aplicación frontend
+                        </Typography>
+                      </li>
+                    </Box>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      🌐 Para Producción:
+                    </Typography>
+                    <Box component="ol" sx={{ pl: 2, mb: 0 }}>
+                      <li>
+                        <Typography variant="body2">
+                          Configura tu dominio público (ej: <code>https://api.tudominio.com</code>)
+                        </Typography>
+                      </li>
+                      <li>
+                        <Typography variant="body2">
+                          Agrega en tu archivo <code>.env</code>:
+                        </Typography>
+                        <Box
+                          component="pre"
+                          sx={{
+                            mt: 1,
+                            p: 1,
+                            bgcolor: 'grey.900',
+                            color: 'grey.100',
+                            borderRadius: 1,
+                            fontSize: '0.75rem',
+                            overflow: 'auto'
+                          }}
+                        >
+                          REACT_APP_WEBHOOK_BASE_URL=https://api.tudominio.com
+                        </Box>
+                      </li>
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="caption" color="text.secondary">
+                    <InfoIcon sx={{ fontSize: 12, verticalAlign: 'middle', mr: 0.5 }} />
+                    Después de configurar la variable de entorno, recarga esta página para ver la URL correcta.
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+          </Alert>
+        )}
 
         {/* Progreso de verificación */}
         {verifying && (

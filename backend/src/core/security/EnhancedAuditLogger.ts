@@ -313,11 +313,12 @@ export class EnhancedAuditLogger implements IEnhancedAuditLogger {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
       // Obtener eventos antiguos
-      const oldEvents = await this.connection.query<any>(`
+      const oldEventsResult = await this.connection.query<any>(`
         SELECT * FROM security_events 
         WHERE timestamp < $1
       `, [cutoffDate]);
-      if (oldEvents.rows.length === 0) {
+      const oldEvents = oldEventsResult.rows;
+      if (oldEvents.length === 0) {
         this.logger.info('No events to archive');
         return;
       }
@@ -340,7 +341,7 @@ export class EnhancedAuditLogger implements IEnhancedAuditLogger {
         DELETE FROM security_events 
         WHERE timestamp < $1
       `, [cutoffDate]);
-      this.logger.info(`Archived ${oldEvents.rows.length} events to ${archivePath}`);
+      this.logger.info(`Archived ${oldEvents.length} events to ${archivePath}`);
     } catch (error) {
       this.logger.error('Failed to archive old logs:', error);
       throw error;
@@ -651,7 +652,7 @@ Timestamp: ${e.timestamp.toISOString()}
     `, [trailId]);
     if (result.rows.length === 0) return null;
     // Obtener eventos del trail
-    const events = await this.connection.query<any>(`
+    const eventsResult = await this.connection.query<any>(`
       SELECT se.* FROM security_events se
       JOIN trail_events te ON se.id = te.event_id
       WHERE te.trail_id = $1
@@ -659,7 +660,7 @@ Timestamp: ${e.timestamp.toISOString()}
     `, [trailId]);
     return {
       ...result.rows[0],
-      events: events.map(this.mapToSecurityEvent)
+      events: eventsResult.rows.map(this.mapToSecurityEvent)
     };
   }
   private async getTrailByHash(hash: string): Promise<AuditTrail | null> {

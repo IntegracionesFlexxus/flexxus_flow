@@ -19,13 +19,21 @@ let testConnection: DatabaseConnection | null = null;
  * Create mock database connection for unit tests
  */
 export function createMockDatabaseConnection(): IDatabaseConnection {
-  return {
+  const mockClient = {
     query: jest.fn().mockResolvedValue([]),
-    connect: jest.fn().mockResolvedValue({
-      query: jest.fn().mockResolvedValue([]),
-      release: jest.fn()
-    })
-  };
+    release: jest.fn()
+  } as any;
+  return {
+    query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    transaction: jest.fn().mockImplementation(async (callback) => callback(mockClient)),
+    healthCheck: jest.fn().mockResolvedValue(true),
+    close: jest.fn().mockResolvedValue(undefined),
+    connect: jest.fn().mockResolvedValue(mockClient),
+    disconnect: jest.fn().mockResolvedValue(undefined),
+    isConnected: jest.fn().mockReturnValue(true),
+    getClient: jest.fn().mockResolvedValue(mockClient),
+    getPoolStatus: jest.fn().mockReturnValue({ total: 0, idle: 0, waiting: 0 })
+  } as unknown as IDatabaseConnection;
 }
 /**
  * Initialize test database for integration tests
@@ -35,7 +43,8 @@ export async function initializeTestDatabase(): Promise<DatabaseConnection> {
     return testConnection;
   }
   testConnection = new DatabaseConnection(testDatabaseConfig as any);
-  await testConnection.connect();
+  const client = await testConnection.connect();
+  client.release();
   return testConnection;
 }
 /**

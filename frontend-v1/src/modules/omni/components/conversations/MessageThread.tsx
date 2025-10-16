@@ -457,8 +457,8 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ conversationId }) 
                               {formatTime(message.created_at)}
                             </Typography>
 
-                            {/* Icono de estado (solo para mensajes salientes) */}
-                            {isOutbound && (
+                            {/* Icono de estado (solo para mensajes salientes, excepto cuando falla) */}
+                            {isOutbound && message.status !== MessageStatus.FAILED && (
                               <Tooltip title={message.status}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.5 }}>
                                   {getStatusIcon(message.status)}

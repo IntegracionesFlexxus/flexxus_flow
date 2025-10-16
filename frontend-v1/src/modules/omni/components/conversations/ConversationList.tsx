@@ -34,8 +34,7 @@ import {
   Sms as SmsIcon,
   Instagram as InstagramIcon,
   Facebook as FacebookIcon,
-  Person as PersonIcon,
-  Refresh as RefreshIcon
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { conversationService } from '../../services/conversationService';
@@ -67,7 +66,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
   // WebSocket context para actualizaciones en tiempo real
-  const { lastConversation, lastMessage, isConnected } = useWebSocketContext();
+  const { lastConversation, lastMessage } = useWebSocketContext();
 
   // Construir filtros combinados
   const filters: ConversationFilters = {
@@ -78,7 +77,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   };
 
   // Query para obtener conversaciones
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['conversations', filters],
     queryFn: () => conversationService.getConversations(filters),
     // Configuración para NO hacer polling - usar WebSocket para actualizaciones
@@ -86,7 +85,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     refetchOnWindowFocus: false,      // No refetch al cambiar de pestaña
     refetchOnReconnect: false,        // No refetch al reconectar internet
     staleTime: Infinity,              // Los datos nunca son "stale" (WebSocket los actualiza)
-    cacheTime: 1000 * 60 * 30         // Mantener en cache 30 minutos
+    gcTime: 1000 * 60 * 30  // Mantener en cache 30 minutos
   });
 
   // Actualizar estado local cuando llegan datos
@@ -229,32 +228,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           sx={{ mb: 2 }}
         />
 
-        {/* Indicador de conexión WebSocket */}
-        {!isConnected && (
-          <Box
-            sx={{
-              p: 1,
-              mb: 2,
-              bgcolor: 'warning.light',
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <Typography variant="caption" color="warning.dark">
-              Conexión perdida. Usando datos en caché.
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => refetch()}
-              sx={{ ml: 1 }}
-            >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
-
         <Stack direction="row" spacing={1}>
           <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
             <InputLabel>Estado</InputLabel>
@@ -338,11 +311,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                             flex: 1
                           }}
                         >
-                          {conversation.customer_first_name && conversation.customer_last_name
-                            ? `${conversation.customer_first_name} ${conversation.customer_last_name}`
-                            : conversation.channel_type.toLowerCase() === 'whatsapp' && conversation.customer_phone
-                            ? conversation.customer_phone
-                            : conversation.customer_phone || conversation.customer_email || conversation.external_id || 'Cliente desconocido'}
+                          {conversation.customer_first_name
+                            ? `${conversation.customer_first_name}${conversation.customer_last_name ? ' ' + conversation.customer_last_name : ''}`
+                            : 'Cliente desconocido'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {conversation.last_message_at
@@ -359,33 +330,73 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                           sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.85rem'
                           }}
                         >
-                          {conversation.channel_name || conversation.channel_type}
+                          {conversation.channel_type.toLowerCase() === 'whatsapp' && conversation.customer_phone
+                            ? conversation.customer_phone
+                            : conversation.channel_type.toLowerCase() === 'email' && conversation.customer_email
+                            ? conversation.customer_email
+                            : conversation.channel_name || conversation.channel_type}
                         </Typography>
 
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                           <Chip
                             label={conversation.status}
                             size="small"
-                            color={getStatusColor(conversation.status)}
-                            sx={{ height: 20, fontSize: '0.7rem' }}
+                            sx={{
+                              height: 20,
+                              fontSize: '0.7rem',
+                              bgcolor: conversation.status === ConversationStatus.OPEN
+                                ? '#c8e6c9' // Verde pastel
+                                : conversation.status === ConversationStatus.PENDING
+                                ? '#fff3cd' // Amarillo pastel
+                                : conversation.status === ConversationStatus.RESOLVED
+                                ? '#e0e0e0' // Gris claro pastel
+                                : '#f5f5f5', // Gris muy claro para archived
+                              color: conversation.status === ConversationStatus.OPEN
+                                ? '#2e7d32' // Verde oscuro para texto
+                                : conversation.status === ConversationStatus.PENDING
+                                ? '#856404' // Amarillo oscuro para texto
+                                : '#616161', // Gris oscuro para texto
+                              border: 'none'
+                            }}
                           />
                           {conversation.priority !== ConversationPriority.NORMAL && (
                             <Chip
                               label={conversation.priority}
                               size="small"
-                              color={getPriorityColor(conversation.priority)}
-                              sx={{ height: 20, fontSize: '0.7rem' }}
+                              sx={{
+                                height: 20,
+                                fontSize: '0.7rem',
+                                bgcolor: conversation.priority === ConversationPriority.URGENT
+                                  ? '#ffcdd2' // Rojo pastel
+                                  : conversation.priority === ConversationPriority.HIGH
+                                  ? '#ffe0b2' // Naranja pastel
+                                  : conversation.priority === ConversationPriority.LOW
+                                  ? '#e1f5fe' // Azul claro pastel
+                                  : '#e3f2fd', // Azul muy claro para normal (aunque no se muestra)
+                                color: conversation.priority === ConversationPriority.URGENT
+                                  ? '#c62828' // Rojo oscuro para texto
+                                  : conversation.priority === ConversationPriority.HIGH
+                                  ? '#e65100' // Naranja oscuro para texto
+                                  : '#01579b', // Azul oscuro para texto
+                                border: 'none'
+                              }}
                             />
                           )}
                           {conversation.assigned_to && (
                             <Chip
                               label={conversation.agent_name || 'Asignado'}
                               size="small"
-                              variant="outlined"
-                              sx={{ height: 20, fontSize: '0.7rem' }}
+                              sx={{
+                                height: 20,
+                                fontSize: '0.7rem',
+                                bgcolor: '#f3e5f5', // Púrpura muy claro pastel
+                                color: '#6a1b9a', // Púrpura oscuro para texto
+                                border: 'none'
+                              }}
                             />
                           )}
                         </Box>

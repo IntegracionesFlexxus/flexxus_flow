@@ -134,13 +134,13 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ conversationId }) 
   const getStatusIcon = (status: MessageStatus) => {
     switch (status) {
       case MessageStatus.PENDING:
-        return <ScheduleIcon fontSize="small" sx={{ color: 'text.secondary' }} />;
+        return <ScheduleIcon fontSize="small" sx={{ color: '#546e7a' }} />;
       case MessageStatus.SENT:
-        return <DoneIcon fontSize="small" sx={{ color: 'text.secondary' }} />;
+        return <DoneIcon fontSize="small" sx={{ color: '#546e7a' }} />;
       case MessageStatus.DELIVERED:
-        return <DoneAllIcon fontSize="small" sx={{ color: 'text.secondary' }} />;
+        return <DoneAllIcon fontSize="small" sx={{ color: '#546e7a' }} />;
       case MessageStatus.READ:
-        return <DoneAllIcon fontSize="small" sx={{ color: 'primary.main' }} />;
+        return <DoneAllIcon fontSize="small" sx={{ color: '#0d47a1' }} />; // Azul oscuro cuando se lee
       case MessageStatus.FAILED:
         return <ErrorIcon fontSize="small" color="error" />;
       default:
@@ -424,8 +424,8 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ conversationId }) 
                           elevation={1}
                           sx={{
                             p: 1.5,
-                            bgcolor: isOutbound ? 'primary.main' : 'background.paper',
-                            color: isOutbound ? 'primary.contrastText' : 'text.primary',
+                            bgcolor: isOutbound ? '#bbdefb' : 'background.paper', // Azul pastel claro
+                            color: isOutbound ? '#0d47a1' : 'text.primary', // Azul oscuro para texto
                             borderRadius: 2,
                             ...(isOutbound && {
                               borderBottomRightRadius: 4
@@ -449,8 +449,8 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ conversationId }) 
                             <Typography
                               variant="caption"
                               sx={{
-                                color: isOutbound ? 'primary.contrastText' : 'text.secondary',
-                                opacity: 0.7,
+                                color: isOutbound ? '#0d47a1' : 'text.secondary', // Azul oscuro para mensajes salientes
+                                opacity: 0.8,
                                 fontSize: '0.7rem'
                               }}
                             >

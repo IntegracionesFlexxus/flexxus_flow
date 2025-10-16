@@ -31,6 +31,8 @@ export interface NotificationPreferencesApi {
 
 class NotificationApiService {
   private readonly baseUrl = '/api/notifications';
+  // TODO: Backend not implemented yet - Feature disabled temporarily
+  private readonly FEATURE_ENABLED = false;
 
   /**
    * Obtener notificaciones con paginación
@@ -47,6 +49,9 @@ class NotificationApiService {
     fromDate?: Date;
     toDate?: Date;
   }): Promise<NotificationApiResponse> {
+    if (!this.FEATURE_ENABLED) {
+      return { data: [], total: 0, page: 1, totalPages: 0 };
+    }
     const response = await api.get(this.baseUrl, { params });
     return response.data;
   }
@@ -55,6 +60,9 @@ class NotificationApiService {
    * Obtener una notificación específica
    */
   async getNotificationById(id: string): Promise<NotificationData> {
+    if (!this.FEATURE_ENABLED) {
+      throw new Error('Notification feature not available');
+    }
     const response = await api.get(`${this.baseUrl}/${id}`);
     return response.data.data;
   }
@@ -114,6 +122,9 @@ class NotificationApiService {
     byCategory: Record<string, number>;
     byPriority: Record<string, number>;
   }> {
+    if (!this.FEATURE_ENABLED) {
+      return { total: 0, unread: 0, byType: {}, byCategory: {}, byPriority: {} };
+    }
     const response = await api.get(`${this.baseUrl}/stats`);
     return response.data.data;
   }
@@ -122,6 +133,9 @@ class NotificationApiService {
    * Obtener contador de no leídas
    */
   async getUnreadCount(): Promise<number> {
+    if (!this.FEATURE_ENABLED) {
+      return 0;
+    }
     const response = await api.get(`${this.baseUrl}/unread-count`);
     return response.data.data.count;
   }
@@ -130,6 +144,16 @@ class NotificationApiService {
    * Obtener preferencias
    */
   async getPreferences(): Promise<NotificationPreferencesApi> {
+    if (!this.FEATURE_ENABLED) {
+      return {
+        enabled: false,
+        sound: false,
+        vibrate: false,
+        desktop: false,
+        categories: {},
+        priorities: []
+      };
+    }
     const response = await api.get(`${this.baseUrl}/preferences`);
     return response.data.data;
   }
@@ -150,6 +174,9 @@ class NotificationApiService {
     deleted: string[];
     updated: NotificationData[];
   }> {
+    if (!this.FEATURE_ENABLED) {
+      return { notifications: [], deleted: [], updated: [] };
+    }
     try {
       // Obtener notificaciones recientes
       const response = await this.getNotifications({

@@ -11,8 +11,8 @@ import omniRoutes from './routes';
 
 const logger = LoggerFactory.create({ file: __filename });
 
-// Configure the container with Omni module dependencies
-configureOmniContainer(container);
+// NOTE: Container configuration is done in container/container.ts
+// to avoid duplicate registration errors
 
 // Initialize the module (WebSocket handlers, message queue, etc.)
 initializeOmniModule(container).catch(error => {

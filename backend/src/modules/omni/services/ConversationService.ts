@@ -3,17 +3,19 @@
  * Business logic for managing omnichannel conversations
  */
 
-import { injectable, inject } from 'inversify';
+import { injectable, inject, optional } from 'inversify';
 import { TYPES } from '@/container/types';
 import { ConversationRepository } from '../repositories/ConversationRepository';
 import { IConversation, IConversationCreate, IConversationUpdate } from '../interfaces/IConversation';
 import winston from 'winston';
+import { OmniWebSocketHandler } from '../websocket/OmniWebSocketHandler';
 
 @injectable()
 export class ConversationService {
   constructor(
     @inject(TYPES.OmniConversationRepository) private conversationRepository: ConversationRepository,
-    @inject(TYPES.Logger) private logger: winston.Logger
+    @inject(TYPES.Logger) private logger: winston.Logger,
+    @inject(TYPES.OmniWebSocketHandler) @optional() private wsHandler?: OmniWebSocketHandler
   ) {}
 
   /**
@@ -33,6 +35,15 @@ export class ConversationService {
         conversationId: conversation.id,
         channelId: conversation.channel_id
       });
+
+      // Emit WebSocket event for new conversation
+      if (this.wsHandler) {
+        try {
+          this.wsHandler.emitNewConversation(companyId, conversation);
+        } catch (wsError) {
+          this.logger.warn('Failed to emit WebSocket new conversation event', { wsError, conversationId: conversation.id });
+        }
+      }
 
       return conversation;
     } catch (error) {
@@ -88,6 +99,16 @@ export class ConversationService {
       if (updated) {
         const updatedConversation = await this.conversationRepository.findById(conversationId, companyId);
         this.logger.info('Conversation updated successfully', { conversationId });
+
+        // Emit WebSocket event for conversation update
+        if (this.wsHandler && updatedConversation) {
+          try {
+            this.wsHandler.emitConversationUpdate(conversationId, updatedConversation);
+          } catch (wsError) {
+            this.logger.warn('Failed to emit WebSocket conversation update event', { wsError, conversationId });
+          }
+        }
+
         return updatedConversation;
       }
 
@@ -132,6 +153,10 @@ export class ConversationService {
       if (updated) {
         const updatedConversation = await this.conversationRepository.findById(conversationId, companyId);
         this.logger.info('Conversation assigned successfully', { conversationId, agentId: data.agent_id });
+
+        // Emit WebSocket event
+        this.emitConversationUpdate(conversationId, updatedConversation);
+
         return updatedConversation;
       }
 
@@ -169,6 +194,10 @@ export class ConversationService {
       if (updated) {
         const updatedConversation = await this.conversationRepository.findById(conversationId, companyId);
         this.logger.info('Conversation resolved successfully', { conversationId });
+
+        // Emit WebSocket event
+        this.emitConversationUpdate(conversationId, updatedConversation);
+
         return updatedConversation;
       }
 
@@ -206,6 +235,10 @@ export class ConversationService {
       if (updated) {
         const updatedConversation = await this.conversationRepository.findById(conversationId, companyId);
         this.logger.info('Conversation reopened successfully', { conversationId });
+
+        // Emit WebSocket event
+        this.emitConversationUpdate(conversationId, updatedConversation);
+
         return updatedConversation;
       }
 
@@ -339,6 +372,19 @@ export class ConversationService {
     } catch (error) {
       this.logger.error('Failed to bulk assign conversations', { error, conversationIds, agentId });
       throw error;
+    }
+  }
+
+  /**
+   * Helper method to emit conversation updates via WebSocket
+   */
+  private emitConversationUpdate(conversationId: string, conversation: IConversation | null): void {
+    if (this.wsHandler && conversation) {
+      try {
+        this.wsHandler.emitConversationUpdate(conversationId, conversation);
+      } catch (wsError) {
+        this.logger.warn('Failed to emit WebSocket conversation update event', { wsError, conversationId });
+      }
     }
   }
 }

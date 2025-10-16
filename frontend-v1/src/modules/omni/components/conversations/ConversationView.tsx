@@ -57,6 +57,8 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
                   <Box sx={{ fontWeight: 600 }}>
                     {selectedConversation.customer_first_name && selectedConversation.customer_last_name
                       ? `${selectedConversation.customer_first_name} ${selectedConversation.customer_last_name}`
+                      : selectedConversation.channel_type.toLowerCase() === 'whatsapp' && selectedConversation.customer_phone
+                      ? selectedConversation.customer_phone
                       : selectedConversation.customer_phone || selectedConversation.customer_email || selectedConversation.external_id || 'Cliente desconocido'}
                   </Box>
                   <Box sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>

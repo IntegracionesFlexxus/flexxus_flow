@@ -83,6 +83,8 @@ export interface MessageSend {
   recipient: string;
   content: string;
   content_type?: MessageContentType;
+  sender_type?: MessageSenderType;
+  direction?: MessageDirection;
   media_url?: string;
   template_id?: string;
   template_variables?: Record<string, any>;

@@ -3,7 +3,7 @@
  * Business logic for managing omnichannel messages
  */
 
-import { injectable, inject } from 'inversify';
+import { injectable, inject, optional } from 'inversify';
 import { TYPES } from '@/container/types';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { ConversationRepository } from '../repositories/ConversationRepository';
@@ -19,6 +19,7 @@ import {
 } from '../types/message.types';
 import winston from 'winston';
 import { hydrateMessage } from '../utils/messageMapper';
+import { OmniWebSocketHandler } from '../websocket/OmniWebSocketHandler';
 
 @injectable()
 export class MessageService {
@@ -26,7 +27,8 @@ export class MessageService {
     @inject(TYPES.OmniMessageRepository) private messageRepository: MessageRepository,
     @inject(TYPES.OmniConversationRepository) private conversationRepository: ConversationRepository,
     @inject(TYPES.OmniMessageQueue) private messageQueue: MessageQueue,
-    @inject(TYPES.Logger) private logger: winston.Logger
+    @inject(TYPES.Logger) private logger: winston.Logger,
+    @inject(TYPES.OmniWebSocketHandler) @optional() private wsHandler?: OmniWebSocketHandler
   ) {}
 
   /**
@@ -72,6 +74,21 @@ export class MessageService {
         conversationId: hydrated.conversation_id
       });
 
+      // Emit WebSocket event for real-time updates
+      if (this.wsHandler && hydrated.conversation_id) {
+        try {
+          this.wsHandler.emitMessage(hydrated.conversation_id, hydrated);
+          this.logger.info('WebSocket message emitted successfully', {
+            messageId: hydrated.id,
+            conversationId: hydrated.conversation_id,
+            direction: hydrated.direction,
+            senderType: hydrated.sender_type
+          });
+        } catch (wsError) {
+          this.logger.warn('Failed to emit WebSocket message event', { wsError, messageId: hydrated.id });
+        }
+      }
+
       return hydrated;
     } catch (error) {
       this.logger.error('Failed to send message', { error, data });
@@ -89,11 +106,34 @@ export class MessageService {
     }
 
     const initialDirection: MessageDirection | undefined = data.direction;
-    let direction: MessageDirection =
-      initialDirection ||
-      (data.sender_type === MessageSenderType.CUSTOMER
+    const initialSenderType: MessageSenderType | undefined = data.sender_type;
+    let direction: MessageDirection;
+    let senderType: MessageSenderType | undefined = initialSenderType;
+
+    // IMPROVED LOGIC: Determine direction based on available information
+    // Priority 1: If direction is explicitly provided, use it
+    if (initialDirection) {
+      direction = initialDirection;
+      this.logger.debug('Using explicit direction', { direction });
+    }
+    // Priority 2: If sender_type is provided, infer direction from it
+    else if (initialSenderType) {
+      direction = initialSenderType === MessageSenderType.CUSTOMER
         ? MessageDirection.INBOUND
-        : MessageDirection.OUTBOUND);
+        : MessageDirection.OUTBOUND;
+      this.logger.debug('Inferred direction from sender_type', { senderType: initialSenderType, direction });
+    }
+    // Priority 3: If sender_id is provided (authenticated agent), assume OUTBOUND
+    else if (data.sender_id) {
+      direction = MessageDirection.OUTBOUND;
+      senderType = MessageSenderType.AGENT;
+      this.logger.debug('Inferred OUTBOUND from authenticated sender_id', { sender_id: data.sender_id });
+    }
+    // Priority 4: Will check conversation later as last resort
+    else {
+      direction = MessageDirection.INBOUND; // Default, may be overridden
+      this.logger.debug('Using default direction (will check conversation)', { direction });
+    }
 
     const contentType: MessageContentType = data.content_type || MessageContentType.TEXT;
 
@@ -116,13 +156,16 @@ export class MessageService {
       channelId = channelId || conversation.channel_id;
       customerId = customerId || conversation.customer_id;
 
-      // Only recalculate direction if neither initialDirection nor sender_type were provided
-      // If sender_type was provided, direction was already correctly calculated above (lines 92-96)
-      if (!initialDirection && !data.sender_type) {
-        direction =
-          conversation.assigned_to || (conversation.metadata as any)?.autoResponder
-            ? MessageDirection.OUTBOUND
-            : MessageDirection.INBOUND;
+      // LAST RESORT: Only use conversation assigned_to if we have no other information
+      if (!initialDirection && !initialSenderType && !data.sender_id) {
+        const hasAssignedAgent = conversation.assigned_to || (conversation.metadata as any)?.autoResponder;
+        direction = hasAssignedAgent ? MessageDirection.OUTBOUND : MessageDirection.INBOUND;
+        senderType = hasAssignedAgent ? MessageSenderType.AGENT : MessageSenderType.CUSTOMER;
+        this.logger.debug('Determined direction from conversation', {
+          assigned_to: conversation.assigned_to,
+          direction,
+          senderType
+        });
       }
 
       if (direction === MessageDirection.OUTBOUND && !recipient) {
@@ -143,8 +186,8 @@ export class MessageService {
       throw new Error('Recipient is required for outbound messages');
     }
 
-    const senderType: MessageSenderType =
-      data.sender_type ||
+    // Use senderType determined earlier, or infer from direction
+    const finalSenderType: MessageSenderType = senderType ||
       (direction === MessageDirection.OUTBOUND
         ? MessageSenderType.AGENT
         : MessageSenderType.CUSTOMER);
@@ -185,7 +228,7 @@ export class MessageService {
       conversation_id: conversationId,
       company_id: companyId,
       customer_id: customerId,
-      sender_type: senderType,
+      sender_type: finalSenderType,
       sender_id: data.sender_id,
       sender_name: data.sender_name, // Add sender name (agent name)
       content: contentValue,
@@ -209,6 +252,21 @@ export class MessageService {
     if (!dbPayload.media_metadata && data.media_url) {
       dbPayload.media_metadata = {};
     }
+
+    // LOG: Final validation of message direction and sender
+    this.logger.info('Message normalized successfully', {
+      conversationId,
+      direction,
+      senderType: finalSenderType,
+      senderId: data.sender_id,
+      senderName: data.sender_name,
+      hasExplicitDirection: !!initialDirection,
+      hasExplicitSenderType: !!initialSenderType,
+      inferredFrom: initialDirection ? 'explicit_direction' :
+                    initialSenderType ? 'sender_type' :
+                    data.sender_id ? 'authenticated_sender' :
+                    'conversation_assigned_to'
+    });
 
     return { dbPayload, channelId, direction };
   }
@@ -252,7 +310,21 @@ export class MessageService {
       }
 
       this.logger.info('Message status updated successfully', { messageId, status });
-      return this.mapMessage(updated);
+      const mapped = this.mapMessage(updated);
+
+      // Emit WebSocket event for status update
+      if (this.wsHandler && mapped && mapped.conversation_id) {
+        try {
+          this.wsHandler.emitMessage(mapped.conversation_id, {
+            ...mapped,
+            _updateType: 'status_change'
+          });
+        } catch (wsError) {
+          this.logger.warn('Failed to emit WebSocket status update event', { wsError, messageId });
+        }
+      }
+
+      return mapped;
     } catch (error) {
       this.logger.error('Failed to update message status', { error, messageId, status });
       throw error;

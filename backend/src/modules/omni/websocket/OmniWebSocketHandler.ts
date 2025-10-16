@@ -7,6 +7,8 @@ import { injectable, inject } from 'inversify';
 import { Socket, Namespace } from 'socket.io';
 import { TYPES } from '@/container/types';
 import { LoggerFactory } from '@/shared/services/logger/LoggerService';
+import { IJwtService } from '@/modules/auth/interfaces/IJwtService';
+import { ISessionRepository } from '@/modules/auth/interfaces/ISessionRepository';
 
 interface OmniSocketData {
   companyId: string;
@@ -22,7 +24,10 @@ export class OmniWebSocketHandler {
   private logger: any;
   private activeConnections: Map<string, OmniSocketData> = new Map();
 
-  constructor() {
+  constructor(
+    @inject(TYPES.JwtService) private jwtService: IJwtService,
+    @inject(TYPES.SessionRepository) private sessionRepository: ISessionRepository
+  ) {
     this.logger = LoggerFactory.create({ file: __filename });
   }
 
@@ -49,20 +54,97 @@ export class OmniWebSocketHandler {
    */
   private async authenticateSocket(socket: Socket, next: any): Promise<void> {
     try {
-      const { token, companyId } = socket.handshake.auth;
+      const { token } = socket.handshake.auth;
 
-      if (!token || !companyId) {
-        return next(new Error('Authentication required'));
+      // Validate token presence
+      if (!token) {
+        this.logger.warn('WebSocket connection rejected: No token provided', {
+          socketId: socket.id,
+          origin: socket.handshake.headers.origin
+        });
+        return next(new Error('Authentication token required'));
       }
 
-      // TODO: Validate JWT token properly
-      // For now, just store the company ID
-      (socket as any).companyId = companyId;
-      (socket as any).userId = socket.handshake.auth.userId || 'unknown';
+      // Validate token structure
+      if (!this.jwtService.isValidTokenStructure(token)) {
+        this.logger.warn('WebSocket connection rejected: Invalid token structure', {
+          socketId: socket.id
+        });
+        return next(new Error('Invalid token format'));
+      }
+
+      // Verify JWT token
+      let payload;
+      try {
+        payload = await this.jwtService.verifyAccessToken(token);
+      } catch (error: any) {
+        this.logger.warn('WebSocket connection rejected: Token verification failed', {
+          socketId: socket.id,
+          error: error.message
+        });
+        return next(new Error('Invalid or expired token'));
+      }
+
+      // Validate session
+      const session = await this.sessionRepository.findById(payload.sessionId);
+      if (!session) {
+        this.logger.warn('WebSocket connection rejected: Session not found', {
+          socketId: socket.id,
+          sessionId: payload.sessionId,
+          userId: payload.userId
+        });
+        return next(new Error('Session not found'));
+      }
+
+      if (!session.active) {
+        this.logger.warn('WebSocket connection rejected: Session inactive', {
+          socketId: socket.id,
+          sessionId: payload.sessionId,
+          userId: payload.userId
+        });
+        return next(new Error('Session is not active'));
+      }
+
+      if (session.forceLogout) {
+        this.logger.warn('WebSocket connection rejected: Force logout', {
+          socketId: socket.id,
+          sessionId: payload.sessionId,
+          userId: payload.userId
+        });
+        return next(new Error('Session has been logged out'));
+      }
+
+      if (session.expiresAt < new Date()) {
+        this.logger.warn('WebSocket connection rejected: Session expired', {
+          socketId: socket.id,
+          sessionId: payload.sessionId,
+          userId: payload.userId,
+          expiresAt: session.expiresAt
+        });
+        return next(new Error('Session has expired'));
+      }
+
+      // Store validated user data
+      (socket as any).companyId = payload.companyId;
+      (socket as any).userId = payload.userId;
+      (socket as any).sessionId = payload.sessionId;
+      (socket as any).userEmail = payload.email;
+      (socket as any).userRole = payload.role;
+
+      this.logger.info('WebSocket authentication successful', {
+        socketId: socket.id,
+        userId: payload.userId,
+        companyId: payload.companyId,
+        sessionId: payload.sessionId
+      });
 
       next();
-    } catch (error) {
-      this.logger.error('Socket authentication failed:', error);
+    } catch (error: any) {
+      this.logger.error('Socket authentication error:', {
+        error: error.message,
+        stack: error.stack,
+        socketId: socket.id
+      });
       next(new Error('Authentication failed'));
     }
   }

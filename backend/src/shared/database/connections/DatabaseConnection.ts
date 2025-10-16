@@ -47,9 +47,11 @@ export class DatabaseConnection implements IDatabaseConnection {
       user: config.user,
       password: config.password,
       max: config.max || 20,
-      min: config.min || 5,
-      connectionTimeoutMillis: config.connectionTimeoutMillis || 5000,
-      idleTimeoutMillis: config.idleTimeoutMillis || 30000
+      min: config.min || 2,
+      connectionTimeoutMillis: config.connectionTimeoutMillis || 10000, // Increased to 10s
+      idleTimeoutMillis: config.idleTimeoutMillis || 30000,
+      statement_timeout: 30000, // 30s timeout for queries
+      query_timeout: 30000 // 30s timeout for queries
     };
     // Only add ssl if it's explicitly set
     if (config.ssl !== undefined) {
@@ -75,23 +77,68 @@ export class DatabaseConnection implements IDatabaseConnection {
     this.setupEventHandlers();
   }
   async query<T = any>(text: string, params?: any[]): Promise<import('pg').QueryResult<T>> {
-    const client = await this.pool.connect();
-    try {
-      this.connected = true;
-      const start = Date.now();
-      const result = await client.query<T>(text, params);
-      const duration = Date.now() - start;
-      // Log queries en desarrollo
-      if (environment.isDevelopment) {
-        this.logger.debug(`Query executed in ${duration}ms: ${text.substring(0, 100)}`);
+    const maxRetries = 3;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const client = await this.pool.connect();
+      try {
+        this.connected = true;
+        const start = Date.now();
+        const result = await client.query<T>(text, params);
+        const duration = Date.now() - start;
+
+        // Log queries en desarrollo
+        if (environment.isDevelopment) {
+          this.logger.debug(`Query executed in ${duration}ms: ${text.substring(0, 100)}`);
+        }
+
+        // Log slow queries
+        if (duration > 5000) {
+          this.logger.warn(`Slow query detected (${duration}ms): ${text.substring(0, 200)}`);
+        }
+
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        this.logger.error(`Database query error (attempt ${attempt}/${maxRetries}):`, {
+          error: error.message,
+          code: error.code,
+          query: text.substring(0, 100)
+        });
+
+        // Don't retry on syntax errors or constraint violations
+        if (error.code && ['42601', '42P01', '23505', '23503'].includes(error.code)) {
+          throw error;
+        }
+
+        // Retry on connection/timeout errors
+        if (attempt < maxRetries && this.isRetryableError(error)) {
+          await this.delay(1000 * attempt); // Exponential backoff
+          continue;
+        }
+
+        throw error;
+      } finally {
+        client.release();
       }
-      return result;
-    } catch (error) {
-      this.logger.error('Database query error:', error);
-      throw error;
-    } finally {
-      client.release();
     }
+
+    throw lastError;
+  }
+
+  private isRetryableError(error: any): boolean {
+    const retryableCodes = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'];
+    const retryableMessages = ['Connection terminated', 'connection timeout', 'Connection error'];
+
+    return (
+      retryableCodes.includes(error.code) ||
+      retryableMessages.some(msg => error.message?.includes(msg))
+    );
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async connect(): Promise<PoolClient> {

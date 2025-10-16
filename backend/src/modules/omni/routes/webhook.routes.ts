@@ -32,12 +32,46 @@ router.get('/whatsapp', async (req: Request, res: Response) => {
   logger.info('WhatsApp webhook verification request', { mode, hasToken: !!token });
 
   if (mode === 'subscribe' && token) {
-    // TODO: Buscar canal por verify token en la base de datos
-    // Por ahora, aceptar cualquier token para desarrollo
-    logger.info('WhatsApp webhook verified', { token: String(token).substring(0, 10) + '...' });
-    res.status(200).send(challenge);
+    try {
+      // Buscar canal por verify token en la base de datos
+      const { container } = await import('@/container/container');
+      const { TYPES } = await import('@/container/types');
+      const channelRepository = container.get<any>(TYPES.OmniChannelRepository);
+
+      // Buscar canal WhatsApp con el webhook_secret que coincida
+      // Usar executeQuery directamente para buscar sin companyId
+      const query = `
+        SELECT id, name, company_id, webhook_secret
+        FROM channels
+        WHERE channel_type = 'whatsapp'
+        AND webhook_secret = $1
+        AND is_active = true
+        LIMIT 1
+      `;
+      const result = await channelRepository.executeQuery(query, [token]);
+
+      if (result.rows.length > 0) {
+        const matchingChannel = result.rows[0];
+        logger.info('WhatsApp webhook verified successfully', {
+          channelId: matchingChannel.id,
+          channelName: matchingChannel.name,
+          companyId: matchingChannel.company_id
+        });
+        res.status(200).send(challenge);
+      } else {
+        logger.warn('WhatsApp webhook verification failed - token mismatch', {
+          providedToken: String(token).substring(0, 10) + '...'
+        });
+        res.status(403).send('Forbidden');
+      }
+    } catch (error: any) {
+      logger.error('Error during WhatsApp webhook verification', {
+        error: error.message
+      });
+      res.status(500).send('Internal Server Error');
+    }
   } else {
-    logger.warn('WhatsApp webhook verification failed', {
+    logger.warn('WhatsApp webhook verification failed - invalid request', {
       mode,
       tokenProvided: !!token
     });

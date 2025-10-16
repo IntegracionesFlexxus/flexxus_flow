@@ -40,7 +40,7 @@ export class MessageRepository extends BaseOmniRepository<IMessage> {
       SELECT *
       FROM ${this.tableName}
       WHERE company_id = $1
-        AND (external_message_id = $2 OR external_id = $2)
+        AND external_message_id = $2
       ORDER BY created_at DESC
       LIMIT 1
     `;

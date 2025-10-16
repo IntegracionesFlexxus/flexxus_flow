@@ -34,11 +34,12 @@ import {
   Sms as SmsIcon,
   Instagram as InstagramIcon,
   Facebook as FacebookIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { conversationService } from '../../services/conversationService';
-import { realtimeService } from '../../services/realtimeService';
+import { useWebSocketContext } from '../../contexts/WebSocketContext';
 import {
   Conversation,
   ConversationStatus,
@@ -65,6 +66,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const [priorityFilter, setPriorityFilter] = useState<ConversationPriority | 'all'>('all');
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
+  // WebSocket context para actualizaciones en tiempo real
+  const { lastConversation, lastMessage, isConnected } = useWebSocketContext();
+
   // Construir filtros combinados
   const filters: ConversationFilters = {
     ...externalFilters,
@@ -77,7 +81,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['conversations', filters],
     queryFn: () => conversationService.getConversations(filters),
-    refetchInterval: 30000 // Refetch cada 30 segundos como backup
+    // Configuración para NO hacer polling - usar WebSocket para actualizaciones
+    refetchInterval: false,           // Sin refetch automático
+    refetchOnWindowFocus: false,      // No refetch al cambiar de pestaña
+    refetchOnReconnect: false,        // No refetch al reconectar internet
+    staleTime: Infinity,              // Los datos nunca son "stale" (WebSocket los actualiza)
+    cacheTime: 1000 * 60 * 30         // Mantener en cache 30 minutos
   });
 
   // Actualizar estado local cuando llegan datos
@@ -87,27 +96,56 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     }
   }, [data]);
 
-  // Suscribirse a actualizaciones en tiempo real
+  // Manejar actualizaciones de conversaciones por WebSocket
   useEffect(() => {
-    const subscriptionId = realtimeService.subscribeToConversationUpdates((updatedConversation) => {
-      setConversations(prev => {
-        const index = prev.findIndex(c => c.id === updatedConversation.id);
-        if (index >= 0) {
-          // Actualizar conversación existente
-          const newConversations = [...prev];
-          newConversations[index] = updatedConversation;
-          return newConversations;
-        } else {
-          // Agregar nueva conversación
-          return [updatedConversation, ...prev];
+    if (!lastConversation) return;
+
+    console.log('[ConversationList] Conversation update received:', lastConversation);
+
+    setConversations(prev => {
+      const index = prev.findIndex(c => c.id === lastConversation.id);
+
+      if (index >= 0) {
+        // Actualizar conversación existente
+        const newConversations = [...prev];
+        newConversations[index] = lastConversation;
+
+        // Mover al principio si cambió last_message_at
+        if (lastConversation.last_message_at) {
+          newConversations.splice(index, 1);
+          return [lastConversation, ...newConversations];
         }
+
+        return newConversations;
+      } else {
+        // Agregar nueva conversación al principio
+        return [lastConversation, ...prev];
+      }
+    });
+  }, [lastConversation]);
+
+  // Actualizar last_message_at cuando llega un mensaje nuevo
+  useEffect(() => {
+    if (!lastMessage) return;
+
+    console.log('[ConversationList] Message update received:', lastMessage);
+
+    setConversations(prev => {
+      return prev.map(conv => {
+        if (conv.id === lastMessage.conversation_id) {
+          return {
+            ...conv,
+            last_message_at: lastMessage.created_at,
+            // Incrementar unread_count si el mensaje es inbound
+            unread_count: lastMessage.direction === 'inbound'
+              ? (conv.unread_count || 0) + 1
+              : conv.unread_count
+          };
+        }
+        return conv;
       });
     });
-
-    return () => {
-      realtimeService.unsubscribe(subscriptionId);
-    };
-  }, []);
+  }, [lastMessage]);
 
   // Función para obtener el icono del canal
   const getChannelIcon = (channelType: string) => {
@@ -190,6 +228,32 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           }}
           sx={{ mb: 2 }}
         />
+
+        {/* Indicador de conexión WebSocket */}
+        {!isConnected && (
+          <Box
+            sx={{
+              p: 1,
+              mb: 2,
+              bgcolor: 'warning.light',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Typography variant="caption" color="warning.dark">
+              Conexión perdida. Usando datos en caché.
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => refetch()}
+              sx={{ ml: 1 }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
 
         <Stack direction="row" spacing={1}>
           <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
@@ -276,6 +340,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         >
                           {conversation.customer_first_name && conversation.customer_last_name
                             ? `${conversation.customer_first_name} ${conversation.customer_last_name}`
+                            : conversation.channel_type.toLowerCase() === 'whatsapp' && conversation.customer_phone
+                            ? conversation.customer_phone
                             : conversation.customer_phone || conversation.customer_email || conversation.external_id || 'Cliente desconocido'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">

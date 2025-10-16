@@ -1,7 +1,17 @@
 /**
- * Realtime Service
- * Servicio para recibir actualizaciones en tiempo real de conversaciones y mensajes
- * Por ahora usa polling, se puede mejorar a WebSocket más adelante
+ * Realtime Service - DEPRECATED
+ *
+ * @deprecated Este servicio está DEPRECADO. Usa WebSocket en su lugar.
+ *
+ * Este servicio usaba polling cada 5 segundos para obtener actualizaciones.
+ * Ahora se debe usar WebSocketContext y useWebSocketContext() para tiempo real.
+ *
+ * Migración:
+ * - En lugar de: realtimeService.subscribeToMessages(conversationId, callback)
+ * - Usar: const { lastMessage } = useWebSocketContext()
+ *
+ * Ver: frontend-v1/src/modules/omni/contexts/WebSocketContext.tsx
+ * Ver: frontend-v1/src/modules/omni/components/conversations/MessageThread.tsx (ejemplo)
  */
 
 import { conversationService } from './conversationService';

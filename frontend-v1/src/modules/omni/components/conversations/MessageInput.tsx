@@ -30,7 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { messageService } from '../../services/messageService';
-import { MessageContentType } from '../../types/message.types';
+import { MessageContentType, MessageSenderType, MessageDirection } from '../../types/message.types';
 import { useNotifications } from '@/shared/hooks/useNotifications';
 
 interface MessageInputProps {
@@ -68,7 +68,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           channel_id: channelId,
           recipient,
           content: message,
-          content_type: MessageContentType.TEXT
+          content_type: MessageContentType.TEXT,
+          sender_type: MessageSenderType.AGENT,
+          direction: MessageDirection.OUTBOUND
         });
       }
     },

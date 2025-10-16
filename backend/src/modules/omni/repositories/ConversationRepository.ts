@@ -20,77 +20,87 @@ export class ConversationRepository extends BaseOmniRepository<IConversation> {
     filters: ConversationFilters,
     options: QueryOptions = {}
   ): Promise<IConversation[]> {
-    const conditions = ['company_id = $1'];
+    const conditions = ['c.company_id = $1'];
     const params = [companyId];
     let paramCount = 1;
 
     // Build filter conditions
     if (filters.status) {
       paramCount++;
-      conditions.push(`status = $${paramCount}`);
+      conditions.push(`c.status = $${paramCount}`);
       params.push(filters.status);
     }
 
     if (filters.priority) {
       paramCount++;
-      conditions.push(`priority = $${paramCount}`);
+      conditions.push(`c.priority = $${paramCount}`);
       params.push(filters.priority);
     }
 
     if (filters.channelType) {
       paramCount++;
-      conditions.push(`channel_type = $${paramCount}`);
+      conditions.push(`c.channel_type = $${paramCount}`);
       params.push(filters.channelType);
     }
 
     if (filters.assignedTo) {
       paramCount++;
-      conditions.push(`assigned_to = $${paramCount}`);
+      conditions.push(`c.assigned_to = $${paramCount}`);
       params.push(filters.assignedTo);
     }
 
     if (filters.customerId) {
       paramCount++;
-      conditions.push(`customer_id = $${paramCount}`);
+      conditions.push(`c.customer_id = $${paramCount}`);
       params.push(filters.customerId);
     }
 
     if (filters.slaStatus) {
       paramCount++;
-      conditions.push(`sla_status = $${paramCount}`);
+      conditions.push(`c.sla_status = $${paramCount}`);
       params.push(filters.slaStatus);
     }
 
     if (filters.hasUnread) {
-      conditions.push('unread_count > 0');
+      conditions.push('c.unread_count > 0');
     }
 
     if (filters.tags && filters.tags.length > 0) {
       paramCount++;
-      conditions.push(`tags && $${paramCount}`);
+      conditions.push(`c.tags && $${paramCount}`);
       params.push(filters.tags as any); // PostgreSQL array parameter
     }
 
     if (filters.dateFrom) {
       paramCount++;
-      conditions.push(`created_at >= $${paramCount}`);
+      conditions.push(`c.created_at >= $${paramCount}`);
       params.push(filters.dateFrom.toISOString());
     }
 
     if (filters.dateTo) {
       paramCount++;
-      conditions.push(`created_at <= $${paramCount}`);
+      conditions.push(`c.created_at <= $${paramCount}`);
       params.push(filters.dateTo.toISOString());
     }
 
-    // Build query
+    // Build query with JOIN to get customer details
     let query = `
-      SELECT * FROM ${this.tableName}
+      SELECT
+        c.*,
+        cust.first_name as customer_first_name,
+        cust.last_name as customer_last_name,
+        cust.email as customer_email,
+        cust.phone_number as customer_phone,
+        ch.name as channel_name,
+        ch.health_status as channel_health_status
+      FROM ${this.tableName} c
+      LEFT JOIN customers cust ON c.customer_id = cust.id
+      LEFT JOIN channels ch ON c.channel_id = ch.id
       WHERE ${conditions.join(' AND ')}
     `;
 
     // Add ordering
-    query += ` ORDER BY ${options.orderBy || 'last_message_at DESC NULLS LAST, created_at DESC'}`;
+    query += ` ORDER BY ${options.orderBy || 'c.last_message_at DESC NULLS LAST, c.created_at DESC'}`;
 
     // Add pagination
     if (options.limit) {
@@ -102,6 +112,29 @@ export class ConversationRepository extends BaseOmniRepository<IConversation> {
 
     const result = await this.executeQuery(query, params, companyId);
     return result.rows as IConversation[];
+  }
+
+  /**
+   * Override findById to include customer and channel details
+   */
+  async findById(id: string, companyId: string): Promise<IConversation | null> {
+    const query = `
+      SELECT
+        c.*,
+        cust.first_name as customer_first_name,
+        cust.last_name as customer_last_name,
+        cust.email as customer_email,
+        cust.phone_number as customer_phone,
+        ch.name as channel_name,
+        ch.health_status as channel_health_status
+      FROM ${this.tableName} c
+      LEFT JOIN customers cust ON c.customer_id = cust.id
+      LEFT JOIN channels ch ON c.channel_id = ch.id
+      WHERE c.id = $1 AND c.company_id = $2
+    `;
+
+    const result = await this.executeQuery(query, [id, companyId], companyId);
+    return result.rows[0] as IConversation || null;
   }
 
   /**

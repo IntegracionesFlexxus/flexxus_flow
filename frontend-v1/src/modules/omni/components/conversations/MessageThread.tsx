@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { messageService } from '../../services/messageService';
-import { realtimeService } from '../../services/realtimeService';
+import { useWebSocketContext } from '../../contexts/WebSocketContext';
 import {
   Message,
   MessageDirection,
@@ -51,16 +51,20 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ conversationId }) 
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
-  // Query para obtener mensajes
+  // WebSocket context para mensajes en tiempo real
+  const { lastMessage, joinConversation, leaveConversation } = useWebSocketContext();
+
+  // Query para obtener mensajes iniciales
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: () => messageService.getConversationMessages(conversationId),
     enabled: !!conversationId
   });
 
-  // Actualizar estado local cuando llegan datos
+  // Actualizar estado local cuando llegan datos iniciales
   useEffect(() => {
     if (data) {
+      console.log('[MessageThread] Setting initial messages:', data.length);
       setMessages(data);
       if (autoScroll) {
         scrollToBottom();
@@ -68,32 +72,43 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ conversationId }) 
     }
   }, [data, autoScroll]);
 
-  // Suscribirse a mensajes nuevos en tiempo real
+  // Unirse/salir de la sala WebSocket
   useEffect(() => {
-    if (!conversationId) return;
+    if (conversationId) {
+      console.log('[MessageThread] Joining conversation:', conversationId);
+      joinConversation(conversationId);
 
-    const subscriptionId = realtimeService.subscribeToMessages(
-      conversationId,
-      (newMessage) => {
-        setMessages(prev => {
-          // Evitar duplicados
-          if (prev.some(m => m.id === newMessage.id)) {
-            return prev;
-          }
-          return [...prev, newMessage];
-        });
+      return () => {
+        console.log('[MessageThread] Leaving conversation:', conversationId);
+        leaveConversation(conversationId);
+      };
+    }
+  }, [conversationId, joinConversation, leaveConversation]);
 
-        // Auto scroll si está en el fondo
-        if (autoScroll) {
-          setTimeout(() => scrollToBottom(), 100);
-        }
+  // Escuchar mensajes nuevos por WebSocket
+  useEffect(() => {
+    if (!lastMessage || lastMessage.conversation_id !== conversationId) {
+      return;
+    }
+
+    console.log('[MessageThread] New message received via WebSocket:', lastMessage);
+
+    setMessages(prev => {
+      // Evitar duplicados
+      if (prev.some(m => m.id === lastMessage.id)) {
+        console.log('[MessageThread] Duplicate message, ignoring');
+        return prev;
       }
-    );
 
-    return () => {
-      realtimeService.unsubscribe(subscriptionId);
-    };
-  }, [conversationId, autoScroll]);
+      console.log('[MessageThread] Adding new message to thread');
+      return [...prev, lastMessage];
+    });
+
+    // Auto scroll si está en el fondo
+    if (autoScroll) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [lastMessage, conversationId, autoScroll]);
 
   // Detectar si el usuario está scrolleando manualmente
   useEffect(() => {

@@ -15,8 +15,11 @@ export class CRMDatabaseConnection implements IDatabaseConnection {
       user: process.env.CRM_DB_USER || 'flexxus',
       password: process.env.CRM_DB_PASSWORD || 'Flexxus2023**',
       max: 20,
+      min: 2,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000
+      connectionTimeoutMillis: 10000, // Increased from 2s to 10s
+      statement_timeout: 30000, // 30s timeout for queries
+      query_timeout: 30000 // 30s timeout for queries
     });
 
     this.pool.on('error', (err) => {
@@ -53,14 +56,48 @@ export class CRMDatabaseConnection implements IDatabaseConnection {
   }
 
   async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
-    try {
-      const result = await this.pool.query<T>(text, params);
-      this.connected = true;
-      return result;
-    } catch (error) {
-      console.error('CRM query error:', error);
-      throw error;
+    const maxRetries = 3;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.pool.query<T>(text, params);
+        this.connected = true;
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`CRM query error (attempt ${attempt}/${maxRetries}):`, error.message);
+
+        // Don't retry on syntax errors or constraint violations
+        if (error.code && ['42601', '42P01', '23505', '23503'].includes(error.code)) {
+          throw error;
+        }
+
+        // Retry on connection/timeout errors
+        if (attempt < maxRetries && this.isRetryableError(error)) {
+          await this.delay(1000 * attempt); // Exponential backoff
+          continue;
+        }
+
+        throw error;
+      }
     }
+
+    throw lastError;
+  }
+
+  private isRetryableError(error: any): boolean {
+    const retryableCodes = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'];
+    const retryableMessages = ['Connection terminated', 'connection timeout', 'Connection error'];
+
+    return (
+      retryableCodes.includes(error.code) ||
+      retryableMessages.some(msg => error.message?.includes(msg))
+    );
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async getClient(): Promise<PoolClient> {

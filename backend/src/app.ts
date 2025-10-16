@@ -29,6 +29,8 @@ import { requestLogger } from '@/shared/middleware/requestLogger';
 import { generalLimiter } from '@/shared/middleware/rateLimiter';
 import { setupCors } from '@/shared/middleware/security';
 import { devAuthBypass } from '@/modules/auth/middleware/devAuthBypass';
+import { OmniWebSocketHandler } from '@/modules/omni/websocket/OmniWebSocketHandler';
+import { socketRateLimiter } from '@/shared/middleware/socketRateLimiter';
 /**
  * Express Application Class
  * Patrón: Application Controller
@@ -104,6 +106,10 @@ class App {
     this.app.get('/api/health', this.healthCheck.bind(this)); // También en /api/health para compatibilidad
     this.app.get('/ready', this.readinessCheck.bind(this));
     this.app.get('/live', this.livenessCheck.bind(this));
+
+    // WebSocket monitoring endpoints
+    this.app.get('/api/websocket/health', this.websocketHealthCheck.bind(this));
+    this.app.get('/api/websocket/stats', this.websocketStats.bind(this));
     // API v1 routes
     const apiV1Router = express.Router();
     // Auth module routes
@@ -244,6 +250,81 @@ class App {
       status: 'alive',
       timestamp: new Date().toISOString()
     });
+  }
+
+  /**
+   * WebSocket health check endpoint
+   */
+  private websocketHealthCheck(req: Request, res: Response): void {
+    try {
+      const wsEnabled = process.env.WEBSOCKET_ENABLED === 'true';
+
+      if (!wsEnabled) {
+        res.status(200).json({
+          status: 'disabled',
+          message: 'WebSocket is disabled',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      // Try to get WebSocket handler from container
+      const wsHandler = container.get<OmniWebSocketHandler>(TYPES.OmniWebSocketHandler);
+      const connectionsCount = wsHandler.getActiveConnectionsCount();
+
+      res.status(200).json({
+        status: 'healthy',
+        enabled: true,
+        activeConnections: connectionsCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      this.logger.error('WebSocket health check failed:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        message: 'WebSocket service unavailable',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * WebSocket statistics endpoint
+   */
+  private websocketStats(req: Request, res: Response): void {
+    try {
+      const wsEnabled = process.env.WEBSOCKET_ENABLED === 'true';
+
+      if (!wsEnabled) {
+        res.status(200).json({
+          enabled: false,
+          message: 'WebSocket is disabled'
+        });
+        return;
+      }
+
+      // Get WebSocket handler stats
+      const wsHandler = container.get<OmniWebSocketHandler>(TYPES.OmniWebSocketHandler);
+      const totalConnections = wsHandler.getActiveConnectionsCount();
+
+      // Get rate limiter stats
+      const rateLimiterStats = socketRateLimiter.getStats();
+
+      res.status(200).json({
+        enabled: true,
+        connections: {
+          total: totalConnections
+        },
+        rateLimiter: rateLimiterStats,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      this.logger.error('Failed to get WebSocket stats:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve WebSocket statistics'
+      });
+    }
   }
 }
 export default App;

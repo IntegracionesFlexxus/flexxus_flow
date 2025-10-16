@@ -202,12 +202,15 @@ export const messageService = {
         conversation_id: conversationId,
         content,
         content_type: contentType as any,
+        sender_type: 'agent' as any,
+        direction: 'outbound' as any,
         media_url: mediaUrl,
         metadata: {
           fileName: file.name,
           fileSize: file.size,
           fileType: file.type
-        }
+        },
+        recipient: ''  // Será inferido del conversation
       });
     } catch (error: any) {
       console.error('❌ [messageService] sendMessageWithMedia - Error:', error);
